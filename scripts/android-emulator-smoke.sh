@@ -10,7 +10,7 @@ mkdir -p artifacts
 for attempt in 1 2 3; do
     sleep 10
     adb exec-out screencap -p > artifacts/android-gallery.png
-    if swift scripts/check-gallery-screenshot.swift artifacts/android-gallery.png; then
+    if python scripts/check-gallery-screenshot.py artifacts/android-gallery.png; then
         exit 0
     fi
     echo "Android gallery is not visible after attempt $attempt" >&2
