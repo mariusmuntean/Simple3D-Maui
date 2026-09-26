@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-app="$(find samples/Simple3D.Demo/bin/Debug/net10.0-android/android-arm64 \
+app="$(find samples/Simple3D.Demo/bin/Debug/net10.0-android/android-x64 \
     -type f -name '*.apk' -print -quit)"
 test -n "$app" || { echo 'Built Android APK not found' >&2; exit 1; }
 adb install -r "$app"

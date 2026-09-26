@@ -44,31 +44,42 @@ jobs:
       - name: Build signed iOS simulator gallery
         if: matrix.tfm == 'net10.0-ios'
         run: dotnet build samples/Simple3D.Demo/Simple3D.Demo.csproj -f net10.0-ios -r iossimulator-arm64 -c Debug -p:EnableCodeSigning=true -p:CodesignKey=-
-      - name: Build Android emulator gallery
-        if: matrix.tfm == 'net10.0-android'
-        run: dotnet build samples/Simple3D.Demo/Simple3D.Demo.csproj -f net10.0-android -r android-arm64 -c Debug
-      - name: Launch gallery in Android Emulator
-        if: matrix.tfm == 'net10.0-android'
-        uses: ReactiveCircus/android-emulator-runner@v2
-        with:
-          api-level: 35
-          target: google_apis
-          arch: arm64-v8a
-          script: bash scripts/android-emulator-smoke.sh
       - name: Launch gallery in iOS Simulator
         if: matrix.tfm == 'net10.0-ios'
         run: bash scripts/ios-simulator-smoke.sh
-      - name: Save Android screenshot
-        if: always() && matrix.tfm == 'net10.0-android'
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-gallery-screenshot
-          path: artifacts/android-gallery.png
-          if-no-files-found: warn
       - name: Save iOS screenshot
         if: always() && matrix.tfm == 'net10.0-ios'
         uses: actions/upload-artifact@v4
         with:
           name: ios-gallery-screenshot
           path: artifacts/ios-gallery-*.png
+          if-no-files-found: warn
+  android-emulator:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: android-actions/setup-android@v4
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - run: dotnet workload install maui-android
+      - run: dotnet build samples/Simple3D.Demo/Simple3D.Demo.csproj -f net10.0-android -r android-x64 -c Debug
+      - name: Launch gallery in Android Emulator
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          script: bash scripts/android-emulator-smoke.sh
+      - name: Save Android screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-gallery-screenshot
+          path: artifacts/android-gallery.png
           if-no-files-found: warn
