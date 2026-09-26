@@ -16,12 +16,17 @@ app="$(find samples/Simple3D.Demo/bin/Release/net10.0-ios/iossimulator-arm64 \
     -maxdepth 2 -type d -name Simple3D.Demo.app -print -quit)"
 test -n "$app" || { echo 'Built demo app bundle not found' >&2; exit 1; }
 
+# Arm64 simulators validate executable pages, including the generated MAUI AOT image.
+# The unsigned build is useful for compilation checks, but needs an ad hoc signature to launch.
+codesign --force --deep --sign - --timestamp=none "$app"
+codesign --verify --deep --strict --verbose=2 "$app"
+
 xcrun simctl boot "$device" || { xcrun simctl list devices | grep -F "$device" | grep -q Booted; }
 xcrun simctl bootstatus "$device" -b
 xcrun simctl install "$device" "$app"
 xcrun simctl launch "$device" dev.simple3d.gallery
 mkdir -p artifacts
-for attempt in 1 2 3 4 5 6; do
+for attempt in 1 2 3; do
     sleep 10
     xcrun simctl io "$device" screenshot artifacts/ios-gallery.png
     if swift scripts/check-gallery-screenshot.swift artifacts/ios-gallery.png; then
