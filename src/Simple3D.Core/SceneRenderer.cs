@@ -25,6 +25,8 @@ public static class SceneRenderer
         var light = Vector3.Normalize(new Vector3(-.4f, .8f, 1));
         var scale = MathF.Min(width, height) * 1.25f;
         var output = new List<DrawTriangle>();
+        Span<ClipVertex> vertices = stackalloc ClipVertex[3];
+        Span<ClipVertex> clipped = stackalloc ClipVertex[4];
         foreach (var shape in scene.Shapes)
         {
             var transform = Matrix4x4.CreateScale(shape.Size) *
@@ -48,9 +50,7 @@ public static class SceneRenderer
                     continue;
                 }
 
-                Span<ClipVertex> vertices = stackalloc ClipVertex[3];
                 vertices[0] = new(a, da); vertices[1] = new(b, db); vertices[2] = new(c, dc);
-                Span<ClipVertex> clipped = stackalloc ClipVertex[4];
                 var count = 0;
                 var previous = vertices[2];
                 foreach (var current in vertices)
