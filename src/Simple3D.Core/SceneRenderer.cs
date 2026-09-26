@@ -57,7 +57,10 @@ public static class SceneRenderer
                 {
                     var wasInside = previous.Depth >= NearPlane;
                     var isInside = current.Depth >= NearPlane;
-                    if (wasInside != isInside)
+                    // A vertex on the plane is already included by the inside branch.
+                    // Emitting it again creates zero-area triangles at clipping boundaries.
+                    if (wasInside != isInside &&
+                        previous.Depth != NearPlane && current.Depth != NearPlane)
                     {
                         var fraction = (NearPlane - previous.Depth) / (current.Depth - previous.Depth);
                         clipped[count++] = new(Vector3.Lerp(previous.Position, current.Position, fraction), NearPlane);
@@ -87,6 +90,11 @@ public static class SceneRenderer
             if (!float.IsFinite(pa.X) || !float.IsFinite(pa.Y) ||
                 !float.IsFinite(pb.X) || !float.IsFinite(pb.Y) ||
                 !float.IsFinite(pc.X) || !float.IsFinite(pc.Y)) return;
+            // Canvas paths below a hundredth of a square pixel cannot contribute
+            // visible coverage, and arise at clipping boundaries.
+            var twiceArea = ((double)pb.X - pa.X) * ((double)pc.Y - pa.Y) -
+                            ((double)pb.Y - pa.Y) * ((double)pc.X - pa.X);
+            if (!double.IsFinite(twiceArea) || Math.Abs(twiceArea) < .02) return;
             output.Add(new(pa, pb, pc, (a.Depth + b.Depth + c.Depth) / 3, color));
         }
     }

@@ -93,6 +93,13 @@ var tests = new (string Name, Action Run)[]
         Assert(faces.Count == 1, $"clipped face count {faces.Count}");
         Assert(faces.All(Finite), "invalid clipped projection");
     }),
+    ("near plane discards subpixel slivers instead of drawing degenerate paths", () => {
+        var triangle = new Triangle3(new(-.0001f, -.0001f, 4.95f),
+            new(0, .0001f, 5.2f), new(.0001f, -.0001f, 4.95f));
+        var shape = new Shape([triangle], 0xFF7799CC, Vector3.Zero, Vector3.Zero, Vector3.One);
+        var faces = SceneRenderer.Render(new Scene().Add(shape), new Camera(5, 0, 0), 300, 300);
+        Assert(faces.Count == 0, $"clipped sliver emitted {faces.Count} paths");
+    }),
     ("unit meshes have outward, nondegenerate triangles", () => {
         foreach (var shape in new[] { Shape.Box(), Shape.Sphere(), Shape.Cylinder(), Shape.Pyramid() })
             foreach (var face in shape.Mesh) {
