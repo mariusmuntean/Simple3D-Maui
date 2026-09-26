@@ -33,7 +33,7 @@ dotnet run --project samples/Simple3D.Demo -f net10.0-maccatalyst
 dotnet run --project tests/Simple3D.Core.Tests -c Release
 ```
 
-On Android and iOS, select `net10.0-android` or `net10.0-ios` and a device/simulator. CI runs the portable tests and compiles each demo target on macOS.
+On Android and iOS, select `net10.0-android` or `net10.0-ios` and a device/simulator. CI runs the portable tests and compiles each demo target on macOS. The iOS job also boots a simulator, launches the demo, checks that the gallery and 3D shape appear in a screenshot, and uploads that screenshot for inspection.
 
 ## Scope and performance
 

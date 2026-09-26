@@ -34,3 +34,13 @@ jobs:
         if: matrix.tfm == 'net10.0-android'
       - run: dotnet workload install maui
       - run: dotnet build samples/Simple3D.Demo/Simple3D.Demo.csproj -f ${{ matrix.tfm }} -r ${{ matrix.rid }} -c Release -p:EnableCodeSigning=false
+      - name: Launch gallery in iOS Simulator
+        if: matrix.tfm == 'net10.0-ios'
+        run: bash scripts/ios-simulator-smoke.sh
+      - name: Save iOS screenshot
+        if: always() && matrix.tfm == 'net10.0-ios'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-gallery-screenshot
+          path: artifacts/ios-gallery.png
+          if-no-files-found: warn
