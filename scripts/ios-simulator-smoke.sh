@@ -12,13 +12,9 @@ print(sorted(matches, reverse=True)[0][1])
 PY
 )"
 
-app="$(find samples/Simple3D.Demo/bin/Release/net10.0-ios/iossimulator-arm64 \
+app="$(find samples/Simple3D.Demo/bin/Debug/net10.0-ios/iossimulator-arm64 \
     -maxdepth 2 -type d -name Simple3D.Demo.app -print -quit)"
 test -n "$app" || { echo 'Built demo app bundle not found' >&2; exit 1; }
-
-# Arm64 simulators validate executable pages, including the generated MAUI AOT image.
-# The unsigned build is useful for compilation checks, but needs an ad hoc signature to launch.
-codesign --force --deep --sign - --timestamp=none "$app"
 codesign --verify --deep --strict --verbose=2 "$app"
 
 xcrun simctl boot "$device" || { xcrun simctl list devices | grep -F "$device" | grep -q Booted; }
