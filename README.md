@@ -41,4 +41,4 @@ Meshes are shared between instances. The renderer transforms and shades opaque t
 
 ## Milestones
 
-See `docs/superpowers/` for the scope and implementation plan; git history records design, portable core and MAUI/demo milestones. GitHub Actions performs repeatable validation on each push.
+See `docs/superpowers/` for the scope and implementation plan; git history records design, portable core and MAUI/demo milestones. GitHub Actions performs repeatable validation for pull requests and main branch pushes.
