@@ -45,5 +45,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ios-gallery-screenshot
-          path: artifacts/ios-gallery.png
+          path: artifacts/ios-gallery-*.png
           if-no-files-found: warn

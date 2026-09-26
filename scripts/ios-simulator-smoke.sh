@@ -20,16 +20,26 @@ codesign --verify --deep --strict --verbose=2 "$app"
 xcrun simctl boot "$device" || { xcrun simctl list devices | grep -F "$device" | grep -q Booted; }
 xcrun simctl bootstatus "$device" -b
 xcrun simctl install "$device" "$app"
-xcrun simctl launch "$device" dev.simple3d.gallery
 mkdir -p artifacts
-for attempt in 1 2 3; do
-    sleep 10
-    xcrun simctl io "$device" screenshot artifacts/ios-gallery.png
-    if swift scripts/check-gallery-screenshot.swift artifacts/ios-gallery.png; then
-        exit 0
-    fi
-    echo "Gallery is not visible after attempt $attempt" >&2
+for scene in Shapes Stack Orbit; do
+    xcrun simctl terminate "$device" dev.simple3d.gallery 2>/dev/null || true
+    SIMCTL_CHILD_SIMPLE3D_GALLERY_SCENE="$scene" xcrun simctl launch "$device" dev.simple3d.gallery
+    visible=false
+    for attempt in 1 2 3; do
+        sleep 10
+        xcrun simctl io "$device" screenshot "artifacts/ios-gallery-$scene.png"
+        if swift scripts/check-gallery-screenshot.swift "artifacts/ios-gallery-$scene.png"; then
+            visible=true
+            break
+        fi
+        echo "$scene gallery is not visible after attempt $attempt" >&2
+    done
+    if [ "$visible" = false ]; then break; fi
 done
+if [ "$visible" = true ] && swift scripts/check-gallery-scenes.swift \
+    artifacts/ios-gallery-{Shapes,Stack,Orbit}.png; then
+    exit 0
+fi
 
 echo 'Recent gallery simulator logs:' >&2
 xcrun simctl spawn "$device" log show --last 5m --style compact \
