@@ -72,6 +72,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install 'Pillow>=12,<13'
+      - run: python -m unittest discover -s scripts -p 'test_*.py'
       - run: dotnet workload install maui-android
       - run: dotnet build samples/Simple3D.Demo/Simple3D.Demo.csproj -f net10.0-android -r android-x64 -c Debug -p:EmbedAssembliesIntoApk=true
       - name: Reclaim space for Android Emulator
