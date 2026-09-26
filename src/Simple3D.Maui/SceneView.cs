@@ -15,10 +15,10 @@ public sealed class SceneView : GraphicsView
     public SceneView()
     {
         Drawable = new SceneDrawable(this);
-        StartInteraction += (_, args) => _previousTouch = args.Touches.Length > 0 ? args.Touches[0] : null;
+        StartInteraction += (_, args) => _previousTouch = args.Touches.Length == 1 ? args.Touches[0] : null;
         DragInteraction += (_, args) =>
         {
-            if (args.Touches.Length == 0) return;
+            if (args.Touches.Length != 1) { _previousTouch = null; return; }
             var now = args.Touches[0];
             if (_previousTouch is { } previous)
                 Orbit((now.X - previous.X) * .012f, -(now.Y - previous.Y) * .012f);
