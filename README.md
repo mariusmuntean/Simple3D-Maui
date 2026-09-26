@@ -33,11 +33,11 @@ dotnet run --project samples/Simple3D.Demo -f net10.0-maccatalyst
 dotnet run --project tests/Simple3D.Core.Tests -c Release
 ```
 
-On Android and iOS, select `net10.0-android` or `net10.0-ios` and a device/simulator. CI runs the portable tests and compiles each demo target on macOS. The iOS job also boots a simulator, launches the demo, checks that the gallery and 3D shape appear in a screenshot, and uploads that screenshot for inspection.
+On Android and iOS, select `net10.0-android` or `net10.0-ios` and a device/simulator. CI runs the portable tests, builds each demo target, and packs both libraries. The iOS simulator opens all three gallery scenes and compares their rendered drawings; the Android emulator opens the gallery. CI validates screenshots against the gallery's background, panel, and shape colors, and uploads them for inspection.
 
 ## Scope and performance
 
-Meshes are shared between instances. The renderer transforms and shades opaque triangles, removes back faces, then sorts them by depth for a lightweight native canvas draw. It is designed for small illustrations and diagrams, with a modest sphere tessellation. It is a software renderer, not a GPU scene engine. Intersecting geometry may sort incorrectly; transparent materials, mesh import, near-plane clipping and hidden-surface depth buffers are outside the current scope. Avoid positioning geometry through the camera's near plane. Test performance with your intended scene size and device before using dense or animated scenes.
+Meshes are shared between instances. The renderer transforms and shades opaque triangles, removes back faces, clips against the near plane, then sorts them by depth for a lightweight native canvas draw. It is designed for small illustrations and diagrams, with a modest sphere tessellation. It is a software renderer, not a GPU scene engine. Intersecting geometry may sort incorrectly; transparent materials, mesh import, and hidden-surface depth buffers are outside the current scope. The test runner reports a per-frame rendering baseline for twelve spheres, without imposing a fragile time threshold. Test performance with your intended scene size and device before using dense or animated scenes.
 
 ## Milestones
 

@@ -2,7 +2,7 @@
 
 **Goal:** Make the first release resilient to geometry edge cases and verify real gallery rendering automatically.
 
-**Approach:** Keep the dependency-free core test executable. Add deterministic geometry invariants and a near-plane regression, then implement clipping only after the regression fails. Extend the existing iOS screenshot smoke to cover all three gallery scenes with scene-specific image checks. Run the full four-job GitHub Actions workflow after each milestone.
+**Approach:** Keep the dependency-free core test executable. Add deterministic geometry invariants and a near-plane regression, then implement clipping only after the regression fails. Extend the existing iOS screenshot smoke to cover all three gallery scenes. Run the four-job GitHub Actions workflow after each milestone.
 
 ## Milestone 1: Geometry properties and near-plane clipping
 
@@ -14,8 +14,14 @@
 ## Milestone 2: Gallery scene coverage
 
 - Select a gallery scene at startup from a simulator-only environment value, retaining normal default behavior.
-- Launch each scene in iOS Simulator, capture a screenshot, and check background/panel plus a distinct shape color and change between scenes.
+- Launch each scene in iOS Simulator, capture a screenshot, and check background/panel/shape colors and drawing differences between scenes.
 - Upload all screenshots, inspect them, validate all four CI jobs, and commit.
+
+## Milestone 3: Cross-platform runtime and packaging
+
+- Pack both library projects during CI to catch package metadata and multi-target build failures.
+- Install and launch the Android demo in an emulator, capture a screenshot, and validate gallery pixels.
+- Inspect simulator artifacts and update usage and limitations in the README.
 
 ## Risk focus
 
