@@ -16,7 +16,7 @@ var view = new SceneView
 Content = view;
 ```
 
-Drag to orbit, pinch to zoom, or call `view.Orbit(yawRadians, pitchRadians)`, `view.Zoom(factor)`, and `view.ResetCamera()`. Assign a new `Scene` to change composition; call `view.Refresh()` when changing the existing scene. Shapes are immutable; `At`, `Rotated` and `Scaled` return transformed instances. Colors use ARGB values (`0xAARRGGBB`). Angles are radians. The built-in unit shapes are centered at the origin; use `Scaled` for size.
+Drag to orbit, pinch to zoom, or call `view.Orbit(yawRadians, pitchRadians)`, `view.Zoom(factor)`, and `view.ResetCamera()`. Assign a new `Scene` to change composition; call `view.Refresh()` when changing the existing scene. Shapes are immutable; `At`, `Rotated` and `Scaled` return transformed instances. Colors use opaque ARGB values (`0xFFRRGGBB`); transparent values are rejected. Angles are radians. The built-in unit shapes are centered at the origin; use `Scaled` for size.
 
 ## Projects
 

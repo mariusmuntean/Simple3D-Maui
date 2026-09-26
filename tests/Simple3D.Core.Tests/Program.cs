@@ -50,6 +50,29 @@ var tests = new (string Name, Action Run)[]
         try { Shape.Box().Scaled(-1); throw new Exception("accepted negative size"); }
         catch (ArgumentOutOfRangeException) { }
     }),
+    ("invalid transform reports the offending argument", () => {
+        var shape = Shape.Box();
+        AssertOutOfRange(() => shape.At(float.NaN, 0, 0), "x");
+        AssertOutOfRange(() => shape.At(0, 0, float.PositiveInfinity), "z");
+        AssertOutOfRange(() => shape.Rotated(0, float.NaN, 0), "y");
+        AssertOutOfRange(() => shape.Scaled(0), "size");
+        AssertOutOfRange(() => shape.Scaled(1, -1, 1), "y");
+        AssertOutOfRange(() => shape.Scaled(1, 1, float.NaN), "z");
+    }),
+    ("transparent colors are rejected by opaque shape factories", () => {
+        AssertOutOfRange(() => Shape.Box(0x00FFFFFF), "color");
+        AssertOutOfRange(() => Shape.Sphere(0x80FFFFFF), "color");
+        AssertOutOfRange(() => Shape.Cylinder(0x80FFFFFF), "color");
+        AssertOutOfRange(() => Shape.Pyramid(0x80FFFFFF), "color");
+    }),
+    ("scene shape collection cannot bypass Add validation", () => {
+        var scene = new Scene().Add(Shape.Box());
+        Assert(scene.Shapes is not List<Shape>, "mutable list exposed");
+        Assert(scene.Shapes is IList<Shape>, "collection does not support read-only list access");
+        try { ((IList<Shape>)scene.Shapes).Add(null!); throw new Exception("accepted mutation"); }
+        catch (NotSupportedException) { }
+        Assert(scene.Shapes.Count == 1, "scene changed through read-only view");
+    }),
     ("viewport reprojects after resize", () => {
         var scene = new Scene().Add(Shape.Sphere());
         var small = SceneRenderer.Render(scene, new Camera(), 200, 200);
@@ -119,3 +142,13 @@ static void Assert(bool condition, string message) { if (!condition) throw new E
 static bool Finite(DrawTriangle face) => float.IsFinite(face.A.X) && float.IsFinite(face.A.Y) &&
     float.IsFinite(face.B.X) && float.IsFinite(face.B.Y) && float.IsFinite(face.C.X) &&
     float.IsFinite(face.C.Y) && float.IsFinite(face.Depth);
+
+static void AssertOutOfRange(Action action, string parameter)
+{
+    try { action(); }
+    catch (ArgumentOutOfRangeException error) {
+        Assert(error.ParamName == parameter, $"Expected {parameter}, got {error.ParamName}");
+        return;
+    }
+    throw new Exception($"Expected {parameter} to be rejected");
+}
