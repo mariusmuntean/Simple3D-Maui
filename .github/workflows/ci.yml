@@ -73,6 +73,12 @@ jobs:
       - run: python -m pip install 'Pillow>=12,<13'
       - run: dotnet workload install maui-android
       - run: dotnet build samples/Simple3D.Demo/Simple3D.Demo.csproj -f net10.0-android -r android-x64 -c Debug
+      - name: Reclaim space for Android Emulator
+        run: |
+          sudo rm -rf "$ANDROID_HOME/ndk" /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h .
+          available_mb=$(df -Pm . | awk 'NR==2 {print $4}')
+          test "$available_mb" -ge 8500 || { echo "Only $available_mb MB free; emulator needs at least 8500 MB" >&2; exit 1; }
       - name: Launch gallery in Android Emulator
         uses: ReactiveCircus/android-emulator-runner@v2
         with:
