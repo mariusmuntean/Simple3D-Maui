@@ -4,7 +4,8 @@ import Foundation
 guard CommandLine.arguments.count == 2,
       let bytes = try? Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[1])),
       let image = NSBitmapImageRep(data: bytes) else {
-    fatalError("Cannot read simulator screenshot")
+    fputs("Cannot read simulator screenshot\n", stderr)
+    exit(2)
 }
 
 func near(_ color: NSColor, _ red: Int, _ green: Int, _ blue: Int) -> Bool {
@@ -33,7 +34,7 @@ for y in stride(from: 0, to: image.pixelsHigh, by: 6) {
     }
 }
 
-print("Gallery pixels: background=\(background), panel=\(panel), blue shape=\(blueShape)")
+fputs("Gallery pixels: background=\(background), panel=\(panel), blue shape=\(blueShape)\n", stderr)
 guard background > 1000, panel > 1000, blueShape > 100 else {
-    fatalError("The expected gallery and 3D shape are not visible in the screenshot")
+    exit(1)
 }

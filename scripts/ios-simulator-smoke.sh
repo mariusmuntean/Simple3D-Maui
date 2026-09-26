@@ -20,7 +20,20 @@ xcrun simctl boot "$device" || { xcrun simctl list devices | grep -F "$device" |
 xcrun simctl bootstatus "$device" -b
 xcrun simctl install "$device" "$app"
 xcrun simctl launch "$device" dev.simple3d.gallery
-sleep 8
 mkdir -p artifacts
-xcrun simctl io "$device" screenshot artifacts/ios-gallery.png
-swift scripts/check-gallery-screenshot.swift artifacts/ios-gallery.png
+for attempt in 1 2 3 4 5 6; do
+    sleep 10
+    xcrun simctl io "$device" screenshot artifacts/ios-gallery.png
+    if swift scripts/check-gallery-screenshot.swift artifacts/ios-gallery.png; then
+        exit 0
+    fi
+    echo "Gallery is not visible after attempt $attempt" >&2
+done
+
+echo 'Recent gallery simulator logs:' >&2
+xcrun simctl spawn "$device" log show --last 5m --style compact \
+    --predicate 'process CONTAINS "Simple3D"' 2>&1 | tail -100 || true
+echo 'Recent gallery crash reports:' >&2
+find "$HOME/Library/Logs/DiagnosticReports" -maxdepth 1 -iname '*Simple3D*' -mmin -15 \
+    -print -exec head -100 {} \; 2>/dev/null || true
+exit 1
