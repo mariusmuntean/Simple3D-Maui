@@ -39,6 +39,22 @@ var tests = new (string Name, Action Run)[]
         var shape = Shape.Pyramid().At(1, 2, 0).Rotated(0, 0.5f, 0).Scaled(2);
         var faces = SceneRenderer.Render(new Scene().Add(shape), new Camera(), 400, 300);
         Assert(faces.Count > 0 && faces.All(f => float.IsFinite(f.B.Y) && f.Color != 0), "transform");
+    }),
+    ("immutable transformations retain the shared unit mesh", () => {
+        var original = Shape.Sphere();
+        var translated = original.At(2, 0, 0);
+        Assert(original.Position == Vector3.Zero && translated.Position.X == 2, "mutable shape");
+        Assert(original.TriangleCount == translated.TriangleCount, "mesh changed");
+    }),
+    ("invalid dimensions are rejected", () => {
+        try { Shape.Box().Scaled(-1); throw new Exception("accepted negative size"); }
+        catch (ArgumentOutOfRangeException) { }
+    }),
+    ("viewport reprojects after resize", () => {
+        var scene = new Scene().Add(Shape.Sphere());
+        var small = SceneRenderer.Render(scene, new Camera(), 200, 200);
+        var large = SceneRenderer.Render(scene, new Camera(), 400, 400);
+        Assert(small.Count == large.Count && large[0].A.X > small[0].A.X, "resize projection");
     })
 };
 var failed = 0;
@@ -47,5 +63,14 @@ foreach (var (name, run) in tests) {
     catch (Exception error) { failed++; Console.Error.WriteLine($"FAIL {name}: {error.Message}"); }
 }
 Console.WriteLine($"{tests.Length - failed}/{tests.Length} passed");
+if (failed == 0)
+{
+    var scene = new Scene();
+    for (var i = 0; i < 12; i++) scene.Add(Shape.Sphere().At((i % 4 - 1.5f) * .8f, (i / 4 - 1) * .8f, 0));
+    for (var i = 0; i < 30; i++) SceneRenderer.Render(scene, new Camera(), 400, 400);
+    var timer = System.Diagnostics.Stopwatch.StartNew();
+    for (var i = 0; i < 300; i++) SceneRenderer.Render(scene, new Camera(), 400, 400);
+    Console.WriteLine($"Render baseline (12 spheres, {300} frames): {timer.Elapsed.TotalMilliseconds / 300:F2} ms/frame on this runner");
+}
 return failed == 0 ? 0 : 1;
 static void Assert(bool condition, string message) { if (!condition) throw new Exception(message); }

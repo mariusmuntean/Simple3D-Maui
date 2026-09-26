@@ -1,0 +1,36 @@
+name: Build and test
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet run --project tests/Simple3D.Core.Tests --configuration Release
+      - run: dotnet build src/Simple3D.Core --configuration Release --no-restore
+  platforms:
+    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - tfm: net10.0-ios
+            rid: iossimulator-arm64
+          - tfm: net10.0-maccatalyst
+            rid: maccatalyst-arm64
+          - tfm: net10.0-android
+            rid: android-arm64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: android-actions/setup-android@v3
+        if: matrix.tfm == 'net10.0-android'
+      - run: dotnet workload install maui
+      - run: dotnet build samples/Simple3D.Demo/Simple3D.Demo.csproj -f ${{ matrix.tfm }} -r ${{ matrix.rid }} -c Release -p:EnableCodeSigning=false
