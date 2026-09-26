@@ -7,6 +7,9 @@ public readonly record struct DrawTriangle(Vector2 A, Vector2 B, Vector2 C, floa
 /// <summary>Projects small opaque scenes into ordered, flat-shaded screen triangles.</summary>
 public static class SceneRenderer
 {
+    private const float NearPlane = .05f;
+    private readonly record struct ClipVertex(Vector3 Position, float Depth);
+
     public static IReadOnlyList<DrawTriangle> Render(Scene scene, Camera camera, float width, float height)
     {
         ArgumentNullException.ThrowIfNull(scene);
@@ -37,13 +40,33 @@ public static class SceneRenderer
                 var da = Vector3.Dot(a - eye, forward);
                 var db = Vector3.Dot(b - eye, forward);
                 var dc = Vector3.Dot(c - eye, forward);
-                if (da <= .05f || db <= .05f || dc <= .05f) continue;
-                var pa = Project(a, da); var pb = Project(b, db); var pc = Project(c, dc);
-                if (!float.IsFinite(pa.X) || !float.IsFinite(pa.Y) ||
-                    !float.IsFinite(pb.X) || !float.IsFinite(pb.Y) ||
-                    !float.IsFinite(pc.X) || !float.IsFinite(pc.Y)) continue;
                 var shade = .38f + .62f * MathF.Max(0, Vector3.Dot(Vector3.Normalize(normal), light));
-                output.Add(new(pa, pb, pc, (da + db + dc) / 3, Shade(shape.Color, shade)));
+                var color = Shade(shape.Color, shade);
+                if (da >= NearPlane && db >= NearPlane && dc >= NearPlane)
+                {
+                    AddTriangle(new(a, da), new(b, db), new(c, dc), color);
+                    continue;
+                }
+
+                Span<ClipVertex> vertices = stackalloc ClipVertex[3];
+                vertices[0] = new(a, da); vertices[1] = new(b, db); vertices[2] = new(c, dc);
+                Span<ClipVertex> clipped = stackalloc ClipVertex[4];
+                var count = 0;
+                var previous = vertices[2];
+                foreach (var current in vertices)
+                {
+                    var wasInside = previous.Depth >= NearPlane;
+                    var isInside = current.Depth >= NearPlane;
+                    if (wasInside != isInside)
+                    {
+                        var fraction = (NearPlane - previous.Depth) / (current.Depth - previous.Depth);
+                        clipped[count++] = new(Vector3.Lerp(previous.Position, current.Position, fraction), NearPlane);
+                    }
+                    if (isInside) clipped[count++] = current;
+                    previous = current;
+                }
+                if (count >= 3) AddTriangle(clipped[0], clipped[1], clipped[2], color);
+                if (count == 4) AddTriangle(clipped[0], clipped[2], clipped[3], color);
             }
         }
         output.Sort((a,b) => b.Depth.CompareTo(a.Depth));
@@ -54,6 +77,17 @@ public static class SceneRenderer
             var relative = point - eye;
             return new(width/2 + Vector3.Dot(relative, right)*scale/distance,
                        height/2 - Vector3.Dot(relative, up)*scale/distance);
+        }
+
+        void AddTriangle(ClipVertex a, ClipVertex b, ClipVertex c, uint color)
+        {
+            var pa = Project(a.Position, a.Depth);
+            var pb = Project(b.Position, b.Depth);
+            var pc = Project(c.Position, c.Depth);
+            if (!float.IsFinite(pa.X) || !float.IsFinite(pa.Y) ||
+                !float.IsFinite(pb.X) || !float.IsFinite(pb.Y) ||
+                !float.IsFinite(pc.X) || !float.IsFinite(pc.Y)) return;
+            output.Add(new(pa, pb, pc, (a.Depth + b.Depth + c.Depth) / 3, color));
         }
     }
 
