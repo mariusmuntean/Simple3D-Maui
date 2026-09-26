@@ -37,7 +37,12 @@ public sealed class GalleryPage : ContentPage
                 Text = "Drag to orbit · Pinch to zoom", TextColor = Color.FromArgb("#8BA1C1"), FontSize = 13
             } }
         }};
-        ShowShapes();
+        switch (Environment.GetEnvironmentVariable("SIMPLE3D_GALLERY_SCENE"))
+        {
+            case "Stack": ShowStack(); break;
+            case "Orbit": ShowOrbit(); break;
+            default: ShowShapes(); break;
+        }
     }
 
     private static Button SceneButton(string text, Action action)
