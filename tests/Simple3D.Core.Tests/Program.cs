@@ -55,6 +55,48 @@ var tests = new (string Name, Action Run)[]
         var small = SceneRenderer.Render(scene, new Camera(), 200, 200);
         var large = SceneRenderer.Render(scene, new Camera(), 400, 400);
         Assert(small.Count == large.Count && large[0].A.X > small[0].A.X, "resize projection");
+    }),
+    ("near plane clips one vertex into two visible triangles", () => {
+        var shape = new Shape([new Triangle3(new(-.1f, -.1f, 4.9f), new(.1f, -.1f, 4.9f),
+            new(0, .1f, 5))], 0xFF7799CC, Vector3.Zero, Vector3.Zero, Vector3.One);
+        var faces = SceneRenderer.Render(new Scene().Add(shape), new Camera(5, 0, 0), 300, 300);
+        Assert(faces.Count == 2, $"clipped face count {faces.Count}");
+        Assert(faces.All(Finite), "invalid clipped projection");
+    }),
+    ("near plane clips two vertices into one visible triangle", () => {
+        var shape = new Shape([new Triangle3(new(-.1f, -.1f, 4.9f), new(.1f, -.1f, 5),
+            new(0, .1f, 5))], 0xFF7799CC, Vector3.Zero, Vector3.Zero, Vector3.One);
+        var faces = SceneRenderer.Render(new Scene().Add(shape), new Camera(5, 0, 0), 300, 300);
+        Assert(faces.Count == 1, $"clipped face count {faces.Count}");
+        Assert(faces.All(Finite), "invalid clipped projection");
+    }),
+    ("unit meshes have outward, nondegenerate triangles", () => {
+        foreach (var shape in new[] { Shape.Box(), Shape.Sphere(), Shape.Cylinder(), Shape.Pyramid() })
+            foreach (var face in shape.Mesh) {
+                var normal = Vector3.Cross(face.B - face.A, face.C - face.A);
+                Assert(normal.LengthSquared() > 1e-10f, "degenerate mesh triangle");
+                Assert(Vector3.Dot(normal, (face.A + face.B + face.C) / 3) > 0, "inward mesh triangle");
+            }
+    }),
+    ("seeded camera and shape scenes render finite, deterministic faces", () => {
+        var random = new Random(71239);
+        for (var trial = 0; trial < 120; trial++) {
+            var scene = new Scene();
+            for (var i = 0; i < 5; i++)
+                scene.Add((i % 2 == 0 ? Shape.Box() : Shape.Sphere())
+                    .At((float)(random.NextDouble() * 6 - 3), (float)(random.NextDouble() * 6 - 3),
+                        (float)(random.NextDouble() * 6 - 3))
+                    .Rotated((float)random.NextDouble(), (float)random.NextDouble(), 0)
+                    .Scaled((float)(random.NextDouble() * 1.8 + .2)));
+            var camera = new Camera((float)(random.NextDouble() * 7 + 1.2),
+                (float)(random.NextDouble() * 6 - 3), (float)(random.NextDouble() * 2 - 1));
+            var first = SceneRenderer.Render(scene, camera, 360, 240);
+            var second = SceneRenderer.Render(scene, camera, 360, 240);
+            Assert(first.SequenceEqual(second), $"nondeterministic scene {trial}");
+            Assert(first.All(Finite), $"nonfinite scene {trial}");
+            for (var i = 1; i < first.Count; i++)
+                Assert(first[i - 1].Depth >= first[i].Depth, $"unsorted scene {trial}");
+        }
     })
 };
 var failed = 0;
@@ -74,3 +116,6 @@ if (failed == 0)
 }
 return failed == 0 ? 0 : 1;
 static void Assert(bool condition, string message) { if (!condition) throw new Exception(message); }
+static bool Finite(DrawTriangle face) => float.IsFinite(face.A.X) && float.IsFinite(face.A.Y) &&
+    float.IsFinite(face.B.X) && float.IsFinite(face.B.Y) && float.IsFinite(face.C.X) &&
+    float.IsFinite(face.C.Y) && float.IsFinite(face.Depth);
