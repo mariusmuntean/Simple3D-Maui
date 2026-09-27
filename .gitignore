@@ -3,4 +3,9 @@
 .DS_Store
 .vs/
 .idea/
+*.DotSettings.user
 __pycache__/
+_site/
+docs/site/api/
+.tools/
+artifacts/

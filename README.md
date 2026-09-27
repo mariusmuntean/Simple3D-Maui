@@ -1,52 +1,88 @@
 # Simple3D
 
-Small, approachable 3D drawings in .NET MAUI. Build an opaque scene from familiar shapes, place a `SceneView` in a page, and drag to look around. It runs on **iOS, Android and macOS through Mac Catalyst** with .NET 10.
+Small, depth-aware 3D drawings for .NET 10 MAUI on iOS, Android, and Mac Catalyst. Describe a scene with familiar shapes or an indexed mesh, place a `SceneView` in a page, then drag to orbit, pinch to zoom, and tap to pick the visible part.
+
+![Equipment scene](docs/site/images/Equipment.png)
+
+## Get started
+
+Add references to `Simple3D.Core` and `Simple3D.Maui`, and register SkiaSharp in your MAUI host:
+
+```csharp
+using SkiaSharp.Views.Maui.Controls.Hosting;
+
+var builder = MauiApp.CreateBuilder();
+builder.UseMauiApp<App>().UseSkiaSharp();
+```
+
+Create a view:
 
 ```csharp
 using Simple3D.Core;
 using Simple3D.Maui;
 
-var view = new SceneView
-{
-    HeightRequest = 320,
-    Scene = new Scene()
-        .Add(Shape.Box(0xFF8DA9FF).At(-.7f, 0, 0).Rotated(0, .4f, 0))
-        .Add(Shape.Sphere(0xFFFFB775).At(.7f, 0, 0))
-};
-Content = view;
+var scene = new Scene()
+    .Add(Shape.Box(0xFF8DA9FF).Named("Case").At(-.7f, 0, 0))
+    .Add(Shape.Sphere(0xFFFFB775).Named("Ball").At(.7f, 0, 0));
+var view = new SceneView { Scene = scene, HeightRequest = 320 };
+var details = new Label();
+view.Camera.FitToScene(scene, aspectRatio: 4f / 3);
+view.SelectionChanged += (_, shape) => details.Text = shape?.Name ?? "Background";
+Content = new VerticalStackLayout { Children = { view, details } };
 ```
 
-Drag to orbit, pinch to zoom, or call `view.Orbit(yawRadians, pitchRadians)`, `view.Zoom(factor)`, and `view.ResetCamera()`. Assign a new `Scene` to change composition; call `view.Refresh()` when changing the existing scene. Shapes are immutable; `At`, `Rotated` and `Scaled` return copies that replace the corresponding absolute position, rotation or size. For example, `Scaled(2).Scaled(3)` produces size 3. Other attributes and the shared mesh are preserved. Colors use opaque ARGB values (`0xFFRRGGBB`); transparent values are rejected. Angles are radians. The built-in unit shapes are centered at the origin; use `Scaled` for size.
+Core colors are opaque ARGB (`0xFFRRGGBB`). Shape transforms return immutable copies and set absolute values: `Scaled(2).Scaled(3)` results in size 3. `Scene` and `Camera` changes notify the view automatically. Keep mutation and rendering on the UI thread.
 
-## Open and run
+## Explore the repository
 
-Open **[Simple3D.sln](Simple3D.sln)** in a .NET 10 MAUI-capable IDE. It groups the libraries under `src`, the app under `samples`, and the executable regression projects under `tests`. Set **Simple3D.Demo** as the startup project, choose Android, iOS or Mac Catalyst and a device/simulator, then run. Apple targets require macOS and Xcode; Android requires the Android SDK and JDK. Install the corresponding MAUI workload before building.
+Open [Simple3D.sln](Simple3D.sln) in a .NET 10 MAUI-capable IDE. Select `Simple3D.Demo` as the startup project and a device or simulator. The solution includes:
 
-The test projects are console regression runners; run their `dotnet run` commands below rather than expecting Test Explorer discovery.
+- `src/Simple3D.Core`: portable indexed meshes, scenes, cameras, depth rendering, owned frames and picking.
+- `src/Simple3D.Maui`: a SkiaSharp `SceneView` with bindable scene and camera, frame caching, gestures and selection.
+- `samples/Simple3D.Demo`: an interactive equipment, packing and procedural surface gallery.
+- `samples/Simple3D.Examples`: a portable console runner that renders those scenes to PPM images.
+- `tests/Simple3D.Core.Tests` and `tests/Simple3D.Maui.Tests`: executable regression runners.
+- [Hostable documentation](docs/site/index.md): getting started, scene design, complex meshes, interaction, limits and XML-generated API reference.
 
-## Projects
-
-- `src/Simple3D.Core`: portable `net10.0` meshes, camera and deterministic projector. No MAUI or third-party dependency.
-- `src/Simple3D.Maui`: `SceneView` using the standard MAUI `GraphicsView` canvas and touch events.
-- `samples/Simple3D.Demo`: three selectable scenes, orbit and zoom controls; launch this project on a device or simulator.
-- `tests/Simple3D.Core.Tests`: dependency-free executable regression tests.
-- `tests/Simple3D.Maui.Tests`: portable tests of the real MAUI control's gesture events, drawing output and path disposal. Links the production view source against MAUI Controls, so these tests need no platform workload or emulator.
-
-Add project references to `Simple3D.Core` and `Simple3D.Maui`, or pack both locally. Install the .NET 10 MAUI workload and platform SDKs, then run the demo:
+Run portable verification and examples with:
 
 ```bash
-dotnet workload install maui
-dotnet run --project samples/Simple3D.Demo -f net10.0-maccatalyst
 dotnet run --project tests/Simple3D.Core.Tests -c Release
 dotnet run --project tests/Simple3D.Maui.Tests -c Release
+python3 -m unittest discover -s scripts -p 'test_*.py'
+dotnet run --project samples/Simple3D.Examples -c Release -- --all output
 ```
 
-On Android and iOS, select `net10.0-android` or `net10.0-ios` and a device/simulator. CI runs the portable tests, builds each demo target, and packs both libraries. The iOS simulator opens all three gallery scenes and compares their rendered drawings; the Android emulator opens the gallery. CI validates screenshots against the gallery's background, panel, and shape colors, and uploads them for inspection.
+The console runner writes binary PPM images. To regenerate the PNG documentation illustrations, install Pillow and run `python3 scripts/render-doc-images.py`.
 
-## Scope and performance
+## Documentation site
 
-Meshes are shared between instances. The renderer transforms and shades opaque triangles, removes back faces, clips against the near plane, then sorts them by depth for a lightweight native canvas draw. It is designed for small illustrations and diagrams, with a modest sphere tessellation. It is a software renderer, not a GPU scene engine. Intersecting geometry may sort incorrectly; transparent materials, mesh import, and hidden-surface depth buffers are outside the current scope. The test runner reports a per-frame rendering baseline for twelve spheres, without imposing a fragile time threshold. Test performance with your intended scene size and device before using dense or animated scenes.
+Install DocFX 2.81.0 as a local tool, then generate API metadata and a static site:
 
-## Milestones
+```bash
+dotnet tool install docfx --tool-path .tools --version 2.81.0
+.tools/docfx metadata docs/site/docfx.json --warningsAsErrors
+.tools/docfx build docs/site/docfx.json --warningsAsErrors
+python3 -m http.server 8000 --directory _site
+```
 
-See `docs/superpowers/` for the scope and implementation plan; git history records design, portable core and MAUI/demo milestones. GitHub Actions performs repeatable validation for pull requests and main branch pushes.
+Open `http://localhost:8000`. API metadata includes both Core and MAUI and therefore needs the MAUI workload. CI builds the site and uploads the static output. Hosting only requires serving `_site` as static files; this repository does not publish it automatically.
+
+## Local Mac setup
+
+In Rider, open **Settings → Build, Execution, Deployment → Toolset and Build** and select the .NET CLI installation containing the MAUI workloads. Use its automatically detected .NET SDK MSBuild. A different installation without workloads can produce missing MAUI references throughout the editor even when the code builds from the terminal. Save this setting for the current solution.
+
+If the default `dotnet` installation has no MAUI workloads, use the installation that has them (`dotnet workload list`), such as `$HOME/.dotnet/dotnet`:
+
+```bash
+DOTNET_ROOT="$HOME/.dotnet" "$HOME/.dotnet/dotnet" build samples/Simple3D.Demo -f net10.0-maccatalyst -c Debug
+open "samples/Simple3D.Demo/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/Simple3D Gallery.app"
+```
+
+For the locally tested Xcode 27 / Mac Catalyst workload 26.5.10301 combination, append `-p:ValidateXcodeVersion=false` to the build command. This bypasses the workload's Xcode 26.6 version check for local development; it does not make that toolchain combination officially supported. Prefer a matching Xcode/workload pair for release builds. The Mac app registers a MAUI scene delegate for the scene lifecycle required when launching this build on macOS 27.
+
+## Scope
+
+The software depth renderer handles intersecting opaque triangles and visible-shape picking. It has no transparency, texture mapping, shadowing, or GPU scene engine. Frames are bounded to 2,048 physical pixels per side; scenes are bounded by node, triangle, and raster sample budgets. Labels overlay geometry without depth testing. See [rendering limits](docs/site/rendering-limits.md) for exact thresholds and behavior. Profile intended scenes on target devices before using dense or animated content.
+
+GitHub Actions runs portable checks and platform builds. Native runtime coverage is still required before the draft pull request is ready to merge.

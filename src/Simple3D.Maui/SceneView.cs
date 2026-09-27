@@ -122,6 +122,7 @@ public sealed class SceneView : SKCanvasView
         return _frame.Pick((int)(x * _frame.Width / viewWidth), (int)(y * _frame.Height / viewHeight));
     }
 
+    /// <summary>Attaches notifications when the native handler connects and releases them on disconnect.</summary>
     protected override void OnHandlerChanged()
     {
         base.OnHandlerChanged();
@@ -165,11 +166,17 @@ public sealed class SceneView : SKCanvasView
     }
     private void SourceChanged(object? sender, EventArgs args) => Refresh();
 
+    internal static (int Width, int Height) RenderSize(int width, int height)
+    {
+        if (width <= 0 || height <= 0) return (0, 0);
+        var scale = Math.Min(1.0, (double)DepthRenderer.MaximumDimension / Math.Max(width, height));
+        return (Math.Max(1, (int)Math.Round(width * scale)), Math.Max(1, (int)Math.Round(height * scale)));
+    }
+
     private void Paint(object? sender, SKPaintSurfaceEventArgs args)
     {
         var canvas = args.Surface.Canvas;
-        var width = Math.Min(args.Info.Width, DepthRenderer.MaximumDimension);
-        var height = Math.Min(args.Info.Height, DepthRenderer.MaximumDimension);
+        var (width, height) = RenderSize(args.Info.Width, args.Info.Height);
         if (width < 1 || height < 1) return;
         var frame = CaptureFrame(width, height);
         using var bitmap = new SKBitmap(new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque));

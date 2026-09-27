@@ -1,0 +1,15 @@
+# Rendering model and limits
+
+`DepthRenderer` transforms opaque triangles, clips them at the camera near plane, shades them with a fixed light, rasterizes with per-pixel depth, and stores the visible leaf shape for picking. This resolves intersecting opaque geometry that a sorted-triangle painter cannot. `SceneRenderer` remains for older primitive/default-camera code and throws a diagnostic for newer features it cannot represent.
+
+| Limit | Value | Why |
+| --- | ---: | --- |
+| Width or height | 2,048 physical pixels | Bounds frame storage |
+| Scene node visits | 100,000 | Bounds grouping traversal |
+| Aggregate triangles | 1,000,000 | Bounds and render traversal |
+| Raster bounding-box samples | 16,000,000 per frame | Bounds overlapping screen-filling work |
+| Group hierarchy | 64 levels | Bounds recursion |
+
+The sample-work budget counts clipped triangle bounding boxes, including pixels outside the triangle but inside its box. Dense overlapping scenes can reach it before the triangle limit. Rendering then throws `ArgumentException`; reduce scene complexity, viewport size, or visible overlap. `Camera.FitToScene` calculates bounds before mutation and leaves the camera unchanged if a budget or overflow check fails.
+
+Only opaque surfaces are supported. Labels overlay the scene and are not depth tested. There is no far clipping plane, transparency, shadowing, texture sampling, or GPU scene engine. The CPU renderer is deterministic for the tested inputs and uses a bounded scratch depth buffer; each returned frame owns its pixel and picking arrays. Device frame rate depends on scene, viewport, and native presentation, so profile the target device for animation.

@@ -59,6 +59,11 @@ var tests = new (string Name, Action Run)[]
             expected.Zoom((float)factor);
         }
         Assert(actual.CaptureFrame(96, 96).Pixels.Span.SequenceEqual(expected.CaptureFrame(96, 96).Pixels.Span), "pinch changed scale incorrectly");
+    }),
+    ("oversize surfaces keep their aspect ratio", () =>
+    {
+        var size = SceneView.RenderSize(4000, 1000);
+        Assert(size.Width == 2048 && size.Height == 512, "render size distorted the surface");
     })
 };
 

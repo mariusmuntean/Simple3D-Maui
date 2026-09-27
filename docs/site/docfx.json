@@ -1,0 +1,23 @@
+{
+  "metadata": [
+    {
+      "src": [
+        { "src": "../..", "files": ["src/Simple3D.Core/Simple3D.Core.csproj", "src/Simple3D.Maui/Simple3D.Maui.csproj"] }
+      ],
+      "dest": "api"
+    }
+  ],
+  "build": {
+    "content": [
+      { "files": ["**/*.md", "**/toc.yml", "api/**.yml"], "exclude": ["_site/**"] }
+    ],
+    "resource": [{ "files": ["images/**"] }],
+    "dest": "../../_site",
+    "template": ["default"],
+    "globalMetadata": {
+      "_appTitle": "Simple3D",
+      "_appName": "Simple3D",
+      "_enableSearch": true
+    }
+  }
+}
