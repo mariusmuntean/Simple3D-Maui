@@ -79,7 +79,7 @@ DOTNET_ROOT="$HOME/.dotnet" "$HOME/.dotnet/dotnet" build samples/Simple3D.Demo -
 open "samples/Simple3D.Demo/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/Simple3D Gallery.app"
 ```
 
-For the locally tested Xcode 27 / Mac Catalyst workload 26.5.10301 combination, append `-p:ValidateXcodeVersion=false` to the build command. This bypasses the workload's Xcode 26.6 version check for local development; it does not make that toolchain combination officially supported. Prefer a matching Xcode/workload pair for release builds. The Mac app registers a MAUI scene delegate for the scene lifecycle required when launching this build on macOS 27.
+The demo's Debug iOS and Mac Catalyst builds skip the Xcode version check so the locally tested Xcode 27 / Mac Catalyst workload 26.5.10301 combination builds directly from Rider or the command above. This does not make that toolchain combination officially supported. Release builds retain the version check; use a matching Xcode/workload pair. GitHub's macOS jobs select Xcode 26.6 explicitly. The Mac app registers a MAUI scene delegate for the scene lifecycle required when launching this build on macOS 27.
 
 ## Scope
 

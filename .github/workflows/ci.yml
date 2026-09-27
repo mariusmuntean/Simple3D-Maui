@@ -12,6 +12,7 @@ jobs:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
+      - run: sudo xcode-select --switch /Applications/Xcode_26.6.app
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
@@ -54,6 +55,7 @@ jobs:
             rid: android-arm64
     steps:
       - uses: actions/checkout@v4
+      - run: sudo xcode-select --switch /Applications/Xcode_26.6.app
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
