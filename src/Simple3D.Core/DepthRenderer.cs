@@ -42,6 +42,13 @@ public sealed class RenderFrame
     }
 }
 
+/// <summary>Indicates that clipped triangle coverage exceeded the per-frame raster work budget.</summary>
+public sealed class RasterBudgetExceededException : ArgumentException
+{
+    /// <summary>Creates a raster budget diagnostic for the scene argument.</summary>
+    public RasterBudgetExceededException() : base("Scene exceeds raster sample budget.", "scene") { }
+}
+
 /// <summary>Opaque software triangle rasterizer with per-pixel depth and picking. Instances reuse depth scratch storage and are not thread safe.</summary>
 /// <remarks>Transforms use single precision; triangles whose transformed positions or normals overflow or collapse are skipped. There is no far clipping plane.</remarks>
 public sealed class DepthRenderer
@@ -167,7 +174,7 @@ public sealed class DepthRenderer
             if (minX > maxX || minY > maxY || !double.IsFinite(minX + maxX + minY + maxY)) return;
             rasterSamples += ((long)maxX - (long)minX + 1) * ((long)maxY - (long)minY + 1);
             if (rasterSamples > MaximumRasterSamples)
-                throw new ArgumentException("Scene exceeds raster sample budget.", nameof(scene));
+                throw new RasterBudgetExceededException();
             for (var y = (int)minY; y <= (int)maxY; y++)
                 for (var x = (int)minX; x <= (int)maxX; x++)
                 {

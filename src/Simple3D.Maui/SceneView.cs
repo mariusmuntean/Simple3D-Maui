@@ -173,20 +173,36 @@ public sealed class SceneView : SKCanvasView
         return (Math.Max(1, (int)Math.Round(width * scale)), Math.Max(1, (int)Math.Round(height * scale)));
     }
 
+    internal RenderFrame CaptureSurfaceFrame(int surfaceWidth, int surfaceHeight)
+    {
+        var (width, height) = RenderSize(surfaceWidth, surfaceHeight);
+        while (true)
+        {
+            try { return CaptureFrame(width, height); }
+            catch (RasterBudgetExceededException) when (width > 1 || height > 1)
+            {
+                width = Math.Max(1, width / 2);
+                height = Math.Max(1, height / 2);
+            }
+        }
+    }
+
+    internal static float LabelFontSize(int surfaceWidth, double layoutWidth) =>
+        layoutWidth > 0 ? 14f * (float)(surfaceWidth / layoutWidth) : 14f;
+
     private void Paint(object? sender, SKPaintSurfaceEventArgs args)
     {
         var canvas = args.Surface.Canvas;
-        var (width, height) = RenderSize(args.Info.Width, args.Info.Height);
-        if (width < 1 || height < 1) return;
-        var frame = CaptureFrame(width, height);
-        using var bitmap = new SKBitmap(new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque));
+        if (args.Info.Width < 1 || args.Info.Height < 1) return;
+        var frame = CaptureSurfaceFrame(args.Info.Width, args.Info.Height);
+        using var bitmap = new SKBitmap(new SKImageInfo(frame.Width, frame.Height, SKColorType.Bgra8888, SKAlphaType.Opaque));
         MemoryMarshal.AsBytes(frame.Pixels.Span).CopyTo(bitmap.GetPixelSpan());
         canvas.DrawBitmap(bitmap, new SKRect(0, 0, args.Info.Width, args.Info.Height));
         if (frame.Labels.Count == 0) return;
-        using var font = new SKFont(SKTypeface.Default, 14);
+        using var font = new SKFont(SKTypeface.Default, LabelFontSize(args.Info.Width, Width));
         using var paint = new SKPaint { IsAntialias = true };
-        var sx = (float)args.Info.Width / width;
-        var sy = (float)args.Info.Height / height;
+        var sx = (float)args.Info.Width / frame.Width;
+        var sy = (float)args.Info.Height / frame.Height;
         foreach (var label in frame.Labels)
         {
             paint.Color = new SKColor((byte)(label.Label.Color >> 16), (byte)(label.Label.Color >> 8), (byte)label.Label.Color);

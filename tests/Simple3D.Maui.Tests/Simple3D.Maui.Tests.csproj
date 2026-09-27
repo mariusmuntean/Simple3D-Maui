@@ -11,5 +11,6 @@
     <PackageReference Include="SkiaSharp.Views.Maui.Controls" Version="3.119.2" />
     <ProjectReference Include="../../src/Simple3D.Core/Simple3D.Core.csproj" />
     <Compile Include="../../src/Simple3D.Maui/SceneView.cs" Link="SceneView.cs" />
+    <Compile Include="../../samples/Simple3D.Shared/DemoScenes.cs" Link="DemoScenes.cs" />
   </ItemGroup>
 </Project>

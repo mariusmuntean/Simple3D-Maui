@@ -207,7 +207,9 @@ internal static class CoreRegressionTests
         var large = Triangle(new(-20, -20, 0), new(20, -20, 0), new(0, 20, 0), 0xFF123456);
         var scene = new Scene();
         for (var i = 0; i < 20; i++) scene.Add(large);
-        Throws(() => new DepthRenderer().Render(scene, new Camera(5, 0, 0), 1024, 1024));
+        try { new DepthRenderer().Render(scene, new Camera(5, 0, 0), 1024, 1024); }
+        catch (RasterBudgetExceededException) { return; }
+        throw new InvalidOperationException("Expected a specific raster budget diagnostic.");
     }
 
     private static void LegacyFeatureGuard()

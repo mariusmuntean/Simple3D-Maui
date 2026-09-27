@@ -1,6 +1,7 @@
 using Microsoft.Maui.Controls;
 using Simple3D.Core;
 using Simple3D.Maui;
+using Simple3D.Shared;
 
 var tests = new (string Name, Action Run)[]
 {
@@ -64,6 +65,19 @@ var tests = new (string Name, Action Run)[]
     {
         var size = SceneView.RenderSize(4000, 1000);
         Assert(size.Width == 2048 && size.Height == 512, "render size distorted the surface");
+    }),
+    ("zoomed gallery stays renderable within raster budget", () =>
+    {
+        var sample = DemoScenes.Packing();
+        var view = new SceneView { Scene = sample.Scene, Camera = sample.Camera };
+        for (var i = 0; i < 5; i++) view.Zoom(1.25f);
+        var frame = view.CaptureSurfaceFrame(1170, 1320);
+        Assert(frame.Width < 1170 && frame.Height < 1320, "budget did not lower resolution");
+        Assert(frame.Pixels.Span.ToArray().Any(p => p != 0xFFF4F6FA), "gallery disappeared");
+    }),
+    ("label size follows display density", () =>
+    {
+        Assert(Math.Abs(SceneView.LabelFontSize(1170, 390) - 42) < .001f, "3x label is too small");
     })
 };
 

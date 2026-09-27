@@ -83,6 +83,6 @@ For the locally tested Xcode 27 / Mac Catalyst workload 26.5.10301 combination, 
 
 ## Scope
 
-The software depth renderer handles intersecting opaque triangles and visible-shape picking. It has no transparency, texture mapping, shadowing, or GPU scene engine. Frames are bounded to 2,048 physical pixels per side; scenes are bounded by node, triangle, and raster sample budgets. Labels overlay geometry without depth testing. See [rendering limits](docs/site/rendering-limits.md) for exact thresholds and behavior. Profile intended scenes on target devices before using dense or animated content.
+The software depth renderer handles intersecting opaque triangles and visible-shape picking. It has no transparency, texture mapping, shadowing, or GPU scene engine. Frames are bounded to 2,048 physical pixels per side; scenes are bounded by node, triangle, and raster sample budgets. The MAUI view lowers render resolution when an interactive view reaches the raster budget. Labels overlay geometry without depth testing. See [rendering limits](docs/site/rendering-limits.md) for exact thresholds and behavior. Profile intended scenes on target devices before using dense or animated content.
 
-GitHub Actions runs portable checks and platform builds. Native runtime coverage is still required before the draft pull request is ready to merge.
+GitHub Actions runs portable checks and platform builds. Local Mac Catalyst, iOS Simulator, and Android Emulator checks do not replace the pull request's pending CI platform jobs; keep the pull request draft until those jobs can run and pass.

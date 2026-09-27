@@ -2,7 +2,7 @@
 
 `SceneView` is an `SKCanvasView` backed by the CPU `DepthRenderer`. It keeps one owned `RenderFrame` per view and reuses it until a bound scene, camera, background, or viewport size changes. The frame contains packed opaque ARGB pixels, projected labels, and shape IDs for depth-aware picking.
 
-The control installs drag, pinch, and tap gestures. Drag orbits, each pinch event applies its incremental zoom factor, and tap selects the visible leaf shape. Handle the event to show details:
+The control installs drag, pinch, and tap gestures. Drag orbits, each pinch event applies its incremental zoom factor, and tap selects the visible leaf shape. Projected label text scales with display density. Handle the event to show details:
 
 ```csharp
 view.SelectionChanged += (_, shape) =>
