@@ -2,6 +2,12 @@ using System.Numerics;
 
 namespace Simple3D.Core;
 
+/// <summary>A projected triangle for the legacy painter renderer.</summary>
+/// <param name="A">First screen vertex.</param>
+/// <param name="B">Second screen vertex.</param>
+/// <param name="C">Third screen vertex.</param>
+/// <param name="Depth">Mean view depth.</param>
+/// <param name="Color">Packed ARGB color.</param>
 public readonly record struct DrawTriangle(Vector2 A, Vector2 B, Vector2 C, float Depth, uint Color);
 
 /// <summary>Projects small opaque scenes into ordered, flat-shaded screen triangles.</summary>
@@ -10,6 +16,7 @@ public static class SceneRenderer
     private const float NearPlane = .05f;
     private readonly record struct ClipVertex(Vector3 Position, float Depth);
 
+    /// <summary>Legacy sorted-triangle projection. Use DepthRenderer for intersecting geometry, groups, camera targets and orthographic views.</summary>
     public static IReadOnlyList<DrawTriangle> Render(Scene scene, Camera camera, float width, float height)
     {
         ArgumentNullException.ThrowIfNull(scene);
@@ -107,3 +114,4 @@ public static class SceneRenderer
         return (color & 0xFF000000) | (r << 16) | (g << 8) | b;
     }
 }
+

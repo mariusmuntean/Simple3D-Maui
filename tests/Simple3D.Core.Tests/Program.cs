@@ -3,6 +3,38 @@ using Simple3D.Core;
 
 var tests = new (string Name, Action Run)[]
 {
+    ("indexed meshes validate and defensively copy", () => {
+        var vertices = new[] { new Vector3(-1,-1,0), new Vector3(1,-1,0), new Vector3(0,1,0) };
+        var mesh = new Mesh(vertices, new[] {0,1,2}); vertices[0] = Vector3.Zero;
+        Assert(mesh.Vertices[0].X == -1, "vertices changed");
+        try { _ = new Mesh(vertices, new[] {0,1,9}); throw new Exception("bad index accepted"); } catch (ArgumentException) { }
+        try { _ = new Mesh(vertices, new[] {0,0,1}); throw new Exception("degenerate accepted"); } catch (ArgumentException) { }
+    }),
+    ("scene events and immutable groups", () => {
+        var child = Shape.Box().Named("child"); var group = Shape.Group(child).At(4,0,0);
+        var scene = new Scene(); var changes = 0; scene.Changed += (_,_) => changes++;
+        scene.Add(group); Assert(scene.GetBounds()!.Value.Min.X == 3.5f, "group transform");
+        Assert(scene.Replace(group, child), "replace"); Assert(scene.Remove(child), "remove");
+        scene.Clear(); Assert(changes == 3, "event count");
+    }),
+    ("depth visibility picking and retained frames", () => {
+        var near = Shape.Box(0xFFFF0000).Named("near").At(0,0,1);
+        var far = Shape.Box(0xFF0000FF).Named("far");
+        var renderer = new DepthRenderer(); var scene = new Scene().Add(near).Add(far);
+        var frame = renderer.Render(scene, new Camera(5,0,0), 100,100);
+        Assert(ReferenceEquals(frame.Pick(50,50), near), "occluded pick");
+        renderer.Render(new Scene(),new Camera(),10,10);
+        Assert(ReferenceEquals(frame.Pick(50,50), near), "frame was overwritten");
+    }),
+    ("camera fit and projected world labels", () => {
+        var scene = new Scene().Add(Shape.Box().At(20,3,0)).AddLabel(new WorldLabel("A",new(20,3,0)));
+        var camera = new Camera(5,0,0); camera.FitToScene(scene,2);
+        Assert(camera.Target == new Vector3(20,3,0), "fit target");
+        var frame = new DepthRenderer().Render(scene,camera,200,100);
+        Assert(frame.Labels.Count == 1 && MathF.Abs(frame.Labels[0].Position.X-100)<.01f,"label projection");
+        camera.Projection = CameraProjection.Orthographic;
+        Assert(new DepthRenderer().Render(scene,camera,200,100).Pick(100,50) != null,"orthographic fit");
+    }),
     ("built-in meshes have triangles", () => {
         foreach (var shape in new[] { Shape.Box(), Shape.Sphere(), Shape.Cylinder(), Shape.Pyramid() })
             Assert(shape.TriangleCount > 0, "empty mesh");
@@ -139,6 +171,7 @@ var tests = new (string Name, Action Run)[]
     })
 };
 var failed = 0;
+tests = tests.Concat(CoreRegressionTests.Cases).ToArray();
 foreach (var (name, run) in tests) {
     try { run(); Console.WriteLine($"PASS {name}"); }
     catch (Exception error) { failed++; Console.Error.WriteLine($"FAIL {name}: {error.Message}"); }
@@ -151,7 +184,14 @@ if (failed == 0)
     for (var i = 0; i < 30; i++) SceneRenderer.Render(scene, new Camera(), 400, 400);
     var timer = System.Diagnostics.Stopwatch.StartNew();
     for (var i = 0; i < 300; i++) SceneRenderer.Render(scene, new Camera(), 400, 400);
-    Console.WriteLine($"Render baseline (12 spheres, {300} frames): {timer.Elapsed.TotalMilliseconds / 300:F2} ms/frame on this runner");
+    Console.WriteLine($"Legacy baseline (12 spheres, 400x400, {300} frames): {timer.Elapsed.TotalMilliseconds / 300:F2} ms/frame on this runner");
+    var depthRenderer = new DepthRenderer();
+    var camera = new Camera();
+    for (var i = 0; i < 20; i++) depthRenderer.Render(scene, camera, 400, 300);
+    var allocated = GC.GetAllocatedBytesForCurrentThread();
+    timer.Restart();
+    for (var i = 0; i < 100; i++) depthRenderer.Render(scene, camera, 400, 300);
+    Console.WriteLine($"Depth renderer (12 spheres, {scene.Shapes.Sum(shape => shape.TriangleCount)} triangles, 400x300, 100 frames): {timer.Elapsed.TotalMilliseconds / 100:F2} ms/frame, {(GC.GetAllocatedBytesForCurrentThread() - allocated) / 100:N0} bytes/frame on this runner");
 }
 return failed == 0 ? 0 : 1;
 static void Assert(bool condition, string message) { if (!condition) throw new Exception(message); }
