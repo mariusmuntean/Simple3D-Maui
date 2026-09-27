@@ -97,13 +97,21 @@ public sealed class Scene
         }
     }
 
-    /// <summary>World axis-aligned bounds of geometry, or null for an empty scene. Labels are excluded. Overflowing transforms or excessive node visits throw.</summary>
+    /// <summary>World axis-aligned bounds of geometry, or null for an empty scene. Labels are excluded. Overflowing transforms or excessive node or triangle visits throw.</summary>
     public Bounds3? GetBounds()
     {
+        var nodes = Flatten().ToArray();
+        long triangleCount = 0;
+        foreach (var (shape, _) in nodes)
+        {
+            triangleCount += shape.TriangleCount;
+            if (triangleCount > DepthRenderer.MaximumTriangles)
+                throw new ArgumentException("Scene exceeds triangle budget.", nameof(Shapes));
+        }
         var min = new Vector3(float.PositiveInfinity);
         var max = new Vector3(float.NegativeInfinity);
         var any = false;
-        foreach (var (shape, transform) in Flatten())
+        foreach (var (shape, transform) in nodes)
             foreach (var triangle in shape.Mesh)
             {
                 Include(Vector3.Transform(triangle.A, transform));

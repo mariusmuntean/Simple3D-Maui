@@ -12,7 +12,10 @@ internal static class CoreRegressionTests
         ("intersecting triangles select nearest visible surface", Intersections),
         ("seeded depth and picking agree with independent ray oracle", RayOracle),
         ("raster clipping extremes resizing and empty frames remain bounded", ExtremeFrames),
-        ("group depth and node budget are bounded", HierarchyLimits)
+        ("group depth and node budget are bounded", HierarchyLimits),
+        ("bounds and fit reject excessive repeated mesh triangles", BoundsBudget),
+        ("raster sample work is bounded", RasterWorkBudget),
+        ("legacy renderer rejects unsupported scene features", LegacyFeatureGuard)
     ];
 
     private static void CameraNotifications()
@@ -180,6 +183,54 @@ internal static class CoreRegressionTests
         var triangles = Shape.Sphere();
         for (var i = 0; i < 12; i++) triangles = Shape.Group(triangles, triangles);
         Throws(() => new DepthRenderer().Render(new Scene().Add(triangles), new Camera(), 1, 1));
+    }
+
+    private static void BoundsBudget()
+    {
+        var shared = Shape.Sphere();
+        while (shared.TriangleCount <= 1_000_000 && CountTriangles(shared) <= 1_000_000)
+            shared = Shape.Group(shared, shared);
+        var scene = new Scene().Add(shared);
+        var camera = new Camera();
+        var original = (camera.Target, camera.Distance, camera.OrthographicHeight);
+        Throws(() => scene.GetBounds());
+        Throws(() => camera.FitToScene(scene));
+        Check((camera.Target, camera.Distance, camera.OrthographicHeight) == original, "failed fit changed camera");
+
+        static long CountTriangles(Shape shape) => shape.TriangleCount + shape.Children.Sum(CountTriangles);
+    }
+
+    private static void RasterWorkBudget()
+    {
+        var large = Triangle(new(-20, -20, 0), new(20, -20, 0), new(0, 20, 0), 0xFF123456);
+        var scene = new Scene();
+        for (var i = 0; i < 20; i++) scene.Add(large);
+        Throws(() => new DepthRenderer().Render(scene, new Camera(5, 0, 0), 1024, 1024));
+    }
+
+    private static void LegacyFeatureGuard()
+    {
+        var rendererScene = new Scene().Add(Shape.Box());
+        var camera = new Camera();
+        camera.Target = Vector3.One;
+        Unsupported(() => SceneRenderer.Render(rendererScene, camera, 32, 32));
+        camera.Target = Vector3.Zero;
+        camera.Projection = CameraProjection.Orthographic;
+        Unsupported(() => SceneRenderer.Render(rendererScene, camera, 32, 32));
+        camera.Projection = CameraProjection.Perspective;
+        camera.NearPlane = .2f;
+        Unsupported(() => SceneRenderer.Render(rendererScene, camera, 32, 32));
+        camera.NearPlane = .05f;
+        Unsupported(() => SceneRenderer.Render(new Scene().Add(Shape.Group(Shape.Box())), camera, 32, 32));
+        Unsupported(() => SceneRenderer.Render(new Scene().Add(Shape.Box().WithMaterial(new Material(lit: false))), camera, 32, 32));
+        Check(SceneRenderer.Render(rendererScene, camera, 32, 32).Count > 0, "legacy primitive regression");
+    }
+
+    private static void Unsupported(Action action)
+    {
+        try { action(); }
+        catch (NotSupportedException) { return; }
+        throw new InvalidOperationException("Expected unsupported feature diagnostic.");
     }
 
     private static Shape Triangle(Vector3 a, Vector3 b, Vector3 c, uint color) =>

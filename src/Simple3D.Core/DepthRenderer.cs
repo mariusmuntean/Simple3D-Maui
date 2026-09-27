@@ -50,6 +50,8 @@ public sealed class DepthRenderer
     public const int MaximumDimension = 2048;
     /// <summary>Maximum triangles visited per render, including repeated mesh instances.</summary>
     public const int MaximumTriangles = 1_000_000;
+    /// <summary>Maximum total clipped triangle bounding-box samples evaluated per frame.</summary>
+    public const long MaximumRasterSamples = 16_000_000;
     private float[] _depth = [];
 
     /// <summary>Renders an owned snapshot. Dimensions must be 1..2048; background must be opaque. Equal-depth pixels favor earlier shapes. Scenes exceeding triangle or node budgets throw.</summary>
@@ -75,6 +77,7 @@ public sealed class DepthRenderer
         Array.Fill(pixels, background);
         var ids = new int[count];
         Array.Fill(ids, -1);
+        long rasterSamples = 0;
 
         var basis = camera.Basis();
         var scale = height / (2 * Math.Tan(camera.FieldOfView * .5));
@@ -162,6 +165,9 @@ public sealed class DepthRenderer
             var minY = Math.Max(0, Math.Ceiling(Math.Min(pa.Y, Math.Min(pb.Y, pc.Y)) - .5));
             var maxY = Math.Min(height - 1, Math.Floor(Math.Max(pa.Y, Math.Max(pb.Y, pc.Y)) - .5));
             if (minX > maxX || minY > maxY || !double.IsFinite(minX + maxX + minY + maxY)) return;
+            rasterSamples += ((long)maxX - (long)minX + 1) * ((long)maxY - (long)minY + 1);
+            if (rasterSamples > MaximumRasterSamples)
+                throw new ArgumentException("Scene exceeds raster sample budget.", nameof(scene));
             for (var y = (int)minY; y <= (int)maxY; y++)
                 for (var x = (int)minX; x <= (int)maxX; x++)
                 {
