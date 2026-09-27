@@ -28,7 +28,7 @@ Content = view;
 
 For a display-only scene, set `IsInteractive = false`. This removes the view's orbit, pinch and tap gestures. The default is interactive; you can switch the property at runtime. The camera can still be changed in code.
 
-For simple animation, replace an immutable shape on the UI thread. Each replacement invalidates the frame. Set `MaximumRenderDimension` to a smaller physical size while animating to bound the software rasterizer's per-frame work, then restore it when the animation stops. The [gallery demo](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Demo/GalleryPage.cs) has a timed example that rotates a shape at a target of 30 updates per second and stops its timer when the page disappears. Actual frame rate depends on the device, viewport and scene.
+For simple animation, replace immutable shapes on the UI thread. Each replacement invalidates the frame. Set `MaximumRenderDimension` to a smaller physical size while animating to bound the software rasterizer's per-frame work, then restore it when the animation stops. The [gallery demo](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Demo/GalleryPage.cs) gives each scene its own time-based motion. Its timer targets 60 updates per second and stops when the page disappears; actual rendered frame rate depends on the device, viewport and scene.
 
 Colors passed to Core use opaque `0xAARRGGBB` values. `SceneView.SceneBackgroundColor` accepts a MAUI `Color` and must be opaque. Angles are radians. Shape transforms return copies; adding a changed shape requires `Scene.Replace` or `Scene.Add`. `Scene.Changed` and `Camera.Changed` trigger a redraw automatically. Keep scene and camera mutations on the UI thread.
 
