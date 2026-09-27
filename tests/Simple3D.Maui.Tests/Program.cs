@@ -1,8 +1,10 @@
 using Microsoft.Maui.Controls;
+using System.Runtime.InteropServices;
 using Simple3D.Core;
 using Simple3D.Maui;
 using Simple3D.Shared;
 using Simple3D.Demo;
+using SkiaSharp;
 
 var tests = new (string Name, Action Run)[]
 {
@@ -18,6 +20,36 @@ var tests = new (string Name, Action Run)[]
         var second = view.CaptureFrame(96, 80);
         camera.Orbit(.2f, 0);
         Assert(!ReferenceEquals(second, view.CaptureFrame(96, 80)), "camera mutation kept stale frame");
+    }),
+    ("native paint bitmap is reused and tracks rendered pixels", () =>
+    {
+        var scene = new Scene().Add(Shape.Box());
+        var view = new SceneView { Scene = scene };
+        var first = view.CaptureFrame(96, 80);
+        var bitmap = view.PaintBitmap(first);
+        Assert(ReferenceEquals(bitmap, view.PaintBitmap(first)), "unchanged paint allocated a new bitmap");
+        Assert(bitmap.GetPixelSpan().SequenceEqual(MemoryMarshal.AsBytes(first.Pixels.Span)),
+            "first bitmap pixels differ from frame");
+        using var painted = new SKBitmap(new SKImageInfo(96, 80, SKColorType.Bgra8888, SKAlphaType.Opaque));
+        using var canvas = new SKCanvas(painted);
+        canvas.DrawBitmap(bitmap, 0, 0);
+        var before = painted.GetPixelSpan().ToArray();
+        scene.Add(Shape.Sphere().At(1, 0, 0));
+        var second = view.CaptureFrame(96, 80);
+        Assert(!ReferenceEquals(first, second), "scene mutation did not render");
+        Assert(ReferenceEquals(bitmap, view.PaintBitmap(second)), "same-size paint allocated a new bitmap");
+        Assert(bitmap.GetPixelSpan().SequenceEqual(MemoryMarshal.AsBytes(second.Pixels.Span)),
+            "updated bitmap pixels differ from frame");
+        canvas.DrawBitmap(bitmap, 0, 0);
+        Assert(!before.SequenceEqual(painted.GetPixelSpan().ToArray()), "native paint stayed stale after a scene update");
+        Assert(painted.GetPixelSpan().SequenceEqual(MemoryMarshal.AsBytes(second.Pixels.Span)),
+            "native paint differs from the updated frame");
+        var resized = view.PaintBitmap(view.CaptureFrame(64, 64));
+        Assert(!ReferenceEquals(bitmap, resized), "resized paint kept the old bitmap");
+        view.ReleasePaintBitmap();
+        Assert(!ReferenceEquals(resized, view.PaintBitmap(view.CaptureFrame(64, 64))),
+            "released native bitmap was reused");
+        view.ReleasePaintBitmap();
     }),
     ("replaced scene and camera no longer invalidate the view", () =>
     {

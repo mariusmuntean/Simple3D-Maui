@@ -36,6 +36,8 @@ public sealed class SceneView : SKCanvasView
 
     private readonly DepthRenderer _renderer = new();
     private RenderFrame? _frame;
+    private RenderFrame? _paintBitmapFrame;
+    private SKBitmap? _paintBitmap;
     private bool _dirty = true;
     private bool _subscriptionsActive;
     private bool _wasConnected;
@@ -181,6 +183,7 @@ public sealed class SceneView : SKCanvasView
         if (Handler is null)
         {
             _panActive = false;
+            ReleasePaintBitmap();
             if (_wasConnected) SetSubscriptions(false);
         }
         else
@@ -276,14 +279,35 @@ public sealed class SceneView : SKCanvasView
     internal static float LabelFontSize(int surfaceWidth, double layoutWidth) =>
         layoutWidth > 0 ? 14f * (float)(surfaceWidth / layoutWidth) : 14f;
 
+    internal SKBitmap PaintBitmap(RenderFrame frame)
+    {
+        if (_paintBitmap is null || _paintBitmap.Width != frame.Width || _paintBitmap.Height != frame.Height)
+        {
+            ReleasePaintBitmap();
+            _paintBitmap = new SKBitmap(new SKImageInfo(frame.Width, frame.Height, SKColorType.Bgra8888, SKAlphaType.Opaque));
+        }
+        if (!ReferenceEquals(_paintBitmapFrame, frame))
+        {
+            MemoryMarshal.AsBytes(frame.Pixels.Span).CopyTo(_paintBitmap.GetPixelSpan());
+            _paintBitmap.NotifyPixelsChanged();
+            _paintBitmapFrame = frame;
+        }
+        return _paintBitmap;
+    }
+
+    internal void ReleasePaintBitmap()
+    {
+        _paintBitmap?.Dispose();
+        _paintBitmap = null;
+        _paintBitmapFrame = null;
+    }
+
     private void Paint(object? sender, SKPaintSurfaceEventArgs args)
     {
         var canvas = args.Surface.Canvas;
         if (args.Info.Width < 1 || args.Info.Height < 1) return;
         var frame = CaptureSurfaceFrame(args.Info.Width, args.Info.Height);
-        using var bitmap = new SKBitmap(new SKImageInfo(frame.Width, frame.Height, SKColorType.Bgra8888, SKAlphaType.Opaque));
-        MemoryMarshal.AsBytes(frame.Pixels.Span).CopyTo(bitmap.GetPixelSpan());
-        canvas.DrawBitmap(bitmap, new SKRect(0, 0, args.Info.Width, args.Info.Height));
+        canvas.DrawBitmap(PaintBitmap(frame), new SKRect(0, 0, args.Info.Width, args.Info.Height));
         if (frame.Labels.Count == 0) return;
         using var font = new SKFont(SKTypeface.Default, LabelFontSize(args.Info.Width, Width));
         using var paint = new SKPaint { IsAntialias = true };
