@@ -74,6 +74,18 @@ var tests = new (string Name, Action Run)[]
         view.ApplyMacPinch(GestureStatus.Running, .8);
         Assert(Math.Abs(view.Camera.Distance - 10f / 1.2f) < .0001f, "next gesture did not reset scale");
     }),
+    ("orbit preview restores full resolution after mouse drag", () =>
+    {
+        var view = new SceneView { Scene = new Scene().Add(Shape.Box()) };
+        var pan = (IPanGestureController)view.GestureRecognizers.OfType<PanGestureRecognizer>().Single();
+        pan.SendPanStarted(view, 1);
+        pan.SendPan(view, 24, 0, 1);
+        var preview = view.CaptureSurfaceFrame(2048, 630);
+        Assert(preview.Width == 1024 && preview.Height == 315, "drag preview still renders at full desktop resolution");
+        pan.SendPanCompleted(view, 1);
+        var final = view.CaptureSurfaceFrame(2048, 630);
+        Assert(final.Width == 2048 && final.Height == 630, "full resolution was not restored after drag");
+    }),
     ("oversize surfaces keep their aspect ratio", () =>
     {
         var size = SceneView.RenderSize(4000, 1000);

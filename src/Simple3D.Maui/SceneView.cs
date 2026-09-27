@@ -14,6 +14,7 @@ namespace Simple3D.Maui;
 /// <summary>A depth-rendered, touch-enabled surface for small opaque scenes. Mutate its scene and camera on the UI thread.</summary>
 public sealed class SceneView : SKCanvasView
 {
+    private const int DragPreviewMaximumDimension = 1024;
     /// <summary>The scene displayed by this view.</summary>
     public static readonly BindableProperty SceneProperty = BindableProperty.Create(nameof(Scene), typeof(Scene), typeof(SceneView),
         defaultValueCreator: _ => new Scene(), propertyChanged: (bindable, oldValue, newValue) =>
@@ -31,6 +32,7 @@ public sealed class SceneView : SKCanvasView
     private bool _dirty = true;
     private bool _subscriptionsActive;
     private bool _wasConnected;
+    private bool _panActive;
     private double _lastPanX, _lastPanY;
     private double _lastMacPinchScale = 1;
 #if MACCATALYST
@@ -51,13 +53,14 @@ public sealed class SceneView : SKCanvasView
         var pan = new PanGestureRecognizer();
         pan.PanUpdated += (_, args) =>
         {
-            if (args.StatusType == GestureStatus.Started) { _lastPanX = _lastPanY = 0; }
+            if (args.StatusType == GestureStatus.Started) { _lastPanX = _lastPanY = 0; _panActive = true; }
             else if (args.StatusType == GestureStatus.Running)
             {
                 Orbit((float)((args.TotalX - _lastPanX) * .012), (float)(-(args.TotalY - _lastPanY) * .012));
                 _lastPanX = args.TotalX;
                 _lastPanY = args.TotalY;
             }
+            else { _panActive = false; Refresh(); }
         };
         GestureRecognizers.Add(pan);
 #if !MACCATALYST
@@ -155,6 +158,7 @@ public sealed class SceneView : SKCanvasView
         base.OnHandlerChanged();
         if (Handler is null)
         {
+            _panActive = false;
             if (_wasConnected) SetSubscriptions(false);
         }
         else
@@ -212,16 +216,17 @@ public sealed class SceneView : SKCanvasView
     }
     private void SourceChanged(object? sender, EventArgs args) => Refresh();
 
-    internal static (int Width, int Height) RenderSize(int width, int height)
+    internal static (int Width, int Height) RenderSize(int width, int height, int maximumDimension = DepthRenderer.MaximumDimension)
     {
         if (width <= 0 || height <= 0) return (0, 0);
-        var scale = Math.Min(1.0, (double)DepthRenderer.MaximumDimension / Math.Max(width, height));
+        var scale = Math.Min(1.0, (double)maximumDimension / Math.Max(width, height));
         return (Math.Max(1, (int)Math.Round(width * scale)), Math.Max(1, (int)Math.Round(height * scale)));
     }
 
     internal RenderFrame CaptureSurfaceFrame(int surfaceWidth, int surfaceHeight)
     {
-        var (width, height) = RenderSize(surfaceWidth, surfaceHeight);
+        var (width, height) = RenderSize(surfaceWidth, surfaceHeight,
+            _panActive ? DragPreviewMaximumDimension : DepthRenderer.MaximumDimension);
         while (true)
         {
             try { return CaptureFrame(width, height); }
