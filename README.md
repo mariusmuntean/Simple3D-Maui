@@ -18,6 +18,12 @@ Content = view;
 
 Drag to orbit, pinch to zoom, or call `view.Orbit(yawRadians, pitchRadians)`, `view.Zoom(factor)`, and `view.ResetCamera()`. Assign a new `Scene` to change composition; call `view.Refresh()` when changing the existing scene. Shapes are immutable; `At`, `Rotated` and `Scaled` return copies that replace the corresponding absolute position, rotation or size. For example, `Scaled(2).Scaled(3)` produces size 3. Other attributes and the shared mesh are preserved. Colors use opaque ARGB values (`0xFFRRGGBB`); transparent values are rejected. Angles are radians. The built-in unit shapes are centered at the origin; use `Scaled` for size.
 
+## Open and run
+
+Open **[Simple3D.sln](Simple3D.sln)** in a .NET 10 MAUI-capable IDE. It groups the libraries under `src`, the app under `samples`, and the executable regression projects under `tests`. Set **Simple3D.Demo** as the startup project, choose Android, iOS or Mac Catalyst and a device/simulator, then run. Apple targets require macOS and Xcode; Android requires the Android SDK and JDK. Install the corresponding MAUI workload before building.
+
+The test projects are console regression runners; run their `dotnet run` commands below rather than expecting Test Explorer discovery.
+
 ## Projects
 
 - `src/Simple3D.Core`: portable `net10.0` meshes, camera and deterministic projector. No MAUI or third-party dependency.
