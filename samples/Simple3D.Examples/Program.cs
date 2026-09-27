@@ -5,7 +5,7 @@ using Simple3D.Shared;
 if (args.Length != 2 || (args[0] != "--all" && !DemoScenes.All.Any(s => s.Name.Equals(args[0], StringComparison.OrdinalIgnoreCase))))
 {
     Console.Error.WriteLine("Usage: dotnet run --project samples/Simple3D.Examples -- --all OUTPUT_DIRECTORY");
-    Console.Error.WriteLine("   or: dotnet run --project samples/Simple3D.Examples -- Equipment|Packing|Surface OUTPUT.ppm");
+    Console.Error.WriteLine($"   or: dotnet run --project samples/Simple3D.Examples -- {string.Join('|', DemoScenes.All.Select(scene => scene.Name))} OUTPUT.ppm");
     return 2;
 }
 

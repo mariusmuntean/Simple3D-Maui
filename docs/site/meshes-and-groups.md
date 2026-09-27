@@ -17,4 +17,4 @@ var scene = new Scene().Add(face).Add(face.At(0, 0, -1));
 
 ![Procedural indexed wave surface](images/Surface.png)
 
-The [surface factory](https://github.com/mariusmuntean/Simple3D-Maui/blob/maturity-tests/samples/Simple3D.Shared/DemoScenes.cs) builds a 16 × 16 grid from shared indexed vertices. The [executable examples](examples.md) render it without MAUI, and the [demo](https://github.com/mariusmuntean/Simple3D-Maui/blob/maturity-tests/samples/Simple3D.Demo/GalleryPage.cs) adds orbit and selection.
+The [surface factory](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/DemoScenes.cs) builds a 16 × 16 grid from shared indexed vertices. The [executable examples](examples.md) render it without MAUI, and the [demo](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Demo/GalleryPage.cs) adds orbit and selection.

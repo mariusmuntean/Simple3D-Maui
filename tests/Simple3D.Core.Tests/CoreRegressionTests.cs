@@ -232,14 +232,21 @@ internal static class CoreRegressionTests
 
     private static void SampleScenes()
     {
+        var names = DemoScenes.All.Select(sample => sample.Name).ToArray();
+        foreach (var name in new[] { "Equipment", "Packing", "Surface", "Assembly", "Molecule", "Telemetry", "City" })
+            Check(names.Count(candidate => candidate == name) == 1, $"missing or duplicate {name} example");
         foreach (var sample in DemoScenes.All)
         {
             Check(sample.Scene.GetBounds() is not null, "sample has no geometry");
             Check(sample.Scene.Labels.Count > 0, "sample has no labels");
             var frame = new DepthRenderer().Render(sample.Scene, sample.Camera, 240, 180, 0xFF18243B);
             Check(frame.Pixels.Span.ToArray().Count(p => p != 0xFF18243B) > 500, "sample drawing too small");
+            var hasPickableShape = false;
+            for (var y = 0; y < frame.Height && !hasPickableShape; y++)
+                for (var x = 0; x < frame.Width; x++)
+                    if (frame.Pick(x, y) is not null) { hasPickableShape = true; break; }
+            Check(hasPickableShape, $"{sample.Name} has no pickable geometry");
         }
-        Check(DemoScenes.All.Count == 3, "expected three teaching scenes");
     }
 
     private static void Unsupported(Action action)
