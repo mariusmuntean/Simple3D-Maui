@@ -21,7 +21,8 @@ internal static class CoreRegressionTests
         ("sample scenes use depth rendering and fit the camera", SampleScenes),
         ("each sample animation moves and resets its scene", SampleAnimations),
         ("equipment output arrow keeps its tail fixed", EquipmentAnimation),
-        ("telemetry bars animate within scale and change color", TelemetryAnimation)
+        ("telemetry bars animate within scale and change color", TelemetryAnimation),
+        ("engineering scenes move their subject while anchors stay fixed", EngineeringAnimations)
     ];
 
     private static void CameraNotifications()
@@ -290,14 +291,14 @@ internal static class CoreRegressionTests
     private static void SampleScenes()
     {
         var names = DemoScenes.All.Select(sample => sample.Name).ToArray();
-        foreach (var name in new[] { "Equipment", "Packing", "Surface", "Assembly", "Molecule", "Telemetry", "City" })
+        foreach (var name in new[] { "Equipment", "Packing", "Surface", "Assembly", "Molecule", "Telemetry", "City", "Robot Arm", "Orbit", "Wind" })
             Check(names.Count(candidate => candidate == name) == 1, $"missing or duplicate {name} example");
         foreach (var sample in DemoScenes.All)
         {
             Check(sample.Scene.GetBounds() is not null, "sample has no geometry");
             Check(sample.Scene.Labels.Count > 0, "sample has no labels");
             var frame = new DepthRenderer().Render(sample.Scene, sample.Camera, 240, 180, 0xFF18243B);
-            Check(frame.Pixels.Span.ToArray().Count(p => p != 0xFF18243B) > 500, "sample drawing too small");
+            Check(frame.Pixels.Span.ToArray().Count(p => p != 0xFF18243B) > 500, $"{sample.Name} drawing too small");
             var hasPickableShape = false;
             for (var y = 0; y < frame.Height && !hasPickableShape; y++)
                 for (var x = 0; x < frame.Width; x++)
@@ -373,6 +374,38 @@ internal static class CoreRegressionTests
         Check(arrow.Position == new Vector3(.55f, -.2f, 0),
             "output arrow must be positioned at its fixed tail");
         Check(arrow.Geometry!.Vertices.Contains(Vector3.Zero), "output arrow tail moved");
+    }
+
+    private static void EngineeringAnimations()
+    {
+        foreach (var (name, anchor, moving) in new[]
+        {
+            ("Robot Arm", "Base", "Gripper"),
+            ("Orbit", "Star", "Planet"),
+            ("Wind", "Tower", "Blade 1")
+        })
+        {
+            var sample = DemoScenes.All.Single(scene => scene.Name == name);
+            if (name == "Orbit")
+                Check(sample.Scene.Shapes.Single(shape => shape.Name == "Orbit path").Children
+                    .All(segment => segment.Name == "Orbit path"), "picked orbit segment has no useful name");
+            var anchorBefore = Position(anchor);
+            var movingBefore = Position(moving);
+            sample.Animate(.85f);
+            Check(Vector3.Distance(Position(anchor), anchorBefore) < .0001f,
+                $"{name} animation moved its fixed anchor");
+            Check(Vector3.Distance(Position(moving), movingBefore) > .05f,
+                $"{name} animation did not move {moving}");
+            sample.Animate(0);
+            Check(Vector3.Distance(Position(moving), movingBefore) < .0001f,
+                $"{name} animation did not reset {moving}");
+
+            Vector3 Position(string shapeName)
+            {
+                var node = sample.Scene.Flatten().Single(node => node.Shape.Name == shapeName);
+                return Vector3.Transform(Vector3.Zero, node.Transform);
+            }
+        }
     }
 
     private static void Unsupported(Action action)
