@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
@@ -36,9 +37,21 @@ public sealed class SceneView : SKCanvasView
 
     private DepthRenderer _renderer = new();
     private RenderFrame? _frame;
-    private RenderFrame? _paintBitmapFrame;
+    private RenderTarget? _paintTarget;
+    private RenderTarget? _paintBitmapTarget;
     private SKBitmap? _paintBitmap;
+    private long _paintVersion;
+    private long _bitmapVersion;
+    private int _paintSurfaceWidth, _paintSurfaceHeight;
+    private int _paintRequestedWidth, _paintRequestedHeight;
+    private (long Nodes, long Triangles) _fallbackGeometry;
+    private float _fallbackDistance, _fallbackOrthographicHeight, _fallbackFieldOfView;
+    private CameraProjection _fallbackProjection;
+    private long _lastPaintTimestamp;
+    private long _lastFailedProbeTimestamp;
+    private long _failedProbeSamples;
     private bool _dirty = true;
+    private bool _paintTargetDirty = true;
     private bool _subscriptionsActive;
     private bool _wasConnected;
     private bool _panActive;
@@ -140,6 +153,7 @@ public sealed class SceneView : SKCanvasView
     public void Refresh()
     {
         _dirty = true;
+        _paintTargetDirty = true;
         InvalidateSurface();
     }
 
@@ -148,23 +162,33 @@ public sealed class SceneView : SKCanvasView
     {
         if (_dirty || _frame is null || _frame.Width != width || _frame.Height != height)
         {
-            var c = SceneBackgroundColor;
-            if (c.Alpha < 1) throw new ArgumentException("Scene background must be opaque.", nameof(SceneBackgroundColor));
-            var background = 0xFF000000u | ((uint)Math.Round(c.Red * 255) << 16) |
-                ((uint)Math.Round(c.Green * 255) << 8) | (uint)Math.Round(c.Blue * 255);
-            _frame = _renderer.Render(Scene, Camera, width, height, background);
+            _frame = _renderer.Render(Scene, Camera, width, height, BackgroundPixel());
             _dirty = false;
         }
         return _frame;
     }
 
-    /// <summary>Pick at view coordinates measured from the top left. Uses the last rendered frame.</summary>
+    /// <summary>Pick at view coordinates measured from the top left. Uses the native paint target when available, otherwise the last owned frame.</summary>
     public Shape? PickAt(double x, double y, double viewWidth, double viewHeight)
     {
-        if (_frame is null || !double.IsFinite(x) || !double.IsFinite(y) ||
+        if (!double.IsFinite(x) || !double.IsFinite(y) ||
             viewWidth <= 0 || viewHeight <= 0 || x < 0 || y < 0 || x >= viewWidth || y >= viewHeight) return null;
+        if (_paintTarget is not null)
+        {
+            if (_paintTargetDirty) CapturePaintTarget(_paintSurfaceWidth, _paintSurfaceHeight);
+            return _paintTarget.Pick((int)(x * _paintTarget.Width / viewWidth), (int)(y * _paintTarget.Height / viewHeight));
+        }
+        if (_frame is null) return null;
         if (_dirty) CaptureFrame(_frame.Width, _frame.Height);
         return _frame.Pick((int)(x * _frame.Width / viewWidth), (int)(y * _frame.Height / viewHeight));
+    }
+
+    private uint BackgroundPixel()
+    {
+        var c = SceneBackgroundColor;
+        if (c.Alpha < 1) throw new ArgumentException("Scene background must be opaque.", nameof(SceneBackgroundColor));
+        return 0xFF000000u | ((uint)Math.Round(c.Red * 255) << 16) |
+            ((uint)Math.Round(c.Green * 255) << 8) | (uint)Math.Round(c.Blue * 255);
     }
 
     /// <summary>Attaches notifications when the native handler connects and releases them on disconnect.</summary>
@@ -229,6 +253,8 @@ public sealed class SceneView : SKCanvasView
             if (current is not null) current.Changed += SourceChanged;
         }
         SelectedShape = null;
+        _paintRequestedWidth = _paintRequestedHeight = 0;
+        _lastFailedProbeTimestamp = 0;
         Refresh();
     }
     private void ReplaceCamera(Camera? previous, Camera? current)
@@ -238,6 +264,8 @@ public sealed class SceneView : SKCanvasView
             if (previous is not null) previous.Changed -= SourceChanged;
             if (current is not null) current.Changed += SourceChanged;
         }
+        _paintRequestedWidth = _paintRequestedHeight = 0;
+        _lastFailedProbeTimestamp = 0;
         Refresh();
     }
     private void SourceChanged(object? sender, EventArgs args) => Refresh();
@@ -261,36 +289,111 @@ public sealed class SceneView : SKCanvasView
         return (Math.Max(1, (int)Math.Round(width * scale)), Math.Max(1, (int)Math.Round(height * scale)));
     }
 
-    internal RenderFrame CaptureSurfaceFrame(int surfaceWidth, int surfaceHeight)
+    internal RenderTarget CapturePaintTarget(int surfaceWidth, int surfaceHeight)
     {
+        _paintSurfaceWidth = surfaceWidth;
+        _paintSurfaceHeight = surfaceHeight;
         var (width, height) = RenderSize(surfaceWidth, surfaceHeight,
             _panActive ? Math.Min(DragPreviewMaximumDimension, MaximumRenderDimension) : MaximumRenderDimension);
+        var requestedWidth = width;
+        var requestedHeight = height;
+        if (_paintTarget is not null && !_paintTargetDirty &&
+            _paintRequestedWidth == width && _paintRequestedHeight == height) return _paintTarget;
+        var retryAfterIdle = _paintTargetDirty && _lastPaintTimestamp != 0 &&
+            Stopwatch.GetElapsedTime(_lastPaintTimestamp) >= TimeSpan.FromMilliseconds(500);
+        var probeCooldown = _paintTarget is not null && _lastFailedProbeTimestamp != 0 &&
+            Stopwatch.GetElapsedTime(_lastFailedProbeTimestamp) < TimeSpan.FromSeconds(2) &&
+            _paintTarget.RasterSamples >= _failedProbeSamples * .5;
+        if (_paintTarget is not null && _paintRequestedWidth == width && _paintRequestedHeight == height &&
+            (_paintTarget.Width < width || _paintTarget.Height < height) &&
+            Camera.Projection == _fallbackProjection &&
+            Camera.Distance < _fallbackDistance * 1.25f &&
+            Camera.OrthographicHeight < _fallbackOrthographicHeight * 1.25f &&
+            Camera.FieldOfView < _fallbackFieldOfView * 1.15f &&
+            SceneGeometry(Scene) == _fallbackGeometry && (!retryAfterIdle || probeCooldown) &&
+            (probeCooldown || EstimatedFullResolutionWork(_paintTarget, width, height) >= DepthRenderer.MaximumRasterSamples * .75))
+        {
+            width = _paintTarget.Width;
+            height = _paintTarget.Height;
+        }
+        var attemptedRequestedSize = width == requestedWidth && height == requestedHeight;
+        var previousTarget = _paintTarget;
         while (true)
         {
-            try { return CaptureFrame(width, height); }
+            if (_paintTarget is null || _paintTarget.Width != width || _paintTarget.Height != height)
+            {
+                _paintTarget = new RenderTarget(width, height);
+                _paintTargetDirty = true;
+            }
+            if (!_paintTargetDirty) return _paintTarget;
+            try
+            {
+                _renderer.RenderInto(Scene, Camera, _paintTarget, BackgroundPixel());
+                _paintTargetDirty = false;
+                _paintRequestedWidth = requestedWidth;
+                _paintRequestedHeight = requestedHeight;
+                if (attemptedRequestedSize && (width < requestedWidth || height < requestedHeight))
+                {
+                    _fallbackDistance = Camera.Distance;
+                    _fallbackOrthographicHeight = Camera.OrthographicHeight;
+                    _fallbackFieldOfView = Camera.FieldOfView;
+                    _fallbackProjection = Camera.Projection;
+                    _fallbackGeometry = SceneGeometry(Scene);
+                }
+                else if (width == requestedWidth && height == requestedHeight)
+                    _lastFailedProbeTimestamp = 0;
+                _lastPaintTimestamp = Stopwatch.GetTimestamp();
+                _paintVersion++;
+                return _paintTarget;
+            }
             catch (RasterBudgetExceededException) when (width > 1 || height > 1)
             {
+                if (attemptedRequestedSize && width == requestedWidth && height == requestedHeight &&
+                    previousTarget is not null &&
+                    (previousTarget.Width < requestedWidth || previousTarget.Height < requestedHeight))
+                {
+                    _lastFailedProbeTimestamp = Stopwatch.GetTimestamp();
+                    _failedProbeSamples = previousTarget.RasterSamples;
+                }
                 width = Math.Max(1, width / 2);
                 height = Math.Max(1, height / 2);
             }
         }
     }
 
+    private static double EstimatedFullResolutionWork(RenderTarget target, int requestedWidth, int requestedHeight) =>
+        target.RasterSamples * ((double)requestedWidth / target.Width) * ((double)requestedHeight / target.Height);
+
+    private static (long Nodes, long Triangles) SceneGeometry(Scene scene)
+    {
+        long nodes = 0, triangles = 0;
+        foreach (var shape in scene.Shapes) Visit(shape);
+        return (nodes, triangles);
+
+        void Visit(Shape shape)
+        {
+            nodes++;
+            triangles += shape.TriangleCount;
+            foreach (var child in shape.Children) Visit(child);
+        }
+    }
+
     internal static float LabelFontSize(int surfaceWidth, double layoutWidth) =>
         layoutWidth > 0 ? 14f * (float)(surfaceWidth / layoutWidth) : 14f;
 
-    internal SKBitmap PaintBitmap(RenderFrame frame)
+    internal SKBitmap PaintBitmap(RenderTarget target)
     {
-        if (_paintBitmap is null || _paintBitmap.Width != frame.Width || _paintBitmap.Height != frame.Height)
+        if (_paintBitmap is null || _paintBitmap.Width != target.Width || _paintBitmap.Height != target.Height)
         {
             ReleasePaintBitmap();
-            _paintBitmap = new SKBitmap(new SKImageInfo(frame.Width, frame.Height, SKColorType.Bgra8888, SKAlphaType.Opaque));
+            _paintBitmap = new SKBitmap(new SKImageInfo(target.Width, target.Height, SKColorType.Bgra8888, SKAlphaType.Opaque));
         }
-        if (!ReferenceEquals(_paintBitmapFrame, frame))
+        if (!ReferenceEquals(_paintBitmapTarget, target) || _bitmapVersion != _paintVersion)
         {
-            MemoryMarshal.AsBytes(frame.Pixels.Span).CopyTo(_paintBitmap.GetPixelSpan());
+            MemoryMarshal.AsBytes(target.Pixels.Span).CopyTo(_paintBitmap.GetPixelSpan());
             _paintBitmap.NotifyPixelsChanged();
-            _paintBitmapFrame = frame;
+            _paintBitmapTarget = target;
+            _bitmapVersion = _paintVersion;
         }
         return _paintBitmap;
     }
@@ -299,29 +402,37 @@ public sealed class SceneView : SKCanvasView
     {
         _paintBitmap?.Dispose();
         _paintBitmap = null;
-        _paintBitmapFrame = null;
+        _paintBitmapTarget = null;
+        _bitmapVersion = 0;
     }
 
     internal void ReleaseRenderResources()
     {
         ReleasePaintBitmap();
         _frame = null;
+        _paintTarget = null;
         _renderer = new DepthRenderer();
         _dirty = true;
+        _paintTargetDirty = true;
+        _paintSurfaceWidth = _paintSurfaceHeight = 0;
+        _paintRequestedWidth = _paintRequestedHeight = 0;
+        _lastPaintTimestamp = 0;
+        _lastFailedProbeTimestamp = 0;
+        _failedProbeSamples = 0;
     }
 
     private void Paint(object? sender, SKPaintSurfaceEventArgs args)
     {
         var canvas = args.Surface.Canvas;
         if (args.Info.Width < 1 || args.Info.Height < 1) return;
-        var frame = CaptureSurfaceFrame(args.Info.Width, args.Info.Height);
-        canvas.DrawBitmap(PaintBitmap(frame), new SKRect(0, 0, args.Info.Width, args.Info.Height));
-        if (frame.Labels.Count == 0) return;
+        var target = CapturePaintTarget(args.Info.Width, args.Info.Height);
+        canvas.DrawBitmap(PaintBitmap(target), new SKRect(0, 0, args.Info.Width, args.Info.Height));
+        if (target.Labels.Count == 0) return;
         using var font = new SKFont(SKTypeface.Default, LabelFontSize(args.Info.Width, Width));
         using var paint = new SKPaint { IsAntialias = true };
-        var sx = (float)args.Info.Width / frame.Width;
-        var sy = (float)args.Info.Height / frame.Height;
-        foreach (var label in frame.Labels)
+        var sx = (float)args.Info.Width / target.Width;
+        var sy = (float)args.Info.Height / target.Height;
+        foreach (var label in target.Labels)
         {
             paint.Color = new SKColor((byte)(label.Label.Color >> 16), (byte)(label.Label.Color >> 8), (byte)label.Label.Color);
             canvas.DrawText(label.Label.Text, label.Position.X * sx, label.Position.Y * sy, font, paint);

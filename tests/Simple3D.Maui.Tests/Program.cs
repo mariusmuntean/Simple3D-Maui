@@ -25,7 +25,7 @@ var tests = new (string Name, Action Run)[]
     {
         var scene = new Scene().Add(Shape.Box());
         var view = new SceneView { Scene = scene };
-        var first = view.CaptureFrame(96, 80);
+        var first = view.CapturePaintTarget(96, 80);
         var bitmap = view.PaintBitmap(first);
         Assert(ReferenceEquals(bitmap, view.PaintBitmap(first)), "unchanged paint allocated a new bitmap");
         Assert(bitmap.GetPixelSpan().SequenceEqual(MemoryMarshal.AsBytes(first.Pixels.Span)),
@@ -35,8 +35,8 @@ var tests = new (string Name, Action Run)[]
         canvas.DrawBitmap(bitmap, 0, 0);
         var before = painted.GetPixelSpan().ToArray();
         scene.Add(Shape.Sphere().At(1, 0, 0));
-        var second = view.CaptureFrame(96, 80);
-        Assert(!ReferenceEquals(first, second), "scene mutation did not render");
+        var second = view.CapturePaintTarget(96, 80);
+        Assert(ReferenceEquals(first, second), "scene mutation replaced the render target");
         Assert(ReferenceEquals(bitmap, view.PaintBitmap(second)), "same-size paint allocated a new bitmap");
         Assert(bitmap.GetPixelSpan().SequenceEqual(MemoryMarshal.AsBytes(second.Pixels.Span)),
             "updated bitmap pixels differ from frame");
@@ -44,23 +44,73 @@ var tests = new (string Name, Action Run)[]
         Assert(!before.SequenceEqual(painted.GetPixelSpan().ToArray()), "native paint stayed stale after a scene update");
         Assert(painted.GetPixelSpan().SequenceEqual(MemoryMarshal.AsBytes(second.Pixels.Span)),
             "native paint differs from the updated frame");
-        var resized = view.PaintBitmap(view.CaptureFrame(64, 64));
+        var resized = view.PaintBitmap(view.CapturePaintTarget(64, 64));
         Assert(!ReferenceEquals(bitmap, resized), "resized paint kept the old bitmap");
         view.ReleasePaintBitmap();
-        Assert(!ReferenceEquals(resized, view.PaintBitmap(view.CaptureFrame(64, 64))),
+        Assert(!ReferenceEquals(resized, view.PaintBitmap(view.CapturePaintTarget(64, 64))),
             "released native bitmap was reused");
         view.ReleasePaintBitmap();
+    }),
+    ("native paints reuse a render target while captures stay owned", () =>
+    {
+        var scene = new Scene().Add(Shape.Box().Named("box"));
+        var view = new SceneView { Scene = scene, Camera = new Camera(5, 0, 0) };
+        var target = view.CapturePaintTarget(160, 120);
+        var bitmap = view.PaintBitmap(target);
+        var owned = view.CaptureFrame(160, 120);
+        var original = owned.Pixels.ToArray();
+        Assert(target.Pixels.Span.SequenceEqual(owned.Pixels.Span), "native target differs from owned capture");
+        Assert(ReferenceEquals(target, view.CapturePaintTarget(160, 120)), "unchanged native paint replaced target");
+        Assert(ReferenceEquals(bitmap, view.PaintBitmap(target)), "unchanged native paint replaced bitmap");
+        Assert(ReferenceEquals(view.PickAt(80, 60, 160, 120), scene.Shapes[0]), "native picking missed box");
+
+        scene.Replace(scene.Shapes[0], Shape.Sphere(0xFFFFA66F).Named("sphere"));
+        Assert(ReferenceEquals(view.PickAt(80, 60, 160, 120), scene.Shapes[0]),
+            "native picking stayed stale before repaint");
+        Assert(ReferenceEquals(target, view.CapturePaintTarget(160, 120)), "scene update replaced pixel storage");
+        Assert(ReferenceEquals(bitmap, view.PaintBitmap(target)), "scene update replaced native bitmap");
+        Assert(!target.Pixels.Span.SequenceEqual(original), "native pixels stayed stale");
+        Assert(ReferenceEquals(view.PickAt(80, 60, 160, 120), scene.Shapes[0]), "native picking stayed stale");
+        Assert(owned.Pixels.Span.SequenceEqual(original), "owned capture was overwritten");
+        Assert(view.CaptureFrame(160, 120).Pixels.Span.SequenceEqual(target.Pixels.Span),
+            "owned capture remained stale after native paint");
+
+        Assert(!ReferenceEquals(target, view.CapturePaintTarget(80, 80)), "resized native paint kept old target");
+        view.ReleaseRenderResources();
+    }),
+    ("animated native paint keeps per-frame allocation bounded", () =>
+    {
+        var sample = DemoScenes.Surface();
+        var view = new SceneView { Scene = sample.Scene, Camera = sample.Camera, MaximumRenderDimension = 768 };
+        var target = view.CapturePaintTarget(768, 576);
+        var bitmap = view.PaintBitmap(target);
+        for (var i = 0; i < 5; i++)
+        {
+            sample.Animate(i / 60f);
+            view.PaintBitmap(view.CapturePaintTarget(768, 576));
+        }
+        var allocated = GC.GetAllocatedBytesForCurrentThread();
+        for (var i = 0; i < 30; i++)
+        {
+            sample.Animate(i / 60f);
+            Assert(ReferenceEquals(target, view.CapturePaintTarget(768, 576)), "animation replaced target");
+            Assert(ReferenceEquals(bitmap, view.PaintBitmap(target)), "animation replaced bitmap");
+        }
+        var bytesPerFrame = (GC.GetAllocatedBytesForCurrentThread() - allocated) / 30;
+        Assert(bytesPerFrame < 100_000, $"animation allocated {bytesPerFrame:N0} bytes/frame");
+        Console.WriteLine($"Native paint path (animated Surface, 768x576): {bytesPerFrame:N0} managed bytes/frame on this runner");
+        view.ReleaseRenderResources();
     }),
     ("disconnected view releases buffers without invalidating owned snapshots", () =>
     {
         var view = new SceneView { Scene = new Scene().Add(Shape.Box()) };
         var frame = view.CaptureFrame(96, 80);
         var pixels = frame.Pixels.ToArray();
-        var bitmap = view.PaintBitmap(frame);
+        var bitmap = view.PaintBitmap(view.CapturePaintTarget(96, 80));
         view.ReleaseRenderResources();
         Assert(frame.Pixels.Span.SequenceEqual(pixels), "retained snapshot changed after view release");
         Assert(!ReferenceEquals(frame, view.CaptureFrame(96, 80)), "view retained its old frame");
-        Assert(!ReferenceEquals(bitmap, view.PaintBitmap(view.CaptureFrame(96, 80))),
+        Assert(!ReferenceEquals(bitmap, view.PaintBitmap(view.CapturePaintTarget(96, 80))),
             "view retained its native bitmap");
         view.ReleaseRenderResources();
     }),
@@ -126,10 +176,10 @@ var tests = new (string Name, Action Run)[]
         var pan = (IPanGestureController)view.GestureRecognizers.OfType<PanGestureRecognizer>().Single();
         pan.SendPanStarted(view, 1);
         pan.SendPan(view, 24, 0, 1);
-        var preview = view.CaptureSurfaceFrame(2048, 630);
+        var preview = view.CapturePaintTarget(2048, 630);
         Assert(preview.Width == 1024 && preview.Height == 315, "drag preview still renders at full desktop resolution");
         pan.SendPanCompleted(view, 1);
-        var final = view.CaptureSurfaceFrame(2048, 630);
+        var final = view.CapturePaintTarget(2048, 630);
         Assert(final.Width == 2048 && final.Height == 630, "full resolution was not restored after drag");
     }),
     ("display only view ignores gestures and can enable them later", () =>
@@ -148,10 +198,10 @@ var tests = new (string Name, Action Run)[]
     {
         var view = new SceneView { Scene = new Scene().Add(Shape.Box()) };
         view.MaximumRenderDimension = 768;
-        var animation = view.CaptureSurfaceFrame(2048, 1024);
+        var animation = view.CapturePaintTarget(2048, 1024);
         Assert(animation.Width == 768 && animation.Height == 384, "animation render limit was ignored");
         view.MaximumRenderDimension = DepthRenderer.MaximumDimension;
-        var still = view.CaptureSurfaceFrame(2048, 1024);
+        var still = view.CapturePaintTarget(2048, 1024);
         Assert(still.Width == 2048 && still.Height == 1024, "still frame did not regain full resolution");
         Assert(!ReferenceEquals(animation, still), "resizing reused the old frame");
     }),
@@ -165,9 +215,97 @@ var tests = new (string Name, Action Run)[]
         var sample = DemoScenes.Packing();
         var view = new SceneView { Scene = sample.Scene, Camera = sample.Camera };
         for (var i = 0; i < 5; i++) view.Zoom(1.25f);
-        var frame = view.CaptureSurfaceFrame(1170, 1320);
+        var frame = view.CapturePaintTarget(1170, 1320);
         Assert(frame.Width < 1170 && frame.Height < 1320, "budget did not lower resolution");
         Assert(frame.Pixels.Span.ToArray().Any(p => p != 0xFFF4F6FA), "gallery disappeared");
+        Assert(ReferenceEquals(frame, view.CapturePaintTarget(1170, 1320)),
+            "unchanged paint retried a failing full-size render");
+        sample.Animate(.5f);
+        Assert(ReferenceEquals(frame, view.CapturePaintTarget(1170, 1320)),
+            "scene animation retried a failing full-size render");
+        RenderTarget recovered = frame;
+        for (var i = 0; i < 8; i++)
+        {
+            view.Zoom(.8f);
+            recovered = view.CapturePaintTarget(1170, 1320);
+        }
+        Assert(recovered.Width == 1170 && recovered.Height == 1320,
+            "small zoom-out steps did not restore full resolution");
+    }),
+    ("fallback resolution recovers after scene simplification", () =>
+    {
+        var sample = DemoScenes.Packing();
+        var view = new SceneView { Scene = sample.Scene, Camera = sample.Camera };
+        for (var i = 0; i < 5; i++) view.Zoom(1.25f);
+        Assert(view.CapturePaintTarget(1170, 1320).Width < 1170, "expected a budget fallback");
+        sample.Scene.Remove(sample.Scene.Shapes.Single(shape => shape.Name == "Packages"));
+        var recovered = view.CapturePaintTarget(1170, 1320);
+        Assert(recovered.Width == 1170 && recovered.Height == 1320,
+            "removing geometry did not restore full resolution");
+    }),
+    ("fallback resolution recovers after same-count geometry replacement", () =>
+    {
+        var sample = DemoScenes.Packing();
+        var view = new SceneView { Scene = sample.Scene, Camera = sample.Camera };
+        for (var i = 0; i < 5; i++) view.Zoom(1.25f);
+        Assert(view.CapturePaintTarget(1170, 1320).Width < 1170, "expected a budget fallback");
+        var packages = sample.Scene.Shapes.Single(shape => shape.Name == "Packages");
+        sample.Scene.Replace(packages, Shape.Box(0xFF76DBC7).Named("One package"));
+        var recovered = view.CapturePaintTarget(1170, 1320);
+        Assert(recovered.Width == 1170 && recovered.Height == 1320,
+            "same-count geometry replacement did not restore full resolution");
+    }),
+    ("fallback resolution recovers when same-triangle geometry shrinks", () =>
+    {
+        var sample = DemoScenes.Packing();
+        var view = new SceneView { Scene = sample.Scene, Camera = sample.Camera };
+        for (var i = 0; i < 5; i++) view.Zoom(1.25f);
+        Assert(view.CapturePaintTarget(1170, 1320).Width < 1170, "expected a budget fallback");
+        var packages = sample.Scene.Shapes.Single(shape => shape.Name == "Packages");
+        var smaller = Shape.Group(packages.Children.Select(child =>
+            child.Scaled(.1f, .1f, .1f)).ToArray()).Named("Packages");
+        sample.Scene.Replace(packages, smaller);
+        view.CapturePaintTarget(1170, 1320);
+        view.Camera.Orbit(.001f, 0);
+        var recovered = view.CapturePaintTarget(1170, 1320);
+        Assert(recovered.Width == 1170 && recovered.Height == 1320,
+            "shrinking same-triangle geometry did not restore full resolution");
+    }),
+    ("failed full-resolution probes do not repeat every animation frame", () =>
+    {
+        const int copies = 700_000;
+        var indices = new int[copies * 3];
+        for (var i = 0; i < copies; i++)
+        {
+            indices[i * 3] = 0;
+            indices[i * 3 + 1] = 1;
+            indices[i * 3 + 2] = 2;
+        }
+        var triangle = Shape.FromMesh(new Mesh([
+            new(-.5f, -.5f, 0), new(3.6f, -.5f, 0), new(-.5f, 3.6f, 0)
+        ], indices), new Material(0xFF80B2FF));
+        var scene = new Scene().Add(triangle);
+        var camera = new Camera(5, 0, 0) { Projection = CameraProjection.Orthographic, OrthographicHeight = 1024 };
+        var view = new SceneView { Scene = scene, Camera = camera };
+        var first = view.CapturePaintTarget(1024, 1024);
+        Assert(first.Width < 1024, "expected a full-size raster budget failure");
+        camera.Orbit(.00001f, 0);
+        var probe = view.CapturePaintTarget(1024, 1024);
+        Assert(!ReferenceEquals(first, probe), "test scene did not trigger a second full-size probe");
+        camera.Orbit(.00001f, 0);
+        Assert(ReferenceEquals(probe, view.CapturePaintTarget(1024, 1024)),
+            "failed full-size probe repeated on the next animation frame");
+    }),
+    ("fallback resolution recovers after widening orthographic view", () =>
+    {
+        var sample = DemoScenes.Packing();
+        var view = new SceneView { Scene = sample.Scene, Camera = sample.Camera };
+        for (var i = 0; i < 5; i++) view.Zoom(1.25f);
+        Assert(view.CapturePaintTarget(1170, 1320).Width < 1170, "expected a budget fallback");
+        view.Camera.OrthographicHeight *= 3;
+        var recovered = view.CapturePaintTarget(1170, 1320);
+        Assert(recovered.Width == 1170 && recovered.Height == 1320,
+            "widening the camera view did not restore full resolution");
     }),
     ("all gallery scenes remain reachable on narrow screens", () =>
     {
