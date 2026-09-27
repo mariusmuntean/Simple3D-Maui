@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Simple3D scene library for .NET MAUI">
+  <defs>
+    <linearGradient id="sky" x2="1" y2="1">
+      <stop stop-color="#1B2D4E"/>
+      <stop offset="1" stop-color="#0C1526"/>
+    </linearGradient>
+    <radialGradient id="glow">
+      <stop stop-color="#536FC9" stop-opacity=".32"/>
+      <stop offset="1" stop-color="#536FC9" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#sky)"/>
+  <circle cx="337" cy="282" r="340" fill="url(#glow)"/>
+  <g transform="translate(121 140) scale(2.35)">
+    <path d="M64 23 99 43 64 63 29 43Z" fill="#BED0FF"/>
+    <path d="M29 43 64 63v39L29 82Z" fill="#7E98F4"/>
+    <path d="M99 43 64 63v39l35-20Z" fill="#415ED3"/>
+    <path d="M64 63v39" stroke="#27429E" stroke-width="2"/>
+    <circle cx="95" cy="27" r="6" fill="#FFC47A"/>
+  </g>
+  <text x="435" y="280" fill="#F7F9FF" font-family="Inter, Avenir Next, Arial, sans-serif" font-size="100" font-weight="720" letter-spacing="-5">Simple3D</text>
+  <text x="444" y="352" fill="#BDD0EC" font-family="Inter, Avenir Next, Arial, sans-serif" font-size="38">Little worlds. Real depth.</text>
+  <rect x="444" y="405" width="318" height="2" fill="#77DDCE"/>
+  <text x="444" y="463" fill="#77DDCE" font-family="Inter, Avenir Next, Arial, sans-serif" font-size="23" font-weight="600" letter-spacing="1">3D SCENES FOR .NET MAUI</text>
+  <g fill="none" stroke="#8FA4D0" stroke-width="2" opacity=".18" stroke-linejoin="round">
+    <path d="m1040 95 55 32-55 32-55-32zM985 127v63l55 32 55-32v-63M1040 159v63"/>
+    <path d="m1071 386 44 25-44 25-44-25zM1027 411v50l44 25 44-25v-50M1071 436v50"/>
+  </g>
+</svg>

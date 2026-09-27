@@ -1,1 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><rect width="128" height="128" rx="27" fill="#18243B"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <radialGradient id="night" cx="70%" cy="20%" r="95%">
+      <stop stop-color="#253A62"/>
+      <stop offset="1" stop-color="#101A2D"/>
+    </radialGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#night)"/>
+</svg>

@@ -24,7 +24,7 @@
     <Compile Include="../Simple3D.Shared/DemoScenes.cs" Link="DemoScenes.cs" />
   </ItemGroup>
   <ItemGroup>
-    <MauiIcon Include="Resources/AppIcon/appicon.svg" ForegroundFile="Resources/AppIcon/appiconfg.svg" Color="#18243B" />
-    <MauiSplashScreen Include="Resources/Splash/splash.svg" Color="#18243B" BaseSize="128,128" />
+    <MauiIcon Include="Resources/AppIcon/appicon.svg" ForegroundFile="Resources/AppIcon/appiconfg.svg" Color="#101A2D" />
+    <MauiSplashScreen Include="Resources/Splash/splash.svg" Color="#101A2D" BaseSize="128,128" />
   </ItemGroup>
 </Project>
