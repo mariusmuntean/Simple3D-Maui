@@ -17,7 +17,9 @@ internal static class CoreRegressionTests
         ("bounds and fit reject excessive repeated mesh triangles", BoundsBudget),
         ("raster sample work is bounded", RasterWorkBudget),
         ("legacy renderer rejects unsupported scene features", LegacyFeatureGuard),
-        ("sample scenes use depth rendering and fit the camera", SampleScenes)
+        ("sample scenes use depth rendering and fit the camera", SampleScenes),
+        ("each sample animation moves and resets its scene", SampleAnimations),
+        ("telemetry bars animate within scale and change color", TelemetryAnimation)
     ];
 
     private static void CameraNotifications()
@@ -247,6 +249,48 @@ internal static class CoreRegressionTests
                     if (frame.Pick(x, y) is not null) { hasPickableShape = true; break; }
             Check(hasPickableShape, $"{sample.Name} has no pickable geometry");
         }
+    }
+
+    private static void SampleAnimations()
+    {
+        var renderer = new DepthRenderer();
+        foreach (var sample in DemoScenes.All)
+        {
+            var initial = renderer.Render(sample.Scene, sample.Camera, 320, 240).Pixels.ToArray();
+            sample.Animate(.75f);
+            var animated = renderer.Render(sample.Scene, sample.Camera, 320, 240).Pixels.ToArray();
+            Check(initial.Zip(animated).Count(pair => pair.First != pair.Second) > 20,
+                $"{sample.Name} animation is not visible");
+            sample.Animate(0);
+            var restored = renderer.Render(sample.Scene, sample.Camera, 320, 240).Pixels.Span;
+            Check(restored.SequenceEqual(initial), $"{sample.Name} animation did not reset");
+        }
+    }
+
+    private static void TelemetryAnimation()
+    {
+        var sample = DemoScenes.Telemetry();
+        var smallest = float.PositiveInfinity;
+        var largest = 0f;
+        var colors = new HashSet<uint>();
+        for (var step = 0; step <= 120; step++)
+        {
+            sample.Animate(step / 20f);
+            var bars = sample.Scene.Flatten().Select(node => node.Shape)
+                .Where(shape => shape.Name?.StartsWith("Sample ", StringComparison.Ordinal) == true).ToArray();
+            Check(bars.Length == 5, "animation lost a bar");
+            foreach (var bar in bars)
+            {
+                smallest = MathF.Min(smallest, bar.Size.Y);
+                largest = MathF.Max(largest, bar.Size.Y);
+                colors.Add(bar.Color);
+                Check(bar.Size.Y >= .35f && bar.Size.Y <= 2.5f, "bar left the chart scale");
+                Check(MathF.Abs(bar.Position.Y - bar.Size.Y / 2) < .0001f, "bar left the baseline");
+            }
+        }
+        Check(largest - smallest > 1.5f, "bar motion has too little range");
+        Check(colors.Count > 10, "bar colors do not follow their heights");
+        sample.Animate(0);
     }
 
     private static void Unsupported(Action action)

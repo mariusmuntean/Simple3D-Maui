@@ -15,7 +15,7 @@ public sealed class GalleryPage : ContentPage
     private readonly Button _animationButton;
     private DemoScene? _current;
     private IDispatcherTimer? _animationTimer;
-    private Shape? _animatedShape;
+    private double _animationSeconds;
     private long _lastAnimationTick;
 
     public GalleryPage()
@@ -51,7 +51,7 @@ public sealed class GalleryPage : ContentPage
                 Content = _view
             }, toolScroller, _caption, _selection, new Label
             {
-                Text = "Drag to orbit · Pinch to zoom · Tap to select · Animate a shape", TextColor = Color.FromArgb("#8BA1C1"), FontSize = 13
+                Text = "Drag to orbit · Pinch to zoom · Tap to select · Animate the scene", TextColor = Color.FromArgb("#8BA1C1"), FontSize = 13
             } }
         }};
         var requested = Environment.GetEnvironmentVariable("SIMPLE3D_GALLERY_SCENE");
@@ -70,6 +70,8 @@ public sealed class GalleryPage : ContentPage
     {
         StopAnimation();
         _current = sample;
+        _animationSeconds = 0;
+        sample.Animate(0);
         _view.Scene = sample.Scene;
         _view.Camera = new Camera(sample.Camera.Distance, sample.Camera.Yaw, sample.Camera.Pitch)
         {
@@ -86,12 +88,11 @@ public sealed class GalleryPage : ContentPage
     private void ToggleAnimation()
     {
         if (_animationTimer?.IsRunning == true) { StopAnimation(); return; }
-        if (_current is null || _current.Scene.Shapes.Count == 0) return;
+        if (_current is null) return;
         _animationTimer ??= Dispatcher.CreateTimer();
-        _animationTimer.Interval = TimeSpan.FromMilliseconds(33);
+        _animationTimer.Interval = TimeSpan.FromMilliseconds(1000d / 60);
         _animationTimer.Tick -= AdvanceAnimation;
         _animationTimer.Tick += AdvanceAnimation;
-        _animatedShape = _current.Scene.Shapes[0];
         _lastAnimationTick = Stopwatch.GetTimestamp();
         _view.MaximumRenderDimension = 768;
         _animationButton.Text = "Pause";
@@ -100,20 +101,17 @@ public sealed class GalleryPage : ContentPage
 
     private void AdvanceAnimation(object? sender, EventArgs args)
     {
-        if (_current is null || _animatedShape is null) { StopAnimation(); return; }
+        if (_current is null) { StopAnimation(); return; }
         var now = Stopwatch.GetTimestamp();
         var seconds = Math.Min(Stopwatch.GetElapsedTime(_lastAnimationTick, now).TotalSeconds, .1);
         _lastAnimationTick = now;
-        var next = _animatedShape.Rotated(_animatedShape.Rotation.X,
-            _animatedShape.Rotation.Y + (float)(seconds * .7), _animatedShape.Rotation.Z);
-        if (!_current.Scene.Replace(_animatedShape, next)) { StopAnimation(); return; }
-        _animatedShape = next;
+        _animationSeconds += seconds;
+        _current.Animate((float)_animationSeconds);
     }
 
     private void StopAnimation()
     {
         _animationTimer?.Stop();
-        _animatedShape = null;
         _view.MaximumRenderDimension = DepthRenderer.MaximumDimension;
         _animationButton.Text = "Animate";
     }
