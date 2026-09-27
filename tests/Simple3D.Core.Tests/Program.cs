@@ -1,5 +1,6 @@
 using System.Numerics;
 using Simple3D.Core;
+using Simple3D.Shared;
 
 var tests = new (string Name, Action Run)[]
 {
@@ -192,6 +193,12 @@ if (failed == 0)
     timer.Restart();
     for (var i = 0; i < 100; i++) depthRenderer.Render(scene, camera, 400, 300);
     Console.WriteLine($"Depth renderer (12 spheres, {scene.Shapes.Sum(shape => shape.TriangleCount)} triangles, 400x300, 100 frames): {timer.Elapsed.TotalMilliseconds / 100:F2} ms/frame, {(GC.GetAllocatedBytesForCurrentThread() - allocated) / 100:N0} bytes/frame on this runner");
+    var animated = DemoScenes.Surface();
+    for (var i = 0; i < 10; i++) depthRenderer.Render(animated.Scene, animated.Camera, 768, 576);
+    allocated = GC.GetAllocatedBytesForCurrentThread();
+    timer.Restart();
+    for (var i = 0; i < 60; i++) depthRenderer.Render(animated.Scene, animated.Camera, 768, 576);
+    Console.WriteLine($"Depth renderer (mesh scene, 768x576, 60 frames): {timer.Elapsed.TotalMilliseconds / 60:F2} ms/frame, {(GC.GetAllocatedBytesForCurrentThread() - allocated) / 60:N0} bytes/frame on this runner");
 }
 return failed == 0 ? 0 : 1;
 static void Assert(bool condition, string message) { if (!condition) throw new Exception(message); }

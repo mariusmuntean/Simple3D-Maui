@@ -86,6 +86,29 @@ var tests = new (string Name, Action Run)[]
         var final = view.CaptureSurfaceFrame(2048, 630);
         Assert(final.Width == 2048 && final.Height == 630, "full resolution was not restored after drag");
     }),
+    ("display only view ignores gestures and can enable them later", () =>
+    {
+        var view = new SceneView { Scene = new Scene().Add(Shape.Box()), Camera = new Camera(5, 0, 0), IsInteractive = false };
+        Assert(view.GestureRecognizers.Count == 0, "display only view still captures gestures");
+        var initialDistance = view.Camera.Distance;
+        view.ApplyMacPinch(GestureStatus.Started, 1);
+        view.ApplyMacPinch(GestureStatus.Running, 1.5);
+        Assert(view.Camera.Distance == initialDistance, "display only view zoomed");
+        view.IsInteractive = true;
+        Assert(view.GestureRecognizers.OfType<PanGestureRecognizer>().Any(), "orbit gesture was not restored");
+        Assert(view.GestureRecognizers.OfType<TapGestureRecognizer>().Any(), "picking gesture was not restored");
+    }),
+    ("surface render limit can be changed for animation and restored", () =>
+    {
+        var view = new SceneView { Scene = new Scene().Add(Shape.Box()) };
+        view.MaximumRenderDimension = 768;
+        var animation = view.CaptureSurfaceFrame(2048, 1024);
+        Assert(animation.Width == 768 && animation.Height == 384, "animation render limit was ignored");
+        view.MaximumRenderDimension = DepthRenderer.MaximumDimension;
+        var still = view.CaptureSurfaceFrame(2048, 1024);
+        Assert(still.Width == 2048 && still.Height == 1024, "still frame did not regain full resolution");
+        Assert(!ReferenceEquals(animation, still), "resizing reused the old frame");
+    }),
     ("oversize surfaces keep their aspect ratio", () =>
     {
         var size = SceneView.RenderSize(4000, 1000);
