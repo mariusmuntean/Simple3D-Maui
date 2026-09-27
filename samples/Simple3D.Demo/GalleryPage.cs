@@ -1,12 +1,16 @@
 using Simple3D.Core;
 using Simple3D.Maui;
+using Simple3D.Shared;
 
 namespace Simple3D.Demo;
 
 public sealed class GalleryPage : ContentPage
 {
-    private readonly SceneView _view = new() { HeightRequest = 440 };
+    private readonly SceneView _view = new() { HeightRequest = 440, SceneBackgroundColor = Color.FromArgb("#18243B") };
     private readonly Label _caption = new() { FontSize = 15, TextColor = Color.FromArgb("#A9B8D4") };
+    private readonly Label _selection = new() { FontSize = 14, TextColor = Color.FromArgb("#8EE1CD") };
+    private readonly IReadOnlyList<DemoScene> _scenes = DemoScenes.All;
+    private DemoScene? _current;
 
     public GalleryPage()
     {
@@ -16,13 +20,14 @@ public sealed class GalleryPage : ContentPage
         var subtitle = new Label { Text = "Little worlds, a few lines of C#.", FontSize = 16,
             TextColor = Color.FromArgb("#B7C6E2") };
         var scenes = new HorizontalStackLayout { Spacing = 8 };
-        scenes.Add(SceneButton("Shapes", ShowShapes));
-        scenes.Add(SceneButton("Stack", ShowStack));
-        scenes.Add(SceneButton("Orbit", ShowOrbit));
+        foreach (var sample in _scenes)
+            scenes.Add(SceneButton(sample.Name, () => Show(sample)));
         var tools = new HorizontalStackLayout { Spacing = 8 };
         tools.Add(SceneButton("−", () => _view.Zoom(.8f)));
-        tools.Add(SceneButton("Reset", _view.ResetCamera));
+        tools.Add(SceneButton("Fit", () => _view.Camera.FitToScene(_view.Scene, (float)Math.Max(.1, _view.Width / Math.Max(1, _view.Height)))));
+        tools.Add(SceneButton("Reset", () => { if (_current is not null) Show(_current); }));
         tools.Add(SceneButton("+", () => _view.Zoom(1.25f)));
+        _view.SelectionChanged += (_, shape) => _selection.Text = shape is null ? "Tap an object to inspect it" : $"Selected: {shape.Name ?? "unnamed shape"}";
         Content = new ScrollView { Content = new VerticalStackLayout
         {
             Padding = new Thickness(22, 35), Spacing = 18,
@@ -32,17 +37,13 @@ public sealed class GalleryPage : ContentPage
                 Stroke = Color.FromArgb("#314361"), StrokeThickness = 1,
                 StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 24 },
                 Content = _view
-            }, tools, _caption, new Label
+            }, tools, _caption, _selection, new Label
             {
-                Text = "Drag to orbit · Pinch to zoom", TextColor = Color.FromArgb("#8BA1C1"), FontSize = 13
+                Text = "Drag to orbit · Pinch to zoom · Tap to select", TextColor = Color.FromArgb("#8BA1C1"), FontSize = 13
             } }
         }};
-        switch (Environment.GetEnvironmentVariable("SIMPLE3D_GALLERY_SCENE"))
-        {
-            case "Stack": ShowStack(); break;
-            case "Orbit": ShowOrbit(); break;
-            default: ShowShapes(); break;
-        }
+        var requested = Environment.GetEnvironmentVariable("SIMPLE3D_GALLERY_SCENE");
+        Show(_scenes.FirstOrDefault(s => s.Name == requested) ?? _scenes[0]);
     }
 
     private static Button SceneButton(string text, Action action)
@@ -52,34 +53,20 @@ public sealed class GalleryPage : ContentPage
         button.Clicked += (_, _) => action();
         return button;
     }
-    private void ShowShapes()
+
+    private void Show(DemoScene sample)
     {
-        _view.Scene = new Scene()
-            .Add(Shape.Box(0xFF8DA9FF).At(-1.1f, 0, 0).Rotated(.15f, .3f, 0))
-            .Add(Shape.Sphere(0xFFFFB775).At(0, 0, 0))
-            .Add(Shape.Cylinder(0xFF72DBC5).At(1.1f, 0, 0));
-        _caption.Text = "Shapes · Box, sphere and cylinder, each with its own color and transform.";
-    }
-    private void ShowStack()
-    {
-        _view.Scene = new Scene()
-            .Add(Shape.Box(0xFF53699B).At(0, -.95f, 0).Scaled(2.6f, .25f, 1.8f))
-            .Add(Shape.Cylinder(0xFF77D6C1).At(0, -.35f, 0).Scaled(.9f, 1, .9f))
-            .Add(Shape.Sphere(0xFFFFC386).At(0, .45f, 0).Scaled(1.05f))
-            .Add(Shape.Pyramid(0xFFDC98D9).At(0, 1.2f, 0).Scaled(.6f));
-        _caption.Text = "Stack · Compose a scene by chaining Add, At, Scaled and Rotated.";
-    }
-    private void ShowOrbit()
-    {
-        var scene = new Scene().Add(Shape.Sphere(0xFFFFC16D).Scaled(.75f));
-        for (var i = 0; i < 8; i++)
+        _current = sample;
+        _view.Scene = sample.Scene;
+        _view.Camera = new Camera(sample.Camera.Distance, sample.Camera.Yaw, sample.Camera.Pitch)
         {
-            var angle = 2 * MathF.PI * i / 8;
-            scene.Add(Shape.Box(i % 2 == 0 ? 0xFF94B2FF : 0xFF7EDBCB)
-                .At(MathF.Cos(angle) * 1.35f, MathF.Sin(angle * 2) * .22f, MathF.Sin(angle) * 1.35f)
-                .Rotated(0, angle, 0).Scaled(.32f));
-        }
-        _view.Scene = scene;
-        _caption.Text = "Orbit · Repeated shapes share cached mesh data.";
+            Target = sample.Camera.Target,
+            Projection = sample.Camera.Projection,
+            FieldOfView = sample.Camera.FieldOfView,
+            OrthographicHeight = sample.Camera.OrthographicHeight,
+            NearPlane = sample.Camera.NearPlane
+        };
+        _caption.Text = $"{sample.Name} · {sample.Description}";
+        _selection.Text = "Tap an object to inspect it";
     }
 }

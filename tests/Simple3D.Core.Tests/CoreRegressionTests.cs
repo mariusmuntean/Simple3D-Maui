@@ -1,5 +1,6 @@
 using System.Numerics;
 using Simple3D.Core;
+using Simple3D.Shared;
 
 internal static class CoreRegressionTests
 {
@@ -15,7 +16,8 @@ internal static class CoreRegressionTests
         ("group depth and node budget are bounded", HierarchyLimits),
         ("bounds and fit reject excessive repeated mesh triangles", BoundsBudget),
         ("raster sample work is bounded", RasterWorkBudget),
-        ("legacy renderer rejects unsupported scene features", LegacyFeatureGuard)
+        ("legacy renderer rejects unsupported scene features", LegacyFeatureGuard),
+        ("sample scenes use depth rendering and fit the camera", SampleScenes)
     ];
 
     private static void CameraNotifications()
@@ -224,6 +226,18 @@ internal static class CoreRegressionTests
         Unsupported(() => SceneRenderer.Render(new Scene().Add(Shape.Group(Shape.Box())), camera, 32, 32));
         Unsupported(() => SceneRenderer.Render(new Scene().Add(Shape.Box().WithMaterial(new Material(lit: false))), camera, 32, 32));
         Check(SceneRenderer.Render(rendererScene, camera, 32, 32).Count > 0, "legacy primitive regression");
+    }
+
+    private static void SampleScenes()
+    {
+        foreach (var sample in DemoScenes.All)
+        {
+            Check(sample.Scene.GetBounds() is not null, "sample has no geometry");
+            Check(sample.Scene.Labels.Count > 0, "sample has no labels");
+            var frame = new DepthRenderer().Render(sample.Scene, sample.Camera, 240, 180, 0xFF18243B);
+            Check(frame.Pixels.Span.ToArray().Count(p => p != 0xFF18243B) > 500, "sample drawing too small");
+        }
+        Check(DemoScenes.All.Count == 3, "expected three teaching scenes");
     }
 
     private static void Unsupported(Action action)
