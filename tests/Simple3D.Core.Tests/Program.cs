@@ -45,6 +45,15 @@ var tests = new (string Name, Action Run)[]
         var translated = original.At(2, 0, 0);
         Assert(original.Position == Vector3.Zero && translated.Position.X == 2, "mutable shape");
         Assert(original.TriangleCount == translated.TriangleCount, "mesh changed");
+        Assert(ReferenceEquals(original.Mesh, translated.Mesh), "mesh copied");
+    }),
+    ("fluent transforms replace values and preserve unrelated attributes", () => {
+        var original = Shape.Box(0xFF123456).At(1, 2, 3).Rotated(.1f, .2f, .3f).Scaled(2);
+        var changed = original.At(4, 5, 6).Scaled(3).Scaled(2, 3, 4);
+        Assert(original.Position == new Vector3(1, 2, 3) && original.Size == new Vector3(2), "original changed");
+        Assert(changed.Position == new Vector3(4, 5, 6) && changed.Size == new Vector3(2, 3, 4), "transforms accumulated");
+        Assert(changed.Rotation == original.Rotation && changed.Color == original.Color, "unrelated attributes changed");
+        Assert(ReferenceEquals(original.Mesh, changed.Mesh), "mesh copied");
     }),
     ("invalid dimensions are rejected", () => {
         try { Shape.Box().Scaled(-1); throw new Exception("accepted negative size"); }

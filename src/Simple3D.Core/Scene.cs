@@ -4,9 +4,8 @@ namespace Simple3D.Core;
 public sealed class Scene
 {
     private readonly List<Shape> _shapes = new();
-    private readonly IReadOnlyList<Shape> _readOnlyShapes;
-    public Scene() => _readOnlyShapes = _shapes.AsReadOnly();
-    public IReadOnlyList<Shape> Shapes => _readOnlyShapes;
+    public Scene() => Shapes = _shapes.AsReadOnly();
+    public IReadOnlyList<Shape> Shapes { get; }
     public Scene Add(Shape shape) { _shapes.Add(shape ?? throw new ArgumentNullException(nameof(shape))); return this; }
     public Scene Clear() { _shapes.Clear(); return this; }
 }

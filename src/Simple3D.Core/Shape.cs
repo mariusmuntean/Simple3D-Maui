@@ -25,31 +25,39 @@ public sealed class Shape
     public static Shape Pyramid(uint color = 0xFFE495CB) => New(Meshes.Pyramid, color);
 
     private static Shape New(Triangle3[] mesh, uint color) => new(mesh, color, Vector3.Zero, Vector3.Zero, Vector3.One);
+
+    /// <summary>Returns a copy with an absolute position, preserving rotation and size.</summary>
     public Shape At(float x, float y, float z)
     {
         RequireFinite(x, nameof(x));
         RequireFinite(y, nameof(y));
         RequireFinite(z, nameof(z));
-        return Copy(new(x, y, z), Rotation, Size);
+        return new(Mesh, Color, new(x, y, z), Rotation, Size);
     }
+
+    /// <summary>Returns a copy with absolute Euler angles in radians, preserving position and size.</summary>
     public Shape Rotated(float x, float y, float z)
     {
         RequireFinite(x, nameof(x));
         RequireFinite(y, nameof(y));
         RequireFinite(z, nameof(z));
-        return Copy(Position, new(x, y, z), Size);
+        return new(Mesh, Color, Position, new(x, y, z), Size);
     }
+
+    /// <summary>Returns a copy with a uniform size; repeated calls replace the previous size.</summary>
     public Shape Scaled(float size)
     {
         RequirePositive(size, nameof(size));
-        return Scaled(size, size, size);
+        return new(Mesh, Color, Position, Rotation, new(size));
     }
+
+    /// <summary>Returns a copy with absolute positive dimensions, preserving position and rotation.</summary>
     public Shape Scaled(float x, float y, float z)
     {
         RequirePositive(x, nameof(x));
         RequirePositive(y, nameof(y));
         RequirePositive(z, nameof(z));
-        return Copy(Position, Rotation, new(x, y, z));
+        return new(Mesh, Color, Position, Rotation, new(x, y, z));
     }
     private static void RequireFinite(float value, string parameter)
     {
@@ -60,14 +68,6 @@ public sealed class Shape
         if (!float.IsFinite(value) || value <= 0)
             throw new ArgumentOutOfRangeException(parameter, "Dimensions must be positive and finite.");
     }
-    private Shape Copy(Vector3 position, Vector3 rotation, Vector3 size)
-    {
-        if (!Valid(position.X) || !Valid(position.Y) || !Valid(position.Z) ||
-            !Valid(rotation.X) || !Valid(rotation.Y) || !Valid(rotation.Z))
-            throw new ArgumentOutOfRangeException(nameof(position), "Transforms must be finite.");
-        return new(Mesh, Color, position, rotation, size);
-    }
-    private static bool Valid(float n) => float.IsFinite(n);
 }
 
 internal readonly record struct Triangle3(Vector3 A, Vector3 B, Vector3 C);
