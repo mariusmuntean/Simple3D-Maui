@@ -16,6 +16,7 @@ jobs:
         with:
           dotnet-version: 10.0.x
       - run: dotnet run --project tests/Simple3D.Core.Tests --configuration Release
+      - run: dotnet run --project tests/Simple3D.Maui.Tests --configuration Release
       - run: dotnet build src/Simple3D.Core --configuration Release --no-restore
       - run: dotnet pack src/Simple3D.Core --configuration Release --no-build --output artifacts/packages
   platforms:

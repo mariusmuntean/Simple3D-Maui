@@ -10,7 +10,6 @@ public sealed class SceneView : GraphicsView
     private Scene _scene = new();
     private Camera _camera = new();
     private PointF? _previousTouch;
-    private double _previousScale = 1;
 
     public SceneView()
     {
@@ -28,12 +27,8 @@ public sealed class SceneView : GraphicsView
         var pinch = new PinchGestureRecognizer();
         pinch.PinchUpdated += (_, args) =>
         {
-            if (args.Status == GestureStatus.Started) _previousScale = 1;
-            if (args.Status == GestureStatus.Running && args.Scale > 0)
-            {
-                Zoom((float)(args.Scale / _previousScale));
-                _previousScale = args.Scale;
-            }
+            // MAUI supplies an incremental factor, not a cumulative gesture scale.
+            if (args.Status == GestureStatus.Running) Zoom((float)args.Scale);
         };
         GestureRecognizers.Add(pinch);
     }
@@ -59,7 +54,7 @@ public sealed class SceneView : GraphicsView
                 var color = triangle.Color;
                 canvas.FillColor = Color.FromRgba((int)((color >> 16) & 255), (int)((color >> 8) & 255),
                     (int)(color & 255), (int)((color >> 24) & 255));
-                var path = new PathF();
+                using var path = new PathF();
                 path.MoveTo(triangle.A.X, triangle.A.Y);
                 path.LineTo(triangle.B.X, triangle.B.Y);
                 path.LineTo(triangle.C.X, triangle.C.Y);

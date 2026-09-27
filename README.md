@@ -16,7 +16,7 @@ var view = new SceneView
 Content = view;
 ```
 
-Drag to orbit, pinch to zoom, or call `view.Orbit(yawRadians, pitchRadians)`, `view.Zoom(factor)`, and `view.ResetCamera()`. Assign a new `Scene` to change composition; call `view.Refresh()` when changing the existing scene. Shapes are immutable; `At`, `Rotated` and `Scaled` return transformed instances. Colors use opaque ARGB values (`0xFFRRGGBB`); transparent values are rejected. Angles are radians. The built-in unit shapes are centered at the origin; use `Scaled` for size.
+Drag to orbit, pinch to zoom, or call `view.Orbit(yawRadians, pitchRadians)`, `view.Zoom(factor)`, and `view.ResetCamera()`. Assign a new `Scene` to change composition; call `view.Refresh()` when changing the existing scene. Shapes are immutable; `At`, `Rotated` and `Scaled` return copies that replace the corresponding absolute position, rotation or size. For example, `Scaled(2).Scaled(3)` produces size 3. Other attributes and the shared mesh are preserved. Colors use opaque ARGB values (`0xFFRRGGBB`); transparent values are rejected. Angles are radians. The built-in unit shapes are centered at the origin; use `Scaled` for size.
 
 ## Projects
 
@@ -24,6 +24,7 @@ Drag to orbit, pinch to zoom, or call `view.Orbit(yawRadians, pitchRadians)`, `v
 - `src/Simple3D.Maui`: `SceneView` using the standard MAUI `GraphicsView` canvas and touch events.
 - `samples/Simple3D.Demo`: three selectable scenes, orbit and zoom controls; launch this project on a device or simulator.
 - `tests/Simple3D.Core.Tests`: dependency-free executable regression tests.
+- `tests/Simple3D.Maui.Tests`: portable tests of the real MAUI control's gesture events, drawing output and path disposal. Links the production view source against MAUI Controls, so these tests need no platform workload or emulator.
 
 Add project references to `Simple3D.Core` and `Simple3D.Maui`, or pack both locally. Install the .NET 10 MAUI workload and platform SDKs, then run the demo:
 
@@ -31,6 +32,7 @@ Add project references to `Simple3D.Core` and `Simple3D.Maui`, or pack both loca
 dotnet workload install maui
 dotnet run --project samples/Simple3D.Demo -f net10.0-maccatalyst
 dotnet run --project tests/Simple3D.Core.Tests -c Release
+dotnet run --project tests/Simple3D.Maui.Tests -c Release
 ```
 
 On Android and iOS, select `net10.0-android` or `net10.0-ios` and a device/simulator. CI runs the portable tests, builds each demo target, and packs both libraries. The iOS simulator opens all three gallery scenes and compares their rendered drawings; the Android emulator opens the gallery. CI validates screenshots against the gallery's background, panel, and shape colors, and uploads them for inspection.
