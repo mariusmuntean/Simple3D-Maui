@@ -19,6 +19,7 @@ internal static class CoreRegressionTests
         ("legacy renderer rejects unsupported scene features", LegacyFeatureGuard),
         ("sample scenes use depth rendering and fit the camera", SampleScenes),
         ("each sample animation moves and resets its scene", SampleAnimations),
+        ("equipment output arrow keeps its tail fixed", EquipmentAnimation),
         ("telemetry bars animate within scale and change color", TelemetryAnimation)
     ];
 
@@ -286,11 +287,38 @@ internal static class CoreRegressionTests
                 colors.Add(bar.Color);
                 Check(bar.Size.Y >= .35f && bar.Size.Y <= 2.5f, "bar left the chart scale");
                 Check(MathF.Abs(bar.Position.Y - bar.Size.Y / 2) < .0001f, "bar left the baseline");
+                Check(bar.Name == $"Sample {Array.IndexOf(bars, bar) + 1}: {bar.Size.Y:0.00}",
+                    "bar inspection does not show its current value");
+            }
+            if (step == 20)
+            {
+                var frame = new DepthRenderer().Render(sample.Scene, sample.Camera, 320, 240);
+                var picked = false;
+                for (var y = 0; y < frame.Height && !picked; y++)
+                    for (var x = 0; x < frame.Width; x++)
+                    {
+                        var shape = frame.Pick(x, y);
+                        if (shape?.Name?.StartsWith("Sample ", StringComparison.Ordinal) != true) continue;
+                        Check(bars.Contains(shape), "picked bar is not the current animated shape");
+                        picked = true;
+                        break;
+                    }
+                Check(picked, "animated bars are not pickable");
             }
         }
         Check(largest - smallest > 1.5f, "bar motion has too little range");
         Check(colors.Count > 10, "bar colors do not follow their heights");
         sample.Animate(0);
+    }
+
+    private static void EquipmentAnimation()
+    {
+        var sample = DemoScenes.Equipment();
+        sample.Animate(.75f);
+        var arrow = sample.Scene.Shapes.Single(shape => shape.Name == "Output axis");
+        Check(arrow.Position == new Vector3(.55f, -.2f, 0),
+            "output arrow must be positioned at its fixed tail");
+        Check(arrow.Geometry!.Vertices.Contains(Vector3.Zero), "output arrow tail moved");
     }
 
     private static void Unsupported(Action action)

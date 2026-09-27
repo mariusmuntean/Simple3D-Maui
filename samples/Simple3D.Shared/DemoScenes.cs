@@ -21,7 +21,8 @@ public static class DemoScenes
         var housing = Shape.Cylinder(0xFF8DA9FF).Named("Motor housing").Scaled(.65f, 1.25f, .65f).At(-.4f, -.1f, 0);
         var cap = Shape.Sphere(0xFFFFBE79).Named("Inspection cap").Scaled(.34f).At(-.4f, .67f, 0);
         scene.Add(Shape.Group(basePlate, housing, cap).Named("Drive assembly"));
-        var axis = Shape.Arrow(new(.55f, -.2f, 0), new(1.45f, .55f, 0), .09f, 0xFF76DBC7).Named("Output axis");
+        var axis = Shape.Arrow(Vector3.Zero, new(.9f, .75f, 0), .09f, 0xFF76DBC7)
+            .Named("Output axis").At(.55f, -.2f, 0);
         scene.Add(axis);
         scene.AddLabel(new("MOTOR", new(-.4f, 1.15f, 0), 0xFFE4ECFF));
         scene.AddLabel(new("OUTPUT", new(1.2f, .9f, 0), 0xFFE4ECFF));
@@ -153,7 +154,7 @@ public static class DemoScenes
                 var color = height < 1f
                     ? Mix(0xFF80B2FF, 0xFF76DBC7, Math.Clamp((height - .35f) / .65f, 0, 1))
                     : Mix(0xFF76DBC7, 0xFFFFA66F, Math.Clamp((height - 1.65f) / .85f, 0, 1));
-                bars[i] = Shape.Box(color).Named($"Sample {i + 1}")
+                bars[i] = Shape.Box(color).Named($"Sample {i + 1}: {height:0.00}")
                     .Scaled(.56f, height, .56f).At((i - 2) * .78f, height / 2, 0);
             }
             return Shape.Group(bars).Named("Live samples");
