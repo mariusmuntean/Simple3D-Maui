@@ -76,10 +76,10 @@ If the default `dotnet` installation has no MAUI workloads, use the installation
 
 ```bash
 DOTNET_ROOT="$HOME/.dotnet" "$HOME/.dotnet/dotnet" build samples/Simple3D.Demo -f net10.0-maccatalyst -c Debug
-open "samples/Simple3D.Demo/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/Simple3D Gallery.app"
+open "samples/Simple3D.Demo/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/Simple3D.Demo.app"
 ```
 
-The demo's Debug iOS and Mac Catalyst builds skip the Xcode version check so the locally tested Xcode 27 / Mac Catalyst workload 26.5.10301 combination builds directly from Rider or the command above. This does not make that toolchain combination officially supported. Release builds retain the version check; use a matching Xcode/workload pair. GitHub's macOS jobs select Xcode 26.6 explicitly. The Mac app registers a MAUI scene delegate for the scene lifecycle required when launching this build on macOS 27.
+The demo's iOS and Mac Catalyst builds skip the Xcode version check so the locally tested Xcode 27 / Apple workload 26.5.10301 combination builds directly from Rider in Debug and Release. This does not make that toolchain combination officially supported. GitHub's macOS jobs select Xcode 26.6 explicitly. The Mac Catalyst bundle uses the project assembly name so Rider's macOS run configuration finds the executable; its visible title remains Simple3D Gallery. The Mac app registers a MAUI scene delegate for the scene lifecycle required when launching this build on macOS 27.
 
 ## Scope
 

@@ -5,12 +5,16 @@ using Simple3D.Core;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
 using SkiaSharp.Views.Maui.Controls;
+#if MACCATALYST
+using UIKit;
+#endif
 
 namespace Simple3D.Maui;
 
 /// <summary>A depth-rendered, touch-enabled surface for small opaque scenes. Mutate its scene and camera on the UI thread.</summary>
 public sealed class SceneView : SKCanvasView
 {
+    private const int DragPreviewMaximumDimension = 1024;
     /// <summary>The scene displayed by this view.</summary>
     public static readonly BindableProperty SceneProperty = BindableProperty.Create(nameof(Scene), typeof(Scene), typeof(SceneView),
         defaultValueCreator: _ => new Scene(), propertyChanged: (bindable, oldValue, newValue) =>
@@ -22,13 +26,27 @@ public sealed class SceneView : SKCanvasView
     /// <summary>The opaque clear color, expressed as a MAUI color.</summary>
     public static readonly BindableProperty SceneBackgroundColorProperty = BindableProperty.Create(nameof(SceneBackgroundColor), typeof(Color), typeof(SceneView),
         Color.FromArgb("#F4F6FA"), propertyChanged: (bindable, _, _) => ((SceneView)bindable).Refresh());
+    /// <summary>Whether the view installs orbit, zoom and picking gestures.</summary>
+    public static readonly BindableProperty IsInteractiveProperty = BindableProperty.Create(nameof(IsInteractive), typeof(bool), typeof(SceneView),
+        true, propertyChanged: (bindable, _, _) => ((SceneView)bindable).UpdateInteraction());
+    /// <summary>Maximum physical width or height used for native painting.</summary>
+    public static readonly BindableProperty MaximumRenderDimensionProperty = BindableProperty.Create(nameof(MaximumRenderDimension), typeof(int), typeof(SceneView),
+        DepthRenderer.MaximumDimension, validateValue: (_, value) => value is int size && size >= 1 && size <= DepthRenderer.MaximumDimension,
+        propertyChanged: (bindable, _, _) => ((SceneView)bindable).Refresh());
 
     private readonly DepthRenderer _renderer = new();
     private RenderFrame? _frame;
     private bool _dirty = true;
     private bool _subscriptionsActive;
     private bool _wasConnected;
+    private bool _panActive;
     private double _lastPanX, _lastPanY;
+    private double _lastMacPinchScale = 1;
+    private readonly List<IGestureRecognizer> _interactionGestures = new();
+#if MACCATALYST
+    private UIView? _macPinchView;
+    private UIPinchGestureRecognizer? _macPinchRecognizer;
+#endif
 
     /// <summary>Raised when the user taps a visible shape or the background.</summary>
     public event EventHandler<Shape?>? SelectionChanged;
@@ -43,18 +61,21 @@ public sealed class SceneView : SKCanvasView
         var pan = new PanGestureRecognizer();
         pan.PanUpdated += (_, args) =>
         {
-            if (args.StatusType == GestureStatus.Started) { _lastPanX = _lastPanY = 0; }
+            if (args.StatusType == GestureStatus.Started) { _lastPanX = _lastPanY = 0; _panActive = true; }
             else if (args.StatusType == GestureStatus.Running)
             {
                 Orbit((float)((args.TotalX - _lastPanX) * .012), (float)(-(args.TotalY - _lastPanY) * .012));
                 _lastPanX = args.TotalX;
                 _lastPanY = args.TotalY;
             }
+            else { _panActive = false; Refresh(); }
         };
-        GestureRecognizers.Add(pan);
+        _interactionGestures.Add(pan);
+#if !MACCATALYST
         var pinch = new PinchGestureRecognizer();
         pinch.PinchUpdated += (_, args) => { if (args.Status == GestureStatus.Running) Zoom((float)args.Scale); };
-        GestureRecognizers.Add(pinch);
+        _interactionGestures.Add(pinch);
+#endif
         var tap = new TapGestureRecognizer();
         tap.Tapped += (_, args) =>
         {
@@ -63,7 +84,8 @@ public sealed class SceneView : SKCanvasView
             SelectedShape = PickAt(point.Value.X, point.Value.Y, Width, Height);
             SelectionChanged?.Invoke(this, SelectedShape);
         };
-        GestureRecognizers.Add(tap);
+        _interactionGestures.Add(tap);
+        UpdateInteraction();
     }
 
     /// <summary>Scene instance. Changes to this scene invalidate the cached frame.</summary>
@@ -84,11 +106,32 @@ public sealed class SceneView : SKCanvasView
         get => (Color)GetValue(SceneBackgroundColorProperty);
         set => SetValue(SceneBackgroundColorProperty, value ?? throw new ArgumentNullException(nameof(value)));
     }
+    /// <summary>Enable orbit, zoom and tap selection. Set false for a display only scene.</summary>
+    public bool IsInteractive
+    {
+        get => (bool)GetValue(IsInteractiveProperty);
+        set => SetValue(IsInteractiveProperty, value);
+    }
+    /// <summary>Maximum physical render dimension for native paints. Lower values reduce per-frame work during animation.</summary>
+    public int MaximumRenderDimension
+    {
+        get => (int)GetValue(MaximumRenderDimensionProperty);
+        set => SetValue(MaximumRenderDimensionProperty, value);
+    }
 
     /// <summary>Orbit the camera by radians.</summary>
     public void Orbit(float yawDelta, float pitchDelta) => Camera.Orbit(yawDelta, pitchDelta);
     /// <summary>Zoom by an incremental factor.</summary>
     public void Zoom(float factor) => Camera.Zoom(factor);
+    internal void ApplyMacPinch(GestureStatus status, double scale)
+    {
+        if (!IsInteractive) return;
+        if (status == GestureStatus.Started) { _lastMacPinchScale = 1; return; }
+        if (status != GestureStatus.Running) { _lastMacPinchScale = 1; return; }
+        if (!double.IsFinite(scale) || scale <= 0) return;
+        Zoom((float)(scale / _lastMacPinchScale));
+        _lastMacPinchScale = scale;
+    }
     /// <summary>Restore the default camera for this view.</summary>
     public void ResetCamera() => Camera = new Camera();
     /// <summary>Invalidate the frame after external changes that do not raise scene or camera notifications.</summary>
@@ -125,9 +168,19 @@ public sealed class SceneView : SKCanvasView
     /// <summary>Attaches notifications when the native handler connects and releases them on disconnect.</summary>
     protected override void OnHandlerChanged()
     {
+#if MACCATALYST
+        if (_macPinchRecognizer is not null)
+        {
+            _macPinchView?.RemoveGestureRecognizer(_macPinchRecognizer);
+            _macPinchRecognizer.Dispose();
+            _macPinchRecognizer = null;
+            _macPinchView = null;
+        }
+#endif
         base.OnHandlerChanged();
         if (Handler is null)
         {
+            _panActive = false;
             if (_wasConnected) SetSubscriptions(false);
         }
         else
@@ -135,6 +188,26 @@ public sealed class SceneView : SKCanvasView
             _wasConnected = true;
             SetSubscriptions(true);
             Refresh();
+#if MACCATALYST
+            if (Handler.PlatformView is UIView platformView)
+            {
+                // Trackpad pinches have zero UIKit touches; the MAUI bridge ends them after one update.
+                _macPinchRecognizer = new UIPinchGestureRecognizer(recognizer =>
+                {
+                    var status = recognizer.State switch
+                    {
+                        UIGestureRecognizerState.Began => GestureStatus.Started,
+                        UIGestureRecognizerState.Changed => GestureStatus.Running,
+                        UIGestureRecognizerState.Ended => GestureStatus.Completed,
+                        _ => GestureStatus.Canceled
+                    };
+                    ApplyMacPinch(status, recognizer.Scale);
+                });
+                _macPinchRecognizer.Enabled = IsInteractive;
+                platformView.AddGestureRecognizer(_macPinchRecognizer);
+                _macPinchView = platformView;
+            }
+#endif
         }
     }
 
@@ -166,16 +239,29 @@ public sealed class SceneView : SKCanvasView
     }
     private void SourceChanged(object? sender, EventArgs args) => Refresh();
 
-    internal static (int Width, int Height) RenderSize(int width, int height)
+    private void UpdateInteraction()
+    {
+        _panActive = false;
+        GestureRecognizers.Clear();
+        if (IsInteractive)
+            foreach (var gesture in _interactionGestures) GestureRecognizers.Add(gesture);
+#if MACCATALYST
+        if (_macPinchRecognizer is not null) _macPinchRecognizer.Enabled = IsInteractive;
+#endif
+        Refresh();
+    }
+
+    internal static (int Width, int Height) RenderSize(int width, int height, int maximumDimension = DepthRenderer.MaximumDimension)
     {
         if (width <= 0 || height <= 0) return (0, 0);
-        var scale = Math.Min(1.0, (double)DepthRenderer.MaximumDimension / Math.Max(width, height));
+        var scale = Math.Min(1.0, (double)maximumDimension / Math.Max(width, height));
         return (Math.Max(1, (int)Math.Round(width * scale)), Math.Max(1, (int)Math.Round(height * scale)));
     }
 
     internal RenderFrame CaptureSurfaceFrame(int surfaceWidth, int surfaceHeight)
     {
-        var (width, height) = RenderSize(surfaceWidth, surfaceHeight);
+        var (width, height) = RenderSize(surfaceWidth, surfaceHeight,
+            _panActive ? Math.Min(DragPreviewMaximumDimension, MaximumRenderDimension) : MaximumRenderDimension);
         while (true)
         {
             try { return CaptureFrame(width, height); }
