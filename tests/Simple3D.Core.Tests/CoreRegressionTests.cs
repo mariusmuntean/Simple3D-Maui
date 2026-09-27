@@ -16,6 +16,7 @@ internal static class CoreRegressionTests
         ("group depth and node budget are bounded", HierarchyLimits),
         ("bounds and fit reject excessive repeated mesh triangles", BoundsBudget),
         ("raster sample work is bounded", RasterWorkBudget),
+        ("reusable target matches owned frames across updates", ReusableRenderTarget),
         ("legacy renderer rejects unsupported scene features", LegacyFeatureGuard),
         ("sample scenes use depth rendering and fit the camera", SampleScenes),
         ("each sample animation moves and resets its scene", SampleAnimations),
@@ -201,6 +202,13 @@ internal static class CoreRegressionTests
         Throws(() => scene.GetBounds());
         Throws(() => camera.FitToScene(scene));
         Check((camera.Target, camera.Distance, camera.OrthographicHeight) == original, "failed fit changed camera");
+        var renderer = new DepthRenderer();
+        renderer.Render(new Scene(), camera, 1, 1);
+        var allocated = GC.GetAllocatedBytesForCurrentThread();
+        Throws(() => renderer.Render(scene, camera, 2048, 2048));
+        var rejectedBytes = GC.GetAllocatedBytesForCurrentThread() - allocated;
+        Check(rejectedBytes < 8_000_000,
+            $"rejected scene allocated full output buffers ({rejectedBytes:N0} bytes)");
 
         static long CountTriangles(Shape shape) => shape.TriangleCount + shape.Children.Sum(CountTriangles);
     }
@@ -211,8 +219,54 @@ internal static class CoreRegressionTests
         var scene = new Scene();
         for (var i = 0; i < 20; i++) scene.Add(large);
         try { new DepthRenderer().Render(scene, new Camera(5, 0, 0), 1024, 1024); }
-        catch (RasterBudgetExceededException) { return; }
+        catch (RasterBudgetExceededException)
+        {
+            var renderer = new DepthRenderer();
+            var target = new RenderTarget(1024, 1024);
+            renderer.RenderInto(new Scene().Add(Shape.Box()), new Camera(5, 0, 0), target);
+            try { renderer.RenderInto(scene, new Camera(5, 0, 0), target); }
+            catch (RasterBudgetExceededException)
+            {
+                Check(target.Pick(512, 512) is null, "failed target render kept stale picking");
+                renderer.RenderInto(new Scene(), new Camera(), target);
+                Check(target.Pick(512, 512) is null, "target did not recover after failure");
+                return;
+            }
+        }
         throw new InvalidOperationException("Expected a specific raster budget diagnostic.");
+    }
+
+    private static void ReusableRenderTarget()
+    {
+        var renderer = new DepthRenderer();
+        var camera = new Camera(5, .3f, .2f);
+        var near = Shape.Box(0xFF80B2FF).Named("near").At(0, 0, .6f);
+        var far = Shape.Sphere(0xFFFFA66F).Named("far").At(.4f, 0, -.5f);
+        var scene = new Scene().Add(near).Add(far).AddLabel(new("origin", Vector3.Zero));
+        var target = new RenderTarget(160, 120);
+        var storage = target.PixelBuffer;
+        var first = renderer.Render(scene, camera, 160, 120);
+        renderer.RenderInto(scene, camera, target);
+        Compare(first);
+
+        var originalPixels = first.Pixels.ToArray();
+        scene.Replace(near, near.At(-.8f, .3f, .8f));
+        camera.Orbit(.2f, -.1f);
+        var second = renderer.Render(scene, camera, 160, 120);
+        renderer.RenderInto(scene, camera, target);
+        Compare(second);
+        Check(ReferenceEquals(storage, target.PixelBuffer), "target allocated new pixels for an update");
+        Check(first.Pixels.Span.SequenceEqual(originalPixels), "owned frame changed after target update");
+        Check(!first.Pixels.Span.SequenceEqual(second.Pixels.Span), "scene update did not alter frame");
+
+        void Compare(RenderFrame owned)
+        {
+            Check(target.Pixels.Span.SequenceEqual(owned.Pixels.Span), "target pixels differ from owned render");
+            Check(target.Labels.Count == owned.Labels.Count, "target labels differ from owned render");
+            for (var y = 0; y < 120; y += 5)
+                for (var x = 0; x < 160; x += 5)
+                    Check(ReferenceEquals(target.Pick(x, y), owned.Pick(x, y)), "target picking differs");
+        }
     }
 
     private static void LegacyFeatureGuard()

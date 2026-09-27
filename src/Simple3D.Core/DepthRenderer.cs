@@ -42,6 +42,61 @@ public sealed class RenderFrame
     }
 }
 
+/// <summary>A fixed-size render target whose pixel and picking storage is reused on each render.</summary>
+/// <remarks>Content is overwritten by <see cref="DepthRenderer.RenderInto"/>. Copy pixels or use <see cref="DepthRenderer.Render"/> when a snapshot must survive later renders.</remarks>
+public sealed class RenderTarget
+{
+    private readonly uint[] _pixels;
+    private readonly int[] _ids;
+    private Shape[] _shapes = [];
+    private IReadOnlyList<ProjectedLabel> _labels = Array.Empty<ProjectedLabel>();
+    private bool _valid;
+
+    /// <summary>Width in physical pixels.</summary>
+    public int Width { get; }
+    /// <summary>Height in physical pixels.</summary>
+    public int Height { get; }
+    /// <summary>Pixels from the most recent render; the same storage is overwritten on the next render.</summary>
+    public ReadOnlyMemory<uint> Pixels => _pixels;
+    /// <summary>Projected labels from the most recent render.</summary>
+    public IReadOnlyList<ProjectedLabel> Labels => _labels;
+
+    /// <summary>Allocates a reusable target with dimensions from 1 to 2048.</summary>
+    public RenderTarget(int width, int height)
+    {
+        if (width < 1 || width > DepthRenderer.MaximumDimension) throw new ArgumentOutOfRangeException(nameof(width));
+        if (height < 1 || height > DepthRenderer.MaximumDimension) throw new ArgumentOutOfRangeException(nameof(height));
+        Width = width;
+        Height = height;
+        _pixels = new uint[width * height];
+        _ids = new int[width * height];
+        Array.Fill(_ids, -1);
+    }
+
+    /// <summary>Returns the visible leaf shape at a physical pixel in the most recent render.</summary>
+    public Shape? Pick(int x, int y)
+    {
+        if (!_valid || x < 0 || y < 0 || x >= Width || y >= Height) return null;
+        var id = _ids[y * Width + x];
+        return id < 0 ? null : _shapes[id];
+    }
+
+    internal uint[] PixelBuffer => _pixels;
+    internal int[] IdBuffer => _ids;
+    internal void BeginRender()
+    {
+        _valid = false;
+        _shapes = [];
+        _labels = Array.Empty<ProjectedLabel>();
+    }
+    internal void Update(Shape[] shapes, ProjectedLabel[] labels)
+    {
+        _shapes = shapes;
+        _labels = Array.AsReadOnly(labels);
+        _valid = true;
+    }
+}
+
 /// <summary>Indicates that clipped triangle coverage exceeded the per-frame raster work budget.</summary>
 public sealed class RasterBudgetExceededException : ArgumentException
 {
@@ -64,12 +119,38 @@ public sealed class DepthRenderer
     /// <summary>Renders an owned snapshot. Dimensions must be 1..2048; background must be opaque. Equal-depth pixels favor earlier shapes. Scenes exceeding triangle or node budgets throw.</summary>
     public RenderFrame Render(Scene scene, Camera camera, int width, int height, uint background = 0xFFF4F6FA)
     {
+        Validate(scene, camera, width, height, background);
+        var nodes = PrepareNodes(scene);
+        var count = width * height;
+        var pixels = new uint[count];
+        var ids = new int[count];
+        var (shapes, labels) = RenderCore(scene, camera, width, height, background, nodes, pixels, ids);
+        return new(width, height, pixels, ids, shapes, labels);
+    }
+
+    /// <summary>Renders into a reusable target. Its previous pixels and picks are overwritten; after an exception, render again before reading it.</summary>
+    public void RenderInto(Scene scene, Camera camera, RenderTarget target, uint background = 0xFFF4F6FA)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        Validate(scene, camera, target.Width, target.Height, background);
+        target.BeginRender();
+        var nodes = PrepareNodes(scene);
+        var (shapes, labels) = RenderCore(scene, camera, target.Width, target.Height, background,
+            nodes, target.PixelBuffer, target.IdBuffer);
+        target.Update(shapes, labels);
+    }
+
+    private static void Validate(Scene scene, Camera camera, int width, int height, uint background)
+    {
         ArgumentNullException.ThrowIfNull(scene);
         ArgumentNullException.ThrowIfNull(camera);
         if (width < 1 || width > MaximumDimension) throw new ArgumentOutOfRangeException(nameof(width));
         if (height < 1 || height > MaximumDimension) throw new ArgumentOutOfRangeException(nameof(height));
         if ((background >> 24) != 255) throw new ArgumentOutOfRangeException(nameof(background));
+    }
 
+    private static (Shape Shape, Matrix4x4 Transform)[] PrepareNodes(Scene scene)
+    {
         var nodes = scene.Flatten().ToArray();
         long triangles = 0;
         foreach (var node in nodes)
@@ -77,12 +158,16 @@ public sealed class DepthRenderer
             triangles += node.Shape.TriangleCount;
             if (triangles > MaximumTriangles) throw new ArgumentException("Scene exceeds triangle budget.", nameof(scene));
         }
+        return nodes;
+    }
+
+    private (Shape[] Shapes, ProjectedLabel[] Labels) RenderCore(Scene scene, Camera camera, int width, int height,
+        uint background, (Shape Shape, Matrix4x4 Transform)[] nodes, uint[] pixels, int[] ids)
+    {
         var count = width * height;
         if (_depth.Length < count) _depth = new float[count];
         Array.Fill(_depth, float.PositiveInfinity, 0, count);
-        var pixels = new uint[count];
         Array.Fill(pixels, background);
-        var ids = new int[count];
         Array.Fill(ids, -1);
         long rasterSamples = 0;
 
@@ -145,7 +230,7 @@ public sealed class DepthRenderer
             if (p.X >= 0 && p.X < width && p.Y >= 0 && p.Y < height)
                 labels.Add(new(label, new((float)p.X, (float)p.Y), v.Z));
         }
-        return new(width, height, pixels, ids, nodes.Select(n => n.Shape).ToArray(), labels.ToArray());
+        return (nodes.Select(n => n.Shape).ToArray(), labels.ToArray());
 
         Vector3 View(Vector3 p)
         {
