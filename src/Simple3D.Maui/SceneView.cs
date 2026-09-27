@@ -34,7 +34,7 @@ public sealed class SceneView : SKCanvasView
         DepthRenderer.MaximumDimension, validateValue: (_, value) => value is int size && size >= 1 && size <= DepthRenderer.MaximumDimension,
         propertyChanged: (bindable, _, _) => ((SceneView)bindable).Refresh());
 
-    private readonly DepthRenderer _renderer = new();
+    private DepthRenderer _renderer = new();
     private RenderFrame? _frame;
     private RenderFrame? _paintBitmapFrame;
     private SKBitmap? _paintBitmap;
@@ -183,7 +183,7 @@ public sealed class SceneView : SKCanvasView
         if (Handler is null)
         {
             _panActive = false;
-            ReleasePaintBitmap();
+            ReleaseRenderResources();
             if (_wasConnected) SetSubscriptions(false);
         }
         else
@@ -300,6 +300,14 @@ public sealed class SceneView : SKCanvasView
         _paintBitmap?.Dispose();
         _paintBitmap = null;
         _paintBitmapFrame = null;
+    }
+
+    internal void ReleaseRenderResources()
+    {
+        ReleasePaintBitmap();
+        _frame = null;
+        _renderer = new DepthRenderer();
+        _dirty = true;
     }
 
     private void Paint(object? sender, SKPaintSurfaceEventArgs args)

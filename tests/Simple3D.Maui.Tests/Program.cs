@@ -51,6 +51,19 @@ var tests = new (string Name, Action Run)[]
             "released native bitmap was reused");
         view.ReleasePaintBitmap();
     }),
+    ("disconnected view releases buffers without invalidating owned snapshots", () =>
+    {
+        var view = new SceneView { Scene = new Scene().Add(Shape.Box()) };
+        var frame = view.CaptureFrame(96, 80);
+        var pixels = frame.Pixels.ToArray();
+        var bitmap = view.PaintBitmap(frame);
+        view.ReleaseRenderResources();
+        Assert(frame.Pixels.Span.SequenceEqual(pixels), "retained snapshot changed after view release");
+        Assert(!ReferenceEquals(frame, view.CaptureFrame(96, 80)), "view retained its old frame");
+        Assert(!ReferenceEquals(bitmap, view.PaintBitmap(view.CaptureFrame(96, 80))),
+            "view retained its native bitmap");
+        view.ReleaseRenderResources();
+    }),
     ("replaced scene and camera no longer invalidate the view", () =>
     {
         var oldScene = new Scene().Add(Shape.Box());
