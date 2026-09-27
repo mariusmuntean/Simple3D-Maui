@@ -61,6 +61,19 @@ var tests = new (string Name, Action Run)[]
         }
         Assert(actual.CaptureFrame(96, 96).Pixels.Span.SequenceEqual(expected.CaptureFrame(96, 96).Pixels.Span), "pinch changed scale incorrectly");
     }),
+    ("trackpad pinch keeps zooming throughout each gesture", () =>
+    {
+        var view = new SceneView { Camera = new Camera(10) };
+        view.ApplyMacPinch(GestureStatus.Started, 1);
+        view.ApplyMacPinch(GestureStatus.Running, 1.1);
+        view.ApplyMacPinch(GestureStatus.Running, 1.2);
+        view.ApplyMacPinch(GestureStatus.Running, 1.5);
+        Assert(Math.Abs(view.Camera.Distance - 10f / 1.5f) < .0001f, "later updates did not continue zooming");
+        view.ApplyMacPinch(GestureStatus.Completed, 1.5);
+        view.ApplyMacPinch(GestureStatus.Started, 1);
+        view.ApplyMacPinch(GestureStatus.Running, .8);
+        Assert(Math.Abs(view.Camera.Distance - 10f / 1.2f) < .0001f, "next gesture did not reset scale");
+    }),
     ("oversize surfaces keep their aspect ratio", () =>
     {
         var size = SceneView.RenderSize(4000, 1000);

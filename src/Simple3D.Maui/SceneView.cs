@@ -5,6 +5,9 @@ using Simple3D.Core;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
 using SkiaSharp.Views.Maui.Controls;
+#if MACCATALYST
+using UIKit;
+#endif
 
 namespace Simple3D.Maui;
 
@@ -29,6 +32,11 @@ public sealed class SceneView : SKCanvasView
     private bool _subscriptionsActive;
     private bool _wasConnected;
     private double _lastPanX, _lastPanY;
+    private double _lastMacPinchScale = 1;
+#if MACCATALYST
+    private UIView? _macPinchView;
+    private UIPinchGestureRecognizer? _macPinchRecognizer;
+#endif
 
     /// <summary>Raised when the user taps a visible shape or the background.</summary>
     public event EventHandler<Shape?>? SelectionChanged;
@@ -52,9 +60,11 @@ public sealed class SceneView : SKCanvasView
             }
         };
         GestureRecognizers.Add(pan);
+#if !MACCATALYST
         var pinch = new PinchGestureRecognizer();
         pinch.PinchUpdated += (_, args) => { if (args.Status == GestureStatus.Running) Zoom((float)args.Scale); };
         GestureRecognizers.Add(pinch);
+#endif
         var tap = new TapGestureRecognizer();
         tap.Tapped += (_, args) =>
         {
@@ -89,6 +99,14 @@ public sealed class SceneView : SKCanvasView
     public void Orbit(float yawDelta, float pitchDelta) => Camera.Orbit(yawDelta, pitchDelta);
     /// <summary>Zoom by an incremental factor.</summary>
     public void Zoom(float factor) => Camera.Zoom(factor);
+    internal void ApplyMacPinch(GestureStatus status, double scale)
+    {
+        if (status == GestureStatus.Started) { _lastMacPinchScale = 1; return; }
+        if (status != GestureStatus.Running) { _lastMacPinchScale = 1; return; }
+        if (!double.IsFinite(scale) || scale <= 0) return;
+        Zoom((float)(scale / _lastMacPinchScale));
+        _lastMacPinchScale = scale;
+    }
     /// <summary>Restore the default camera for this view.</summary>
     public void ResetCamera() => Camera = new Camera();
     /// <summary>Invalidate the frame after external changes that do not raise scene or camera notifications.</summary>
@@ -125,6 +143,15 @@ public sealed class SceneView : SKCanvasView
     /// <summary>Attaches notifications when the native handler connects and releases them on disconnect.</summary>
     protected override void OnHandlerChanged()
     {
+#if MACCATALYST
+        if (_macPinchRecognizer is not null)
+        {
+            _macPinchView?.RemoveGestureRecognizer(_macPinchRecognizer);
+            _macPinchRecognizer.Dispose();
+            _macPinchRecognizer = null;
+            _macPinchView = null;
+        }
+#endif
         base.OnHandlerChanged();
         if (Handler is null)
         {
@@ -135,6 +162,25 @@ public sealed class SceneView : SKCanvasView
             _wasConnected = true;
             SetSubscriptions(true);
             Refresh();
+#if MACCATALYST
+            if (Handler.PlatformView is UIView platformView)
+            {
+                // Trackpad pinches have zero UIKit touches; the MAUI bridge ends them after one update.
+                _macPinchRecognizer = new UIPinchGestureRecognizer(recognizer =>
+                {
+                    var status = recognizer.State switch
+                    {
+                        UIGestureRecognizerState.Began => GestureStatus.Started,
+                        UIGestureRecognizerState.Changed => GestureStatus.Running,
+                        UIGestureRecognizerState.Ended => GestureStatus.Completed,
+                        _ => GestureStatus.Canceled
+                    };
+                    ApplyMacPinch(status, recognizer.Scale);
+                });
+                platformView.AddGestureRecognizer(_macPinchRecognizer);
+                _macPinchView = platformView;
+            }
+#endif
         }
     }
 
