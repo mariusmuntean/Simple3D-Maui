@@ -26,7 +26,7 @@ public sealed class SceneView : SKCanvasView
     private readonly DepthRenderer _renderer = new();
     private RenderFrame? _frame;
     private bool _dirty = true;
-    private bool _subscriptionsActive = true;
+    private bool _subscriptionsActive;
     private bool _wasConnected;
     private double _lastPanX, _lastPanY;
 
@@ -39,8 +39,7 @@ public sealed class SceneView : SKCanvasView
     public SceneView()
     {
         PaintSurface += Paint;
-        Scene.Changed += SourceChanged;
-        Camera.Changed += SourceChanged;
+        SetSubscriptions(true);
         var pan = new PanGestureRecognizer();
         pan.PanUpdated += (_, args) =>
         {
@@ -119,6 +118,7 @@ public sealed class SceneView : SKCanvasView
     {
         if (_frame is null || !double.IsFinite(x) || !double.IsFinite(y) ||
             viewWidth <= 0 || viewHeight <= 0 || x < 0 || y < 0 || x >= viewWidth || y >= viewHeight) return null;
+        if (_dirty) CaptureFrame(_frame.Width, _frame.Height);
         return _frame.Pick((int)(x * _frame.Width / viewWidth), (int)(y * _frame.Height / viewHeight));
     }
 

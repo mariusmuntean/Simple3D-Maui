@@ -38,6 +38,15 @@ var tests = new (string Name, Action Run)[]
         Assert(ReferenceEquals(view.PickAt(30, 20, 60, 40), box), "half-size layout mapped incorrectly");
         Assert(view.PickAt(-1, 20, 60, 40) is null, "outside layout picked a shape");
     }),
+    ("picking refreshes a scene changed since the last paint", () =>
+    {
+        var scene = new Scene().Add(Shape.Box());
+        var view = new SceneView { Scene = scene, Camera = new Camera(5, 0, 0) };
+        view.CaptureFrame(80, 80);
+        Assert(view.PickAt(40, 40, 80, 80) is not null, "initial pick missed");
+        scene.Clear();
+        Assert(view.PickAt(40, 40, 80, 80) is null, "stale shape was picked");
+    }),
     ("pinch applies incremental updates", () =>
     {
         var actual = new SceneView { Scene = new Scene().Add(Shape.Box()) };
