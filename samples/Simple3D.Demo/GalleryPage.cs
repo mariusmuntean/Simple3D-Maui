@@ -36,16 +36,20 @@ public sealed class GalleryPage : ContentPage
         _animationButton = SceneButton("Animate", ToggleAnimation);
         tools.Add(_animationButton);
         _view.SelectionChanged += (_, shape) => _selection.Text = shape is null ? "Tap an object to inspect it" : $"Selected: {shape.Name ?? "unnamed shape"}";
+        var sceneScroller = new ScrollView { Orientation = ScrollOrientation.Horizontal,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Never, Content = scenes };
+        var toolScroller = new ScrollView { Orientation = ScrollOrientation.Horizontal,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Never, Content = tools };
         Content = new ScrollView { Content = new VerticalStackLayout
         {
             Padding = new Thickness(22, 35), Spacing = 18,
-            Children = { title, subtitle, scenes, new Border
+            Children = { title, subtitle, sceneScroller, new Border
             {
                 BackgroundColor = Color.FromArgb("#18243B"),
                 Stroke = Color.FromArgb("#314361"), StrokeThickness = 1,
                 StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 24 },
                 Content = _view
-            }, tools, _caption, _selection, new Label
+            }, toolScroller, _caption, _selection, new Label
             {
                 Text = "Drag to orbit · Pinch to zoom · Tap to select · Animate a shape", TextColor = Color.FromArgb("#8BA1C1"), FontSize = 13
             } }

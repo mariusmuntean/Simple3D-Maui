@@ -2,6 +2,7 @@ using Microsoft.Maui.Controls;
 using Simple3D.Core;
 using Simple3D.Maui;
 using Simple3D.Shared;
+using Simple3D.Demo;
 
 var tests = new (string Name, Action Run)[]
 {
@@ -122,6 +123,17 @@ var tests = new (string Name, Action Run)[]
         var frame = view.CaptureSurfaceFrame(1170, 1320);
         Assert(frame.Width < 1170 && frame.Height < 1320, "budget did not lower resolution");
         Assert(frame.Pixels.Span.ToArray().Any(p => p != 0xFFF4F6FA), "gallery disappeared");
+    }),
+    ("all gallery scenes remain reachable on narrow screens", () =>
+    {
+        var page = new GalleryPage();
+        var content = (VerticalStackLayout)((ScrollView)page.Content).Content;
+        var scroller = content.Children.OfType<ScrollView>()
+            .Single(view => view.Content is HorizontalStackLayout row &&
+                row.Children.OfType<Button>().Any(button => button.Text == "City"));
+        Assert(scroller.Orientation == ScrollOrientation.Horizontal, "scene catalogue cannot scroll horizontally");
+        var buttons = ((HorizontalStackLayout)scroller.Content).Children.OfType<Button>().ToArray();
+        Assert(buttons.Length == DemoScenes.All.Count, "not every example is in the gallery");
     }),
     ("label size follows display density", () =>
     {

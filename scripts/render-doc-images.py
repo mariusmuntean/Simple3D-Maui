@@ -14,6 +14,6 @@ with tempfile.TemporaryDirectory() as directory:
         cwd=ROOT, check=True,
     )
     DEST.mkdir(parents=True, exist_ok=True)
-    for name in ("Equipment", "Packing", "Surface"):
-        with Image.open(pathlib.Path(directory) / f"{name}.ppm") as image:
-            image.save(DEST / f"{name}.png", optimize=True)
+    for image_path in pathlib.Path(directory).glob("*.ppm"):
+        with Image.open(image_path) as image:
+            image.save(DEST / f"{image_path.stem}.png", optimize=True)
