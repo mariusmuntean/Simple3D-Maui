@@ -2,15 +2,30 @@ using System.Numerics;
 
 namespace Simple3D.Core;
 
+/// <summary>A projected triangle for the legacy painter renderer.</summary>
+/// <param name="A">First screen vertex.</param>
+/// <param name="B">Second screen vertex.</param>
+/// <param name="C">Third screen vertex.</param>
+/// <param name="Depth">Mean view depth.</param>
+/// <param name="Color">Packed ARGB color.</param>
 public readonly record struct DrawTriangle(Vector2 A, Vector2 B, Vector2 C, float Depth, uint Color);
 
 /// <summary>Projects small opaque scenes into ordered, flat-shaded screen triangles.</summary>
 public static class SceneRenderer
 {
+    private const float NearPlane = .05f;
+    private readonly record struct ClipVertex(Vector3 Position, float Depth);
+
+    /// <summary>Legacy sorted-triangle projection. Use DepthRenderer for intersecting geometry, groups, camera targets and orthographic views.</summary>
     public static IReadOnlyList<DrawTriangle> Render(Scene scene, Camera camera, float width, float height)
     {
         ArgumentNullException.ThrowIfNull(scene);
         ArgumentNullException.ThrowIfNull(camera);
+        if (camera.Target != Vector3.Zero || camera.Projection != CameraProjection.Perspective ||
+            camera.NearPlane != NearPlane || camera.FieldOfView != .76101275f ||
+            scene.Labels.Count != 0 || scene.Shapes.Any(s => s.Children.Count != 0 || s.Geometry is not null ||
+                !s.Material.Lit || !s.Material.DoubleSided))
+            throw new NotSupportedException("SceneRenderer supports only legacy primitives and the default perspective camera. Use DepthRenderer for newer scene features.");
         if (!float.IsFinite(width) || !float.IsFinite(height) || width <= 0 || height <= 0)
             return Array.Empty<DrawTriangle>();
 
@@ -22,6 +37,8 @@ public static class SceneRenderer
         var light = Vector3.Normalize(new Vector3(-.4f, .8f, 1));
         var scale = MathF.Min(width, height) * 1.25f;
         var output = new List<DrawTriangle>();
+        Span<ClipVertex> vertices = stackalloc ClipVertex[3];
+        Span<ClipVertex> clipped = stackalloc ClipVertex[4];
         foreach (var shape in scene.Shapes)
         {
             var transform = Matrix4x4.CreateScale(shape.Size) *
@@ -37,13 +54,34 @@ public static class SceneRenderer
                 var da = Vector3.Dot(a - eye, forward);
                 var db = Vector3.Dot(b - eye, forward);
                 var dc = Vector3.Dot(c - eye, forward);
-                if (da <= .05f || db <= .05f || dc <= .05f) continue;
-                var pa = Project(a, da); var pb = Project(b, db); var pc = Project(c, dc);
-                if (!float.IsFinite(pa.X) || !float.IsFinite(pa.Y) ||
-                    !float.IsFinite(pb.X) || !float.IsFinite(pb.Y) ||
-                    !float.IsFinite(pc.X) || !float.IsFinite(pc.Y)) continue;
                 var shade = .38f + .62f * MathF.Max(0, Vector3.Dot(Vector3.Normalize(normal), light));
-                output.Add(new(pa, pb, pc, (da + db + dc) / 3, Shade(shape.Color, shade)));
+                var color = Shade(shape.Color, shade);
+                if (da >= NearPlane && db >= NearPlane && dc >= NearPlane)
+                {
+                    AddTriangle(new(a, da), new(b, db), new(c, dc), color);
+                    continue;
+                }
+
+                vertices[0] = new(a, da); vertices[1] = new(b, db); vertices[2] = new(c, dc);
+                var count = 0;
+                var previous = vertices[2];
+                foreach (var current in vertices)
+                {
+                    var wasInside = previous.Depth >= NearPlane;
+                    var isInside = current.Depth >= NearPlane;
+                    // A vertex on the plane is already included by the inside branch.
+                    // Emitting it again creates zero-area triangles at clipping boundaries.
+                    if (wasInside != isInside &&
+                        previous.Depth != NearPlane && current.Depth != NearPlane)
+                    {
+                        var fraction = (NearPlane - previous.Depth) / (current.Depth - previous.Depth);
+                        clipped[count++] = new(Vector3.Lerp(previous.Position, current.Position, fraction), NearPlane);
+                    }
+                    if (isInside) clipped[count++] = current;
+                    previous = current;
+                }
+                if (count >= 3) AddTriangle(clipped[0], clipped[1], clipped[2], color);
+                if (count == 4) AddTriangle(clipped[0], clipped[2], clipped[3], color);
             }
         }
         output.Sort((a,b) => b.Depth.CompareTo(a.Depth));
@@ -54,6 +92,22 @@ public static class SceneRenderer
             var relative = point - eye;
             return new(width/2 + Vector3.Dot(relative, right)*scale/distance,
                        height/2 - Vector3.Dot(relative, up)*scale/distance);
+        }
+
+        void AddTriangle(ClipVertex a, ClipVertex b, ClipVertex c, uint color)
+        {
+            var pa = Project(a.Position, a.Depth);
+            var pb = Project(b.Position, b.Depth);
+            var pc = Project(c.Position, c.Depth);
+            if (!float.IsFinite(pa.X) || !float.IsFinite(pa.Y) ||
+                !float.IsFinite(pb.X) || !float.IsFinite(pb.Y) ||
+                !float.IsFinite(pc.X) || !float.IsFinite(pc.Y)) return;
+            // Canvas paths below a hundredth of a square pixel cannot contribute
+            // visible coverage, and arise at clipping boundaries.
+            var twiceArea = ((double)pb.X - pa.X) * ((double)pc.Y - pa.Y) -
+                            ((double)pb.Y - pa.Y) * ((double)pc.X - pa.X);
+            if (!double.IsFinite(twiceArea) || Math.Abs(twiceArea) < .02) return;
+            output.Add(new(pa, pb, pc, (a.Depth + b.Depth + c.Depth) / 3, color));
         }
     }
 

@@ -1,9 +1,35 @@
 name: Build and test
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
+  documentation:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo xcode-select --switch /Applications/Xcode_26.6.app
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet workload install maui
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'Pillow>=12,<13'
+      - run: python scripts/render-doc-images.py
+      - run: dotnet tool install docfx --tool-path .tools --version 2.81.0
+      - run: .tools/docfx metadata docs/site/docfx.json --warningsAsErrors
+      - run: .tools/docfx build docs/site/docfx.json --warningsAsErrors
+      - uses: actions/upload-artifact@v4
+        with:
+          name: documentation-site
+          path: _site
+          if-no-files-found: error
   core:
     runs-on: ubuntu-latest
     steps:
@@ -12,7 +38,9 @@ jobs:
         with:
           dotnet-version: 10.0.x
       - run: dotnet run --project tests/Simple3D.Core.Tests --configuration Release
+      - run: dotnet run --project tests/Simple3D.Maui.Tests --configuration Release
       - run: dotnet build src/Simple3D.Core --configuration Release --no-restore
+      - run: dotnet pack src/Simple3D.Core --configuration Release --no-build --output artifacts/packages
   platforms:
     runs-on: macos-26
     strategy:
@@ -27,6 +55,7 @@ jobs:
             rid: android-arm64
     steps:
       - uses: actions/checkout@v4
+      - run: sudo xcode-select --switch /Applications/Xcode_26.6.app
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
@@ -34,6 +63,9 @@ jobs:
         if: matrix.tfm == 'net10.0-android'
       - run: dotnet workload install maui
       - run: dotnet build samples/Simple3D.Demo/Simple3D.Demo.csproj -f ${{ matrix.tfm }} -r ${{ matrix.rid }} -c Release -p:EnableCodeSigning=false
+      - name: Pack multi-target MAUI library
+        if: matrix.tfm == 'net10.0-maccatalyst'
+        run: dotnet pack src/Simple3D.Maui/Simple3D.Maui.csproj -c Release -p:EnableCodeSigning=false -o artifacts/packages
       - name: Build signed iOS simulator gallery
         if: matrix.tfm == 'net10.0-ios'
         run: dotnet build samples/Simple3D.Demo/Simple3D.Demo.csproj -f net10.0-ios -r iossimulator-arm64 -c Debug -p:EnableCodeSigning=true -p:CodesignKey=-
@@ -45,5 +77,46 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ios-gallery-screenshot
-          path: artifacts/ios-gallery.png
+          path: artifacts/ios-gallery-*.png
+          if-no-files-found: warn
+  android-emulator:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: android-actions/setup-android@v4
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'Pillow>=12,<13'
+      - run: python -m unittest discover -s scripts -p 'test_*.py'
+      - run: dotnet workload install maui-android
+      - run: dotnet build samples/Simple3D.Demo/Simple3D.Demo.csproj -f net10.0-android -r android-x64 -c Debug -p:EmbedAssembliesIntoApk=true
+      - name: Reclaim space for Android Emulator
+        run: |
+          sudo rm -rf "$ANDROID_HOME/ndk" /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h .
+          available_mb=$(df -Pm . | awk 'NR==2 {print $4}')
+          test "$available_mb" -ge 8500 || { echo "Only $available_mb MB free; emulator needs at least 8500 MB" >&2; exit 1; }
+      - name: Launch gallery in Android Emulator
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          disk-size: 2048M
+          script: bash scripts/android-emulator-smoke.sh
+      - name: Save Android screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-gallery-screenshot
+          path: artifacts/android-gallery.png
           if-no-files-found: warn
