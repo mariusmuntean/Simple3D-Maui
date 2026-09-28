@@ -5,9 +5,9 @@ device="$(python3 - <<'PY'
 import json, subprocess
 devices = json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', 'devices', 'available', '-j']))['devices']
 matches = [(runtime, item['udid']) for runtime, items in devices.items() for item in items
-           if item['name'] == 'iPhone 17 Pro' and item['state'] in ('Booted', 'Shutdown')]
+           if item['name'] == 'iPhone 17 Pro' and item['state'] == 'Shutdown']
 if not matches:
-    raise SystemExit('No available iPhone 17 Pro simulator')
+    raise SystemExit('No idle iPhone 17 Pro simulator; existing sessions are left untouched')
 print(sorted(matches, reverse=True)[0][1])
 PY
 )"
@@ -17,7 +17,21 @@ app="$(find samples/Simple3D.Demo/bin/Debug/net10.0-ios/iossimulator-arm64 \
 test -n "$app" || { echo 'Built demo app bundle not found' >&2; exit 1; }
 codesign --verify --deep --strict --verbose=2 "$app"
 
-xcrun simctl boot "$device" || { xcrun simctl list devices | grep -F "$device" | grep -q Booted; }
+cleanup() {
+    local result=$?
+    trap - EXIT INT TERM
+    xcrun simctl terminate "$device" dev.simple3d.gallery 2>/dev/null || true
+    if ! xcrun simctl shutdown "$device"; then
+        echo "Could not shut down test simulator $device" >&2
+        if [ "$result" -eq 0 ]; then result=1; fi
+    fi
+    exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+xcrun simctl boot "$device"
 xcrun simctl bootstatus "$device" -b
 xcrun simctl install "$device" "$app"
 mkdir -p artifacts
