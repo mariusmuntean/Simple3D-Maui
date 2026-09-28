@@ -6,14 +6,17 @@ Updated: 2026-09-28. Validation below was performed on 2026-09-27 unless stated 
 
 Repository: `mariusmuntean/Simple3D-Maui` (private).
 
-Two independent draft PRs are open against `main`. Both contain committed, pushed implementation; neither has unfinished source drafts.
+Three independent draft PRs are open against `main`. They contain committed, pushed implementation with no unfinished source drafts.
 
 | Branch | PR | Implementation commit | Purpose |
 | --- | --- | --- | --- |
 | `render-bitmap-reuse` | [#6](https://github.com/mariusmuntean/Simple3D-Maui/pull/6) | `758e1eb309ed9709af3299d8df1025728df341a1` | Reuse native painting buffers and bitmap; bounded raster fallback/recovery |
 | `showcase-engineering-scenes` | [#8](https://github.com/mariusmuntean/Simple3D-Maui/pull/8) | `12bcb761613ac8ebe1f67b0508987a93f21d809c` | Add Robot Arm, Orbit and Wind, with relevant animation and documentation images |
+| `native-smoke-cleanup` | [#9](https://github.com/mariusmuntean/Simple3D-Maui/pull/9) | `2426e0bf0d07531b84e9571c26e15c25e6682e2f` | Stop iOS smoke sessions on success, failure and interruption |
 
 The handoff commit follows each implementation commit. Start with #6. After its remaining checks pass, merge it, update #8 from the new `main`, verify the combined result, then merge #8. Preserve the existing PRs.
+
+PR #9 is independent and can be integrated separately after review and runner verification. Its native cleanup check has passed locally.
 
 On another computer:
 
@@ -83,6 +86,14 @@ Important source locations:
 
 All app processes used in the final native pass exited; all simulators were shut down.
 
+### PR #9 (2026-09-28)
+
+- Six executable shell regressions cover cleanup on success, boot/install failure and termination, avoiding an already running user simulator, and reporting shutdown failure. Tests failed against the previous behavior before the fixes.
+- All **10/10** script tests passed. Bash syntax and whitespace checks passed.
+- A fresh iOS Simulator Debug build succeeded with zero warnings/errors.
+- The real iPhone 17 Pro / iOS 26.5 smoke pass rendered Equipment, Packing and Surface and passed screenshot/scene-difference checks. The new exit cleanup stopped the gallery and shut down the device; no simulator was booted and no gallery process remained.
+- GitHub billing blockage was rechecked on 2026-09-28; jobs still fail before starting.
+
 ### Remaining checks before merge
 
 1. Physically verify continuous Mac trackpad pinch. The available automation generated mouse drag/click, not a pinch gesture. The logical incremental-pinch regression passes, but that alone does not verify native delivery.
@@ -115,7 +126,7 @@ For Rider, select the .NET CLI containing the workloads under Settings → Build
 
 The previous Mac had Xcode 27.0 and Apple workload 26.5.10301, which expects Xcode 26.6. The demo currently sets `ValidateXcodeVersion=false` for Apple targets. That permitted local development, but does not establish official toolchain compatibility. CI selects Xcode 26.6; once jobs can start, verify the actual runner toolchain rather than generalizing local results.
 
-For native tests, track the precise app/device you launch. Terminate the app, stop the Rider Run session, and shut down that simulator/emulator in a cleanup block even on failure. The existing iOS smoke script does not yet guarantee cleanup on every exit; account for this when using it locally.
+For native tests, track the precise app/device you launch. Terminate the app, stop the Rider Run session, and shut down that simulator/emulator in a cleanup block even on failure. PR #9 adds that cleanup to the iOS smoke script, including INT/TERM handling. Until it is merged, use its script or provide equivalent cleanup locally. Android smoke app/device cleanup remains to be audited separately.
 
 `SIMPLE3D_GALLERY_SCENE` chooses the initial gallery scene. For simulator launch use `SIMCTL_CHILD_SIMPLE3D_GALLERY_SCENE`.
 
@@ -124,4 +135,3 @@ For native tests, track the precise app/device you launch. Terminate the app, st
 Both implementation branches were clean before this handoff. Generated `bin`, `obj`, `_site`, API metadata, local tools, artifacts and IDE user settings are ignored and reproducible. The selected iOS screenshot was copied into tracked documentation for portable evidence. No credentials or machine-specific IDE configuration are needed in source control.
 
 The documentation site builds to `_site`; it has not been publicly deployed. CI uploads it as an artifact. Package publishing and public promotion have not been performed.
-
