@@ -85,6 +85,10 @@ open "samples/Simple3D.Demo/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/Simp
 
 The demo's iOS and Mac Catalyst builds skip the Xcode version check so the locally tested Xcode 27 / Apple workload 26.5.10301 combination builds directly from Rider in Debug and Release. This does not make that toolchain combination officially supported. GitHub's macOS jobs select Xcode 26.6 explicitly. The Mac Catalyst bundle uses the project assembly name so Rider's macOS run configuration finds the executable; its visible title remains Simple3D Gallery. The Mac app registers a MAUI scene delegate for the scene lifecycle required when launching this build on macOS 27.
 
+### iOS simulator smoke check
+
+After building the signed Debug simulator app, run `bash scripts/ios-simulator-smoke.sh` from the repository root. It selects an idle iPhone 17 Pro, launches three scenes and checks their screenshots. Existing booted simulator sessions are left untouched. On success, failure or interruption, it terminates the gallery and shuts down the selected simulator. A failed shutdown fails the check; an earlier failure keeps its original exit code. Screenshots remain in `artifacts` for inspection.
+
 ## Scope
 
 The software depth renderer handles intersecting opaque triangles and visible-shape picking. It has no transparency, texture mapping, shadowing, or GPU scene engine. Frames are bounded to 2,048 physical pixels per side; scenes are bounded by node, triangle, and raster sample budgets. The MAUI view lowers render resolution when an interactive view reaches the raster budget. Labels overlay geometry without depth testing. See [rendering limits](docs/site/rendering-limits.md) for exact thresholds and behavior. Profile intended scenes on target devices before using dense or animated content.
