@@ -232,6 +232,26 @@ var tests = new (string Name, Action Run)[]
         Assert(recovered.Width == 1170 && recovered.Height == 1320,
             "small zoom-out steps did not restore full resolution");
     }),
+    ("fallback geometry counting enforces the scene node budget", () =>
+    {
+        var empty = Shape.Group();
+        var repeated = empty;
+        for (var i = 0; i < 17; i++) repeated = Shape.Group(repeated, repeated);
+        try
+        {
+            SceneView.SceneGeometry(new Scene().Add(repeated));
+        }
+        catch (ArgumentException)
+        {
+            var box = Shape.Box();
+            var valid = new Scene().Add(Shape.Group(box, box, empty));
+            var count = SceneView.SceneGeometry(valid);
+            Assert(count.Nodes == 4 && count.Triangles == 24,
+                "valid repeated instances or empty groups were counted incorrectly");
+            return;
+        }
+        throw new InvalidOperationException("Fallback traversal exceeded the Core node budget");
+    }),
     ("fallback resolution recovers after scene simplification", () =>
     {
         var sample = DemoScenes.Packing();

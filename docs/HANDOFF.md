@@ -65,7 +65,7 @@ Important source locations:
 
 ### PR #6
 
-- Most recent local regression run: Core **39/39**, MAUI **22/22**, exit code 0.
+- Most recent local regression run (2026-09-28): Core **39/39**, MAUI **23/23**, exit code 0.
 - Earlier script tests: **4/4**; DocFX metadata/site build had zero warnings/errors.
 - Earlier Debug demo builds: Mac Catalyst, iOS Simulator arm64 and Android, zero warnings/errors.
 - Rider solution build succeeded.
@@ -73,6 +73,7 @@ Important source locations:
 - iOS built and launched from Rider on iPhone 17 / iOS 26.5. A simulator capture showed Equipment rendered: [captured frame](validation/ios-rider-pr6.png).
 - Native paint test measured **1,552 managed bytes/frame** for animated Surface at 768×576. This is an allocation benchmark, not displayed FPS.
 - Regression coverage includes reusable bitmap/target pixels and picking, owned snapshots, disconnect cleanup, resolution fallback/recovery, and suppression of repeated failed full-resolution probes.
+- The 2026-09-28 audit found that MAUI fallback geometry counting could traverse more than Core's node budget before rendering. It now rejects after 100,000 node visits, including repeated empty groups. A new regression failed before the fix and passed afterward. The Mac Catalyst Debug build was repeated with zero warnings/errors.
 
 ### PR #8
 
@@ -123,6 +124,8 @@ dotnet tool install docfx --tool-path .tools --version 2.81.0
 The regression projects are executable runners, so use `dotnet run`, not merely `dotnet test`.
 
 For Rider, select the .NET CLI containing the workloads under Settings → Build, Execution, Deployment → Toolset and Build, with its .NET SDK MSBuild. On the previous Mac this was `/Users/marius/.dotnet/dotnet`, SDK 10.0.301; do not assume the same path on another machine.
+
+DocFX also launches `dotnet restore` from the shell's `PATH`. Ensure the workload-equipped SDK is first in `PATH` and set `DOTNET_ROOT` to its installation; Rider's SDK selection alone does not configure DocFX. The 2026-09-28 default-shell metadata attempt selected the Homebrew SDK without workloads and failed; metadata and site generation then passed with zero warnings/errors using the user-local SDK.
 
 The previous Mac had Xcode 27.0 and Apple workload 26.5.10301, which expects Xcode 26.6. The demo currently sets `ValidateXcodeVersion=false` for Apple targets. That permitted local development, but does not establish official toolchain compatibility. CI selects Xcode 26.6; once jobs can start, verify the actual runner toolchain rather than generalizing local results.
 

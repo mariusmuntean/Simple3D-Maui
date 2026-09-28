@@ -364,7 +364,7 @@ public sealed class SceneView : SKCanvasView
     private static double EstimatedFullResolutionWork(RenderTarget target, int requestedWidth, int requestedHeight) =>
         target.RasterSamples * ((double)requestedWidth / target.Width) * ((double)requestedHeight / target.Height);
 
-    private static (long Nodes, long Triangles) SceneGeometry(Scene scene)
+    internal static (long Nodes, long Triangles) SceneGeometry(Scene scene)
     {
         long nodes = 0, triangles = 0;
         foreach (var shape in scene.Shapes) Visit(shape);
@@ -372,7 +372,8 @@ public sealed class SceneView : SKCanvasView
 
         void Visit(Shape shape)
         {
-            nodes++;
+            if (++nodes > Scene.MaximumNodes)
+                throw new ArgumentException("Scene exceeds node visit budget.", nameof(scene));
             triangles += shape.TriangleCount;
             foreach (var child in shape.Children) Visit(child);
         }

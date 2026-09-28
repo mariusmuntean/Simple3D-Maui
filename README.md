@@ -72,6 +72,8 @@ python3 -m http.server 8000 --directory _site
 
 Open `http://localhost:8000`. API metadata includes both Core and MAUI and therefore needs the MAUI workload. CI builds the site and uploads the static output. Hosting only requires serving `_site` as static files; this repository does not publish it automatically.
 
+DocFX resolves `dotnet` from your shell's `PATH` when restoring projects. If you have multiple SDK installations, put the one with MAUI workloads first in `PATH` and set `DOTNET_ROOT` to that installation before running DocFX. Selecting a different SDK only in Rider does not change DocFX's subprocesses.
+
 ## Local Mac setup
 
 In Rider, open **Settings → Build, Execution, Deployment → Toolset and Build** and select the .NET CLI installation containing the MAUI workloads. Use its automatically detected .NET SDK MSBuild. A different installation without workloads can produce missing MAUI references throughout the editor even when the code builds from the terminal. Save this setting for the current solution.
