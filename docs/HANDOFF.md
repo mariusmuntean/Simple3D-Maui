@@ -1,22 +1,25 @@
 # Project handoff
 
-Updated: 2026-09-28. Validation below was performed on 2026-09-27 unless stated otherwise.
+Updated: 2026-09-29. Validation below was performed on 2026-09-27 unless stated otherwise.
 
 ## Resume here
 
 Repository: `mariusmuntean/Simple3D-Maui` (private).
 
-Three independent draft PRs are open against `main`. They contain committed, pushed implementation with no unfinished source drafts.
+Four independent draft PRs are open against `main`. They contain committed, pushed implementation with no unfinished source drafts.
 
 | Branch | PR | Implementation commit | Purpose |
 | --- | --- | --- | --- |
 | `render-bitmap-reuse` | [#6](https://github.com/mariusmuntean/Simple3D-Maui/pull/6) | `758e1eb309ed9709af3299d8df1025728df341a1` | Reuse native painting buffers and bitmap; bounded raster fallback/recovery |
 | `showcase-engineering-scenes` | [#8](https://github.com/mariusmuntean/Simple3D-Maui/pull/8) | `12bcb761613ac8ebe1f67b0508987a93f21d809c` | Add Robot Arm, Orbit and Wind, with relevant animation and documentation images |
 | `native-smoke-cleanup` | [#9](https://github.com/mariusmuntean/Simple3D-Maui/pull/9) | `2426e0bf0d07531b84e9571c26e15c25e6682e2f` | Stop iOS smoke sessions on success, failure and interruption |
+| `package-readiness` | [#10](https://github.com/mariusmuntean/Simple3D-Maui/pull/10) | `abc0fed161d968028db0fbd988e24b30b76ed7c2` | Real package metadata and isolated package-consumer checks |
 
 The handoff commit follows each implementation commit. Start with #6. After its remaining checks pass, merge it, update #8 from the new `main`, verify the combined result, then merge #8. Preserve the existing PRs.
 
 PR #9 is independent and can be integrated separately after review and runner verification. Its native cleanup check has passed locally.
+
+PR #10 is also independent. Package consumers passed locally, including compilation against all three MAUI targets. Its package-test projects intentionally stay outside the regular solution: pack first, then provide a local feed. Recheck all consumers after combining the branches.
 
 On another computer:
 
@@ -101,6 +104,16 @@ All app processes used in the final native pass exited; all simulators were shut
 2. Observe iOS touch interaction and animation pacing on a simulator with a GUI or a device. The previous installation had simulator runtimes and command-line tools but no Simulator application window.
 3. Resolve GitHub account billing/spending-limit block, then rerun Actions on both branches. Jobs fail before any steps start with: “The job was not started because recent account payments have failed or your spending limit needs to be increased.” These failures provide no evidence about source correctness.
 4. After merging #6 and updating #8 from main, repeat portable tests and relevant builds for the combined code.
+
+### PR #10 (2026-09-29)
+
+- Both packages previously contained the placeholder description "Package Description" and lacked a repository URL. Descriptions, author, repository/project URLs and tags are now configured. A package-metadata test failed before the fix and passed afterward.
+- All **7/7** script tests on this branch passed, including three package checks; Core **39/39** and MAUI **13/13** source tests passed. This branch is based on main and lacks #6's additional regression tests.
+- Core's public API ran from a generated package in a fresh cache with a local-only feed. Rendering, picking and owned snapshot retention were checked without project references. XML docs and icon inclusion were also checked.
+- Both libraries packed successfully. A MAUI host fixture using packages only compiled for iOS, Android and Mac Catalyst with zero warnings/errors. This was compilation, not a native app launch.
+- The initial minimal MAUI host had an MA002 warning about a missing direct Controls reference. The committed fixture retains that normal host reference and builds without warnings; Core and SkiaSharp still resolve transitively from the MAUI package.
+- DocFX metadata/site generation passed with zero warnings/errors. CI includes package-consumer checks, but runner execution is still an external gate.
+- No package was published. Publication still needs a license decision, version/package ownership checks, successful runner validation and remaining native interaction checks.
 
 Rider iOS Run launched and rendered, but its console reported an IDE socket connection refusal. Do not claim debugging/Hot Reload was validated.
 
