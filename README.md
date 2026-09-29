@@ -8,7 +8,7 @@ Small, depth-aware 3D drawings for .NET 10 MAUI on iOS, Android, and Mac Catalys
 
 ## Get started
 
-Add references to `Simple3D.Core` and `Simple3D.Maui`, and register SkiaSharp in your MAUI host:
+Reference `Simple3D.Maui` (which brings Core with it), keep your MAUI host's normal direct `Microsoft.Maui.Controls` reference, and register SkiaSharp:
 
 ```csharp
 using SkiaSharp.Views.Maui.Controls.Hosting;
@@ -69,6 +69,24 @@ python3 -m http.server 8000 --directory _site
 ```
 
 Open `http://localhost:8000`. API metadata includes both Core and MAUI and therefore needs the MAUI workload. CI builds the site and uploads the static output. Hosting only requires serving `_site` as static files; this repository does not publish it automatically.
+
+## Package validation
+
+`python3 -m unittest discover -s scripts -p test_packages.py -v` packs Core, checks package metadata/assets and runs its public API from an isolated package feed and cache. The consumer has no project references.
+
+To check the MAUI package's three native targets:
+
+```bash
+dotnet pack src/Simple3D.Core -c Release -p:Version=0.0.0-validation -o artifacts/packages
+dotnet pack src/Simple3D.Maui -c Release -p:Version=0.0.0-validation -p:EnableCodeSigning=false -o artifacts/packages
+package_cache="$(mktemp -d)"
+dotnet build tests/Simple3D.Maui.Package.Tests -c Release -p:PackageFeed="$PWD/artifacts/packages" -p:RestorePackagesPath="$package_cache"
+rm -rf "$package_cache"
+```
+
+Use a fresh cache for each run so a prior package with the same validation version cannot hide a regression. This MAUI consumer compiles a host from package references only; it does not launch an app. These commands create validation packages, not a public release. Publication still needs a license decision, version/ownership checks, passing runner gates and the remaining native interaction checks.
+
+The package-consumer projects are separate from the normal solution build because they require the preceding pack step and a local feed.
 
 ## Local Mac setup
 

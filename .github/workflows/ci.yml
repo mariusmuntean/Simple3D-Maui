@@ -37,10 +37,15 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - run: dotnet run --project tests/Simple3D.Core.Tests --configuration Release
       - run: dotnet run --project tests/Simple3D.Maui.Tests --configuration Release
       - run: dotnet build src/Simple3D.Core --configuration Release --no-restore
       - run: dotnet pack src/Simple3D.Core --configuration Release --no-build --output artifacts/packages
+      - name: Validate packaged Core API
+        run: python3 -m unittest discover -s scripts -p test_packages.py -v
   platforms:
     runs-on: macos-26
     strategy:
@@ -63,9 +68,12 @@ jobs:
         if: matrix.tfm == 'net10.0-android'
       - run: dotnet workload install maui
       - run: dotnet build samples/Simple3D.Demo/Simple3D.Demo.csproj -f ${{ matrix.tfm }} -r ${{ matrix.rid }} -c Release -p:EnableCodeSigning=false
-      - name: Pack multi-target MAUI library
+      - name: Validate multi-target MAUI package
         if: matrix.tfm == 'net10.0-maccatalyst'
-        run: dotnet pack src/Simple3D.Maui/Simple3D.Maui.csproj -c Release -p:EnableCodeSigning=false -o artifacts/packages
+        run: |
+          dotnet pack src/Simple3D.Core -c Release -p:Version=0.0.0-validation -o artifacts/packages
+          dotnet pack src/Simple3D.Maui -c Release -p:Version=0.0.0-validation -p:EnableCodeSigning=false -o artifacts/packages
+          dotnet build tests/Simple3D.Maui.Package.Tests -c Release -p:PackageFeed="$PWD/artifacts/packages" -p:RestorePackagesPath="$PWD/artifacts/package-cache"
       - name: Build signed iOS simulator gallery
         if: matrix.tfm == 'net10.0-ios'
         run: dotnet build samples/Simple3D.Demo/Simple3D.Demo.csproj -f net10.0-ios -r iossimulator-arm64 -c Debug -p:EnableCodeSigning=true -p:CodesignKey=-

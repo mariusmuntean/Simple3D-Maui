@@ -6,6 +6,8 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>package-icon.png</PackageIcon>
+    <Description>Portable 3D scenes, indexed meshes, cameras, software depth rendering and selection of visible shapes for .NET.</Description>
+    <PackageTags>3d;scene;mesh;rendering;depth;picking</PackageTags>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>

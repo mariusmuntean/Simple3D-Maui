@@ -2,7 +2,9 @@
 
 ## Requirements
 
-Use .NET 10 with the MAUI workload and an iOS, Android, or Mac Catalyst target. Add references to both library projects, or install the packages produced by `dotnet pack`. Register the SkiaSharp handler in the host app:
+Use .NET 10 with the MAUI workload and an iOS, Android, or Mac Catalyst target. Reference the `Simple3D.Maui` project or install its package produced by `dotnet pack`. Core is included as a dependency. Keep the host's normal direct `Microsoft.Maui.Controls` reference; a transitive reference alone produces the MAUI SDK's MA002 warning. For rendering without MAUI, reference only `Simple3D.Core`.
+
+Register the SkiaSharp handler in the host app:
 
 ```csharp
 using SkiaSharp.Views.Maui.Controls.Hosting;

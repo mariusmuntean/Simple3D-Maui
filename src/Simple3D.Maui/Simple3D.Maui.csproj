@@ -8,6 +8,8 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>package-icon.png</PackageIcon>
+    <Description>A SkiaSharp 3D scene control for .NET 10 MAUI on iOS, Android and Mac Catalyst, with camera gestures and selection of visible shapes.</Description>
+    <PackageTags>maui;3d;skia;scene;ios;android;maccatalyst</PackageTags>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
