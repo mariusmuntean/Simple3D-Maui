@@ -132,8 +132,8 @@ public sealed class DepthRenderer
     public void RenderInto(Scene scene, Camera camera, RenderTarget target, uint background = 0xFFF4F6FA)
     {
         ArgumentNullException.ThrowIfNull(target);
-        Validate(scene, camera, target.Width, target.Height, background);
         target.BeginRender();
+        Validate(scene, camera, target.Width, target.Height, background);
         var nodes = PrepareNodes(scene);
         var (shapes, labels) = RenderCore(scene, camera, target.Width, target.Height, background,
             nodes, target.PixelBuffer, target.IdBuffer);

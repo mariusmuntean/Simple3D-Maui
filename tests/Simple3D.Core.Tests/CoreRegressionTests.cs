@@ -17,6 +17,9 @@ internal static class CoreRegressionTests
         ("bounds and fit reject excessive repeated mesh triangles", BoundsBudget),
         ("raster sample work is bounded", RasterWorkBudget),
         ("reusable target matches owned frames across updates", ReusableRenderTarget),
+        ("failed render validation clears reusable picking and labels", ReusableValidationFailure),
+        ("group traversal avoids per-node iterator allocation", GroupTraversalAllocation),
+        ("branching groups preserve transform and equal-depth order", BranchingGroupTraversal),
         ("legacy renderer rejects unsupported scene features", LegacyFeatureGuard),
         ("sample scenes use depth rendering and fit the camera", SampleScenes),
         ("each sample animation moves and resets its scene", SampleAnimations),
@@ -235,6 +238,99 @@ internal static class CoreRegressionTests
             }
         }
         throw new InvalidOperationException("Expected a specific raster budget diagnostic.");
+    }
+
+    private static void BranchingGroupTraversal()
+    {
+        var first = Triangle(new(-.5f, -.5f, 0), new(.5f, -.5f, 0), new(0, .5f, 0), 0xFFFF0000);
+        var side = first.WithMaterial(new Material(0xFF00FF00, false));
+        var tied = first.WithMaterial(new Material(0xFF0000FF, false));
+        var a = first.Scaled(.5f).At(.25f, 0, 0);
+        var b = side.Scaled(.25f).At(-.75f, .5f, 0);
+        var c = tied.At(1, 0, 0);
+        var group = Shape.Group(Shape.Group(a, b).Scaled(2).At(.5f, 0, 0), c).Scaled(2).At(-2, 0, 0);
+
+        // Hand-derived transforms: local translation is scaled by each parent,
+        // but a parent's own translation is applied after its scale.
+        var expectedA = first.Scaled(2);
+        var expectedB = side.At(-4, 2, 0);
+        var expectedC = tied.Scaled(2);
+        var expectedPicks = new Dictionary<Shape, Shape> { [expectedA] = a, [expectedB] = b, [expectedC] = c };
+        var renderer = new DepthRenderer();
+        var camera = new Camera(5, 0, 0) { Projection = CameraProjection.Orthographic, OrthographicHeight = 12 };
+        var actual = renderer.Render(new Scene().Add(group), camera, 96, 96);
+        var expected = renderer.Render(new Scene().Add(expectedA).Add(expectedB).Add(expectedC), camera, 96, 96);
+        Check(actual.Pixels.Span.SequenceEqual(expected.Pixels.Span), "branching group changed transformed pixels");
+        var visible = new HashSet<Shape>();
+        for (var y = 0; y < 96; y++)
+            for (var x = 0; x < 96; x++)
+            {
+                var pick = expected.Pick(x, y);
+                var expectedPick = pick is null ? null : expectedPicks[pick];
+                Check(ReferenceEquals(actual.Pick(x, y), expectedPick), "branching group changed pick order");
+                if (expectedPick is not null) visible.Add(expectedPick);
+            }
+        Check(visible.SetEquals([a, b]), "test must cover both branches and hide the later equal-depth leaf");
+    }
+
+    private static void GroupTraversalAllocation()
+    {
+        var flat = new Scene();
+        var grouped = new Scene();
+        for (var i = 0; i < 128; i++)
+        {
+            var shape = Triangle(new(-.1f, -.1f, 0), new(.1f, -.1f, 0), new(0, .1f, 0), 0xFF80B2FF)
+                .At((i % 16 - 8) * .2f, (i / 16 - 4) * .2f, 0);
+            flat.Add(shape);
+            grouped.Add(Shape.Group(Shape.Group(Shape.Group(shape))));
+        }
+        var camera = new Camera(5, 0, 0);
+        var renderer = new DepthRenderer();
+        var a = new RenderTarget(32, 32);
+        var b = new RenderTarget(32, 32);
+        for (var i = 0; i < 10; i++)
+        {
+            renderer.RenderInto(flat, camera, a);
+            renderer.RenderInto(grouped, camera, b);
+        }
+        Check(a.Pixels.Span.SequenceEqual(b.Pixels.Span), "identity groups changed pixels");
+        for (var y = 0; y < 32; y++)
+            for (var x = 0; x < 32; x++)
+                Check(ReferenceEquals(a.Pick(x, y), b.Pick(x, y)), "groups changed traversal or picking order");
+        var flatBytes = Measure(flat, a);
+        var groupedBytes = Measure(grouped, b);
+        Check(groupedBytes <= flatBytes + 4096, $"group wrappers allocated {groupedBytes - flatBytes} extra bytes per frame");
+
+        long Measure(Scene scene, RenderTarget target)
+        {
+            var before = GC.GetAllocatedBytesForCurrentThread();
+            for (var i = 0; i < 20; i++) renderer.RenderInto(scene, camera, target);
+            return (GC.GetAllocatedBytesForCurrentThread() - before) / 20;
+        }
+    }
+
+    private static void ReusableValidationFailure()
+    {
+        var shape = Shape.Box();
+        var scene = new Scene().Add(shape).AddLabel(new WorldLabel("Box", Vector3.Zero));
+        var camera = new Camera(5, 0, 0);
+        var renderer = new DepthRenderer();
+        var target = new RenderTarget(32, 32);
+        Action[] invalidRenders =
+        [
+            () => renderer.RenderInto(null!, camera, target),
+            () => renderer.RenderInto(scene, null!, target),
+            () => renderer.RenderInto(scene, camera, target, background: 0x00FFFFFF)
+        ];
+        foreach (var render in invalidRenders)
+        {
+            renderer.RenderInto(scene, camera, target);
+            Check(ReferenceEquals(target.Pick(16, 16), shape) && target.Labels.Count == 1, "valid target was not populated");
+            Throws(render);
+            Check(target.Pick(16, 16) is null && target.Labels.Count == 0, "failed validation left stale scene information");
+            renderer.RenderInto(scene, camera, target);
+            Check(ReferenceEquals(target.Pick(16, 16), shape) && target.Labels.Count == 1, "target did not recover");
+        }
     }
 
     private static void ReusableRenderTarget()

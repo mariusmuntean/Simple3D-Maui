@@ -2,6 +2,45 @@
 
 Updated: 2026-09-29. Validation below was performed on 2026-09-27 unless stated otherwise.
 
+## Latest quality pass (2026-09-29)
+
+The owner requested resuming from the newest branch. Work continues on
+`showcase-engineering-scenes`, whose preceding head was `e4096a9` (2026-09-29
+15:27 UTC). Preserve the independent work in #6, #9 and #10; this pass does not
+merge those PRs or claim their remaining native checks are complete.
+
+- `RenderInto` now clears reusable picking and labels before argument validation.
+  A null scene/camera or invalid background can no longer leave an old object
+  selectable after a failed render. A regression failed before the fix and
+  verifies successful recovery afterward.
+- Scene traversal now uses an ancestor continuation stack instead of recursive
+  iterator objects for every node. Depth-first ordering, hierarchical transforms
+  and the node budget remain unchanged. A regression compares pixels and picks
+  against an equivalent flat scene and limits extra group allocations. It failed
+  before the change with 138,240 extra bytes per frame for 128 wrapped leaves.
+  A separate branching regression hand-derives noncommuting scale/translation
+  transforms and verifies pixels, picking identity and first-leaf equal-depth ties.
+- Android smoke tests stop the gallery on success, failure, INT and TERM. A failed
+  start also triggers cleanup; original failure statuses are preserved, and a
+  failed cleanup turns success into failure. The emulator runner still owns
+  device shutdown. Seven shell-boundary regressions cover these paths; six failed
+  against the previous script.
+
+Fresh Linux verification with SDK 10.0.401: Core **43/43**, source-linked MAUI
+**13/13**, Python/script checks **11/11**; Core Release build has zero warnings
+and errors. Android shell syntax and whitespace checks pass. These are portable
+checks, not native app launches. Native platform builds and displayed frame
+pacing were not rerun in this environment.
+
+On the same Linux runner, the reusable Orbit scene at 768x576 fell from 23,960 to
+9,176 managed bytes per frame (about 62% less); Surface fell from 1,552 to 1,296.
+Renderer timings varied between runs, so no displayed-FPS or timing improvement
+is asserted. The existing native paint allocation changes in #6 remain separate.
+
+The last inspected Actions run, `36590298666`, failed all six jobs with empty
+step lists. The prior handoff and PRs identify account billing/spending limits
+as the startup blocker; no hosted test result can be inferred from these failures.
+
 ## Resume here
 
 Repository: `mariusmuntean/Simple3D-Maui` (private).
