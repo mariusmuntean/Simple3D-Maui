@@ -1,6 +1,32 @@
 # Project handoff
 
-Updated: 2026-09-29. Validation below was performed on 2026-09-27 unless stated otherwise.
+Updated: 2026-09-30. Validation below was performed on 2026-09-27 unless stated otherwise.
+
+## Portable checkpoint (2026-09-30)
+
+All source changes and handoff context are committed on the branches listed below.
+Both local checkouts were clean at the start of this checkpoint. The local
+`showcase-engineering-scenes` checkout was fast-forwarded to its already pushed
+quality pass. An empty local `showcase-workflows` branch was removed; it had no
+changes, PR or remote branch to preserve. Start future work from a fresh branch
+at the current `origin/showcase-engineering-scenes` or the appropriate integrated
+`main`, and fetch before editing on another computer.
+
+The next proposed additive gallery work is **not implemented**: Conveyor
+Inspection (packages travel through a scan gate and change status), Solar
+Tracker (panels follow a moving sun), Packet Routing (packets traverse fixed
+network links), and Drone Survey (a drone moves over a pad with spinning
+propellers). Keep fixed scene anchors and moving subjects named and pickable.
+Add fail-first scene/animation/reset tests, script coverage, rendered DocFX
+images and catalogue text. Inspect the Mac gallery, measure Core render cost,
+build Apple/Android targets, and stop every launched app or simulator. This is
+a design queue, not a verified feature or a reason to merge the existing PRs.
+
+Actions run [36635101338](https://github.com/mariusmuntean/Simple3D-Maui/actions/runs/36635101338)
+for PR #8 failed before any job step on 2026-09-29. Its check annotation says
+recent account payments failed or the spending limit must be increased. No
+GitHub runner result, native frame-rate result or physical trackpad-pinch result
+can be inferred from that run.
 
 ## Latest quality pass (2026-09-29)
 
@@ -37,8 +63,8 @@ On the same Linux runner, the reusable Orbit scene at 768x576 fell from 23,960 t
 Renderer timings varied between runs, so no displayed-FPS or timing improvement
 is asserted. The existing native paint allocation changes in #6 remain separate.
 
-The last inspected Actions run, `36590298666`, failed all six jobs with empty
-step lists. The prior handoff and PRs identify account billing/spending limits
+The quality-pass Actions run, `36635101338`, failed all six jobs with empty
+step lists. Its Core check annotation identifies account billing/spending limits
 as the startup blocker; no hosted test result can be inferred from these failures.
 
 ## Resume here
@@ -47,10 +73,10 @@ Repository: `mariusmuntean/Simple3D-Maui` (private).
 
 Four independent draft PRs are open against `main`. They contain committed, pushed implementation with no unfinished source drafts.
 
-| Branch | PR | Implementation commit | Purpose |
+| Branch | PR | Latest implementation commit at checkpoint | Purpose |
 | --- | --- | --- | --- |
 | `render-bitmap-reuse` | [#6](https://github.com/mariusmuntean/Simple3D-Maui/pull/6) | `758e1eb309ed9709af3299d8df1025728df341a1` | Reuse native painting buffers and bitmap; bounded raster fallback/recovery |
-| `showcase-engineering-scenes` | [#8](https://github.com/mariusmuntean/Simple3D-Maui/pull/8) | `12bcb761613ac8ebe1f67b0508987a93f21d809c` | Add Robot Arm, Orbit and Wind, with relevant animation and documentation images |
+| `showcase-engineering-scenes` | [#8](https://github.com/mariusmuntean/Simple3D-Maui/pull/8) | `41d3c3c431cc127885ca66e165da05a67165c175` | Add Robot Arm, Orbit and Wind; harden render recovery, reduce traversal allocation, clean Android smoke sessions |
 | `native-smoke-cleanup` | [#9](https://github.com/mariusmuntean/Simple3D-Maui/pull/9) | `2426e0bf0d07531b84e9571c26e15c25e6682e2f` | Stop iOS smoke sessions on success, failure and interruption |
 | `package-readiness` | [#10](https://github.com/mariusmuntean/Simple3D-Maui/pull/10) | `abc0fed161d968028db0fbd988e24b30b76ed7c2` | Real package metadata and isolated package-consumer checks |
 
