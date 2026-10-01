@@ -1,6 +1,49 @@
 # Project handoff
 
-Updated: 2026-09-30. Validation below was performed on 2026-09-27 unless stated otherwise.
+Updated: 2026-10-01. Validation below was performed on 2026-09-27 unless stated otherwise.
+
+## Workflow gallery milestone (2026-10-01)
+
+The `showcase-workflows` branch is based on `showcase-engineering-scenes` at
+`8a3dd72`. It adds Conveyor Inspection, Solar Tracker, Packet Routing and Drone
+Survey to the shared gallery and console scene factories, growing the gallery
+from ten to fourteen scenes. Each animates a relevant moving subject while its
+anchor stays fixed. Shapes have useful names for picking. The scene catalogue,
+rendered documentation images, executable example check and benchmark include
+all four. The implementation plan is in
+[2026-09-30-showcase-workflows.md](superpowers/plans/2026-09-30-showcase-workflows.md).
+
+The Core tests failed first for each missing scene. Image review exposed a
+packet link floating above its rack; a regression failed before the route was
+aligned with the device tops. The first drone animation allocated 94,720 bytes
+per frame because it rebuilt arm geometry. It now reuses static body, arms and
+rotor blades. Solar panel cells are also reused between frames. Those allocation
+regressions failed before the changes and pass afterward.
+
+Fresh local verification: Core **49/49**, source-linked MAUI **13/13**, script
+tests **11/11**, and DocFX metadata/site generation with zero warnings or
+errors. Debug demo builds for Mac Catalyst arm64, iOS Simulator arm64 and Android
+succeeded with zero warnings/errors. The four generated PNGs were inspected.
+Core reusable-target benchmarks at 768×576 over 60 animated frames were about
+1.5 ms/frame for Conveyor and Solar, 2.5 ms for Packet Routing, and 3.1 ms for
+Drone Survey on this Mac. Drone allocation fell from 90,716 to 4,122 managed
+bytes/frame; Solar fell from 8,400 to 2,912. These are Core benchmarks, not
+native displayed frame-rate measurements.
+
+The Mac Catalyst gallery visibly displayed all four scenes. Drone animation
+moved its body and propellers; a click selected `Propeller 4`. The app was
+closed. The iOS app launched with Drone Survey selected on an iPhone 17 Pro /
+iOS 26.5 simulator; its [captured frame](validation/ios-drone-survey.png) passed
+the gallery pixel check. The app was terminated and the simulator shut down.
+No demo, simulator or emulator process remained after validation. This was an
+iOS static launch check, not a touch or frame-pacing measurement, and this run
+did not validate launching the new branch from Rider.
+
+This branch is additive and should be reviewed as a draft PR based on
+`showcase-engineering-scenes`. Keep the independent PRs #6, #9 and #10 intact.
+Once #8 merges, retarget this branch to `main` and revalidate the combined
+result. GitHub Actions and remaining physical/native interaction checks are
+still required before merging.
 
 ## Portable checkpoint (2026-09-30)
 

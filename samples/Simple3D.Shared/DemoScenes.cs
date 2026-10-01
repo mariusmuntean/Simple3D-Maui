@@ -11,7 +11,7 @@ public static class DemoScenes
 {
     /// <summary>Creates independent examples of product, scientific, data and spatial illustrations.</summary>
     public static IReadOnlyList<DemoScene> All =>
-        [Equipment(), Packing(), Surface(), Assembly(), Molecule(), Telemetry(), City(), RobotArm(), Orbit(), Wind()];
+        [Equipment(), Packing(), Surface(), Assembly(), Molecule(), Telemetry(), City(), RobotArm(), Orbit(), Wind(), ConveyorInspection(), SolarTracker(), PacketRouting(), DroneSurvey()];
 
     /// <summary>Builds a labeled tabletop equipment illustration with grouped parts.</summary>
     public static DemoScene Equipment()
@@ -288,6 +288,151 @@ public static class DemoScenes
         camera.FitToScene(scene, 4f / 3);
         return new("Wind", "Watch three selectable blades turn around a fixed turbine.", scene, camera,
             AnimateNode(scene, rotor, RotorAt));
+    }
+
+    /// <summary>Builds an inspection conveyor with parcels that change status at a fixed scan gate.</summary>
+    public static DemoScene ConveyorInspection()
+    {
+        var scene = new Scene();
+        scene.Add(Shape.Box(0xFF526B9A).Named("Conveyor belt").Scaled(3.5f, .12f, 1.05f).At(0, -.55f, 0));
+        scene.Add(Shape.Group(
+            Shape.Box(0xFF8DA9FF).Named("Left post").Scaled(.12f, 1.65f, .12f).At(0, .28f, -.62f),
+            Shape.Box(0xFF8DA9FF).Named("Right post").Scaled(.12f, 1.65f, .12f).At(0, .28f, .62f),
+            Shape.Box(0xFF76DBC7).Named("Scanner head").Scaled(.22f, .16f, 1.35f).At(0, 1.1f, 0))
+            .Named("Scan gate"));
+        Shape ParcelsAt(float time)
+        {
+            var parcels = new Shape[3];
+            for (var i = 0; i < parcels.Length; i++)
+            {
+                var x = -1.25f + (time * 1.2f + i * .85f) % 2.5f;
+                var passed = x >= 0;
+                parcels[i] = Shape.Box(passed ? 0xFF76DBC7u : 0xFFFFBE79u)
+                    .Named($"Parcel {i + 1}: {(passed ? "passed" : "pending")}")
+                    .Scaled(.43f, .43f, .43f).At(x, -.27f, 0);
+            }
+            return Shape.Group(parcels).Named("Inspected parcels");
+        }
+        var parcels = ParcelsAt(0);
+        scene.Add(parcels);
+        scene.AddLabel(new("CONVEYOR / SCAN + SORT", new(-1.65f, 1.48f, 0), 0xFFE4ECFF));
+        var camera = new Camera(6f, .5f, .36f);
+        camera.FitToScene(scene, 4f / 3);
+        return new("Conveyor Inspection", "Follow parcels through a fixed scan gate and inspect their pass state.",
+            scene, camera, AnimateNode(scene, parcels, ParcelsAt));
+    }
+
+    /// <summary>Builds a solar array that tilts toward a moving sun while its mount stays fixed.</summary>
+    public static DemoScene SolarTracker()
+    {
+        var scene = new Scene();
+        scene.Add(Shape.Box(0xFF526B9A).Named("Solar site").Scaled(3.8f, .1f, 2.15f).At(0, -.8f, 0));
+        scene.Add(Shape.Cylinder(0xFF8DA9FF).Named("Tracker mount").Scaled(.2f, 1.1f, .2f).At(0, -.2f, 0));
+        var panelParts = new List<Shape>
+        {
+            Shape.Box(0xFF7894C8).Named("Solar panel").Scaled(2.45f, .12f, 1.4f)
+        };
+        for (var row = 0; row < 2; row++)
+            for (var column = 0; column < 4; column++)
+                panelParts.Add(Shape.Box(0xFF80B2FF).Named($"Cell {row * 4 + column + 1}")
+                    .Scaled(.54f, .015f, .6f).At((column - 1.5f) * .59f, .07f, (row - .5f) * .67f));
+        var panelBase = Shape.Group(panelParts.ToArray()).Named("Panel assembly").At(0, .35f, 0);
+        var sunBase = Shape.Sphere(0xFFFFBE79).Named("Sun").Scaled(.32f);
+        Shape TrackingAt(float time)
+        {
+            var angle = .45f * MathF.Sin(time * .9f);
+            var panel = panelBase.Rotated(0, 0, angle);
+            var sun = sunBase
+                .At(1.55f * MathF.Sin(time * .9f), 1.8f - .18f * (1 - MathF.Cos(time * .9f)), 0);
+            return Shape.Group(panel, sun).Named("Tracking elements");
+        }
+        var tracking = TrackingAt(0);
+        scene.Add(tracking);
+        scene.AddLabel(new("SOLAR / FOLLOW THE SUN", new(-1.65f, 2.35f, 0), 0xFFE4ECFF));
+        var camera = new Camera(6f, .5f, .32f);
+        camera.FitToScene(scene, 4f / 3);
+        return new("Solar Tracker", "Watch the panel tilt as the sun follows its path above the fixed mount.",
+            scene, camera, AnimateNode(scene, tracking, TrackingAt));
+    }
+
+    /// <summary>Builds a routed network with packets moving between fixed, selectable devices.</summary>
+    public static DemoScene PacketRouting()
+    {
+        var scene = new Scene();
+        var source = new Vector3(-1.35f, .5f, -.55f);
+        var router = new Vector3(0, .5f, .45f);
+        var destination = new Vector3(1.35f, .5f, -.55f);
+        scene.Add(Shape.Box(0xFF526B9A).Named("Network floor").Scaled(3.9f, .1f, 2.4f).At(0, -.4f, 0));
+        scene.Add(Shape.Box(0xFF8DA9FF).Named("Source rack").Scaled(.56f, .8f, .5f).At(source.X, .05f, source.Z));
+        scene.Add(Shape.Box(0xFF76DBC7).Named("Router").Scaled(.66f, .8f, .65f).At(router.X, .05f, router.Z));
+        scene.Add(Shape.Box(0xFFFFC18B).Named("Destination rack").Scaled(.56f, .8f, .5f)
+            .At(destination.X, .05f, destination.Z));
+        scene.Add(Shape.Line(source, router, .045f, 0xFF80B2FF).Named("Source link"));
+        scene.Add(Shape.Line(router, destination, .045f, 0xFF76DBC7).Named("Destination link"));
+        Shape PacketsAt(float time)
+        {
+            var packets = new Shape[3];
+            for (var i = 0; i < packets.Length; i++)
+            {
+                var progress = (time * .7f + i * .55f) % 2f;
+                var position = progress < 1f
+                    ? Vector3.Lerp(source, router, progress)
+                    : Vector3.Lerp(router, destination, progress - 1f);
+                packets[i] = Shape.Sphere(0xFFFFE19B).Named($"Packet {i + 1}").Scaled(.15f)
+                    .At(position.X, position.Y, position.Z);
+            }
+            return Shape.Group(packets).Named("Routed packets");
+        }
+        var packets = PacketsAt(0);
+        scene.Add(packets);
+        scene.AddLabel(new("PACKET ROUTING / TWO HOPS", new(-1.75f, 1.3f, 0), 0xFFE4ECFF));
+        var camera = new Camera(6.2f, .53f, .52f);
+        camera.FitToScene(scene, 4f / 3);
+        return new("Packet Routing", "Follow named packets from a source rack through a router to a destination.",
+            scene, camera, AnimateNode(scene, packets, PacketsAt));
+    }
+
+    /// <summary>Builds a survey drone with four spinning propellers above a fixed landing pad.</summary>
+    public static DemoScene DroneSurvey()
+    {
+        var scene = new Scene();
+        scene.Add(Shape.Box(0xFF526B9A).Named("Landing pad").Scaled(3.1f, .1f, 2.25f).At(0, -.7f, 0));
+        scene.Add(Shape.Line(new(-.55f, -.64f, 0), new(.55f, -.64f, 0), .045f, 0xFF76DBC7).Named("Pad crosshair"));
+        scene.Add(Shape.Line(new(0, -.64f, -.55f), new(0, -.64f, .55f), .045f, 0xFF76DBC7).Named("Pad crosshair"));
+        var body = Shape.Sphere(0xFF8DA9FF).Named("Drone body").Scaled(.32f);
+        var arms = new Shape[4];
+        var rotors = new Shape[4];
+        for (var i = 0; i < 4; i++)
+        {
+            var x = (i % 2 == 0 ? -1 : 1) * .68f;
+            var z = (i / 2 == 0 ? -1 : 1) * .52f;
+            arms[i] = Shape.Line(Vector3.Zero, new(x, .06f, z), .065f, 0xFF7894C8).Named($"Arm {i + 1}");
+            rotors[i] = Shape.Group(
+                Shape.Box(0xFFFFBE79).Named($"Propeller {i + 1}").Scaled(.7f, .035f, .09f),
+                Shape.Box(0xFFFFBE79).Named($"Propeller cross {i + 1}").Scaled(.09f, .035f, .7f))
+                .Named($"Rotor {i + 1}").At(x, .12f, z);
+        }
+        Shape DroneAt(float time)
+        {
+            var parts = new Shape[9];
+            parts[0] = body;
+            for (var i = 0; i < 4; i++)
+            {
+                parts[i * 2 + 1] = arms[i];
+                parts[i * 2 + 2] = rotors[i].Rotated(0, time * 9f + i * .4f, 0);
+            }
+            var driftX = .36f * MathF.Sin(time * .8f);
+            var driftZ = .2f * MathF.Sin(time * 1.1f);
+            var rise = .3f + .15f * (1 - MathF.Cos(time * 1.7f));
+            return Shape.Group(parts).Named("Survey drone").At(driftX, rise, driftZ);
+        }
+        var drone = DroneAt(0);
+        scene.Add(drone);
+        scene.AddLabel(new("DRONE / SURVEY HOVER", new(-1.4f, 1.25f, 0), 0xFFE4ECFF));
+        var camera = new Camera(5.5f, .5f, .48f);
+        camera.FitToScene(scene, 4f / 3);
+        return new("Drone Survey", "Watch a survey drone hover and spin four pickable propellers above its pad.",
+            scene, camera, AnimateNode(scene, drone, DroneAt));
     }
 
     private static Action<float> AnimateNode(Scene scene, Shape initial, Func<float, Shape> atTime)
