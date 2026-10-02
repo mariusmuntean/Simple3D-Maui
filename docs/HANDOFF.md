@@ -1,6 +1,6 @@
 # Project handoff
 
-Updated: 2026-10-01. Validation below was performed on 2026-09-27 unless stated otherwise.
+Updated: 2026-10-02. Validation below was performed on 2026-09-27 unless stated otherwise.
 
 ## Apple runner repair (2026-10-02)
 
@@ -26,9 +26,22 @@ script tests now pass **18/18**. Mac Catalyst Release and signed iOS Simulator
 Debug builds passed with zero warnings/errors. The real iPhone 17 Pro / iOS
 26.5 smoke script launched Equipment, Packing and Surface, passed screenshot
 and scene-difference checks, then shut down the simulator; no demo or
-simulator process remained. The revised GitHub Apple jobs remain unverified
-until a fresh hosted run finishes. The `xcode-27` runner is currently a preview
-image, so inspect the actual selected Xcode and simulator devices in its logs.
+simulator process remained.
+
+The next hosted run,
+[37004136654](https://github.com/mariusmuntean/Simple3D-Maui/actions/runs/37004136654),
+passed Core, documentation, Android build and emulator, and Mac Catalyst
+Release build. Its iOS Simulator build passed with zero warnings/errors, but
+the app crashed on launch under iOS 27: the crash report identified
+`UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`. The iOS demo
+now has a `MauiUISceneDelegate` and `UIApplicationSceneManifest`, matching the
+existing Mac Catalyst scene configuration. The corrected iOS build passed
+locally with zero warnings/errors. On iPhone 17 Pro / iOS 26.5, the real smoke
+script displayed Equipment, Packing and Surface, passed pixel and scene
+difference checks, and shut down its simulator. No demo process remained. A
+fresh hosted iOS 27 launch is required to verify this repair. The `xcode-27`
+runner is a preview image; inspect its actual selected Xcode and simulator
+devices in future logs.
 
 ## Workflow gallery milestone (2026-10-01)
 
@@ -147,13 +160,13 @@ Repository: `mariusmuntean/Simple3D-Maui` (private).
 
 Four independent draft PRs are open against `main`, with a fifth draft PR stacked on #8. They contain committed, pushed implementation with no unfinished source drafts.
 
-| Branch | PR | Latest implementation commit at checkpoint | Purpose |
-| --- | --- | --- | --- |
-| `render-bitmap-reuse` | [#6](https://github.com/mariusmuntean/Simple3D-Maui/pull/6) | `758e1eb309ed9709af3299d8df1025728df341a1` | Reuse native painting buffers and bitmap; bounded raster fallback/recovery |
-| `showcase-engineering-scenes` | [#8](https://github.com/mariusmuntean/Simple3D-Maui/pull/8) | `41d3c3c431cc127885ca66e165da05a67165c175` | Add Robot Arm, Orbit and Wind; harden render recovery, reduce traversal allocation, clean Android smoke sessions |
-| `native-smoke-cleanup` | [#9](https://github.com/mariusmuntean/Simple3D-Maui/pull/9) | `2426e0bf0d07531b84e9571c26e15c25e6682e2f` | Stop iOS smoke sessions on success, failure and interruption |
-| `package-readiness` | [#10](https://github.com/mariusmuntean/Simple3D-Maui/pull/10) | `abc0fed161d968028db0fbd988e24b30b76ed7c2` | Real package metadata and isolated package-consumer checks |
-| `showcase-workflows` | [#11](https://github.com/mariusmuntean/Simple3D-Maui/pull/11) | `a1dd22118c3aa1b5cf7daa6b1bfaea569b0aa2ef` | Four workflow scenes, purposeful animation, rendered examples; based on #8 |
+| Branch | PR | Purpose |
+| --- | --- | --- |
+| `render-bitmap-reuse` | [#6](https://github.com/mariusmuntean/Simple3D-Maui/pull/6) | Reuse native painting buffers and bitmap; bounded raster fallback/recovery |
+| `showcase-engineering-scenes` | [#8](https://github.com/mariusmuntean/Simple3D-Maui/pull/8) | Add Robot Arm, Orbit and Wind; harden render recovery, reduce traversal allocation, clean Android smoke sessions |
+| `native-smoke-cleanup` | [#9](https://github.com/mariusmuntean/Simple3D-Maui/pull/9) | Stop iOS smoke sessions on success, failure and interruption |
+| `package-readiness` | [#10](https://github.com/mariusmuntean/Simple3D-Maui/pull/10) | Real package metadata and isolated package-consumer checks |
+| `showcase-workflows` | [#11](https://github.com/mariusmuntean/Simple3D-Maui/pull/11) | Four workflow scenes, purposeful animation, rendered examples and Apple runner repairs; based on #8 |
 
 The handoff commit follows each implementation commit. Start with #6. After its remaining checks pass, merge it, update #8 from the new `main`, verify the combined result, then merge #8. Preserve the existing PRs.
 
