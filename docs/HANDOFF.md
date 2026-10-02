@@ -2,6 +2,34 @@
 
 Updated: 2026-10-01. Validation below was performed on 2026-09-27 unless stated otherwise.
 
+## Apple runner repair (2026-10-02)
+
+GitHub billing has cleared enough for jobs to run. PR #11's first hosted run,
+[36882715397](https://github.com/mariusmuntean/Simple3D-Maui/actions/runs/36882715397),
+passed Core, documentation, Android build and Android emulator jobs. Its iOS
+and Mac Catalyst jobs failed for a toolchain mismatch: unpinned workload
+installation selected .NET 10 Apple packs requiring Xcode 27, while the
+workflow selected Xcode 26.6. The Mac Catalyst pack also rejects the demo's
+old 15.0 minimum and requires 17.0.
+
+This branch now routes Apple jobs to the published `xcode-27` runner and selects
+Xcode 27.0 explicitly; Android remains on `macos-26`. The demo's Mac Catalyst
+minimum is 17.0. The iOS smoke script can choose an idle iPhone 17 Pro,
+iPhone 18 Pro or iPhone 17, matching the devices on both local and Xcode 27
+runners. It also contains the simulator cleanup from independent PR #9
+(`2426e0b`) so this stacked branch terminates its app and shuts down the
+device it boots. Merge #9 independently first if its gates pass; then reconcile
+the shared script when updating #11 from `main`.
+
+A new simulator fallback regression failed before the selector change. Local
+script tests now pass **18/18**. Mac Catalyst Release and signed iOS Simulator
+Debug builds passed with zero warnings/errors. The real iPhone 17 Pro / iOS
+26.5 smoke script launched Equipment, Packing and Surface, passed screenshot
+and scene-difference checks, then shut down the simulator; no demo or
+simulator process remained. The revised GitHub Apple jobs remain unverified
+until a fresh hosted run finishes. The `xcode-27` runner is currently a preview
+image, so inspect the actual selected Xcode and simulator devices in its logs.
+
 ## Workflow gallery milestone (2026-10-01)
 
 The `showcase-workflows` branch is based on `showcase-engineering-scenes` at
@@ -39,13 +67,16 @@ No demo, simulator or emulator process remained after validation. This was an
 iOS static launch check, not a touch or frame-pacing measurement, and this run
 did not validate launching the new branch from Rider.
 
-This branch is additive and should be reviewed as a draft PR based on
-`showcase-engineering-scenes`. Keep the independent PRs #6, #9 and #10 intact.
+This branch is [draft PR #11](https://github.com/mariusmuntean/Simple3D-Maui/pull/11),
+based on `showcase-engineering-scenes`. Keep the independent PRs #6, #9 and #10 intact.
 Once #8 merges, retarget this branch to `main` and revalidate the combined
-result. GitHub Actions and remaining physical/native interaction checks are
-still required before merging.
+result. The first hosted run and its Apple failures are described above.
+Remaining physical/native interaction checks are still required before merging.
 
 ## Portable checkpoint (2026-09-30)
+
+This is a historical checkpoint. The planned gallery scenes are implemented
+on PR #11, described above.
 
 All source changes and handoff context are committed on the branches listed below.
 Both local checkouts were clean at the start of this checkpoint. The local
@@ -114,7 +145,7 @@ as the startup blocker; no hosted test result can be inferred from these failure
 
 Repository: `mariusmuntean/Simple3D-Maui` (private).
 
-Four independent draft PRs are open against `main`. They contain committed, pushed implementation with no unfinished source drafts.
+Four independent draft PRs are open against `main`, with a fifth draft PR stacked on #8. They contain committed, pushed implementation with no unfinished source drafts.
 
 | Branch | PR | Latest implementation commit at checkpoint | Purpose |
 | --- | --- | --- | --- |
@@ -122,6 +153,7 @@ Four independent draft PRs are open against `main`. They contain committed, push
 | `showcase-engineering-scenes` | [#8](https://github.com/mariusmuntean/Simple3D-Maui/pull/8) | `41d3c3c431cc127885ca66e165da05a67165c175` | Add Robot Arm, Orbit and Wind; harden render recovery, reduce traversal allocation, clean Android smoke sessions |
 | `native-smoke-cleanup` | [#9](https://github.com/mariusmuntean/Simple3D-Maui/pull/9) | `2426e0bf0d07531b84e9571c26e15c25e6682e2f` | Stop iOS smoke sessions on success, failure and interruption |
 | `package-readiness` | [#10](https://github.com/mariusmuntean/Simple3D-Maui/pull/10) | `abc0fed161d968028db0fbd988e24b30b76ed7c2` | Real package metadata and isolated package-consumer checks |
+| `showcase-workflows` | [#11](https://github.com/mariusmuntean/Simple3D-Maui/pull/11) | `a1dd22118c3aa1b5cf7daa6b1bfaea569b0aa2ef` | Four workflow scenes, purposeful animation, rendered examples; based on #8 |
 
 The handoff commit follows each implementation commit. Start with #6. After its remaining checks pass, merge it, update #8 from the new `main`, verify the combined result, then merge #8. Preserve the existing PRs.
 
@@ -138,7 +170,10 @@ git fetch origin
 git switch --track origin/render-bitmap-reuse
 ```
 
-To inspect #8 separately, use a second checkout or a worktree for `origin/showcase-engineering-scenes`. Do not overwrite either branch's work.
+To inspect #8 or #11 separately, use another checkout or worktree for
+`origin/showcase-engineering-scenes` or `origin/showcase-workflows`. Do not
+overwrite another branch's work. PR #11 is stacked on #8, so compare it with
+#8's branch until #8 has merged.
 
 ## User requirements and decisions
 
@@ -210,7 +245,7 @@ All app processes used in the final native pass exited; all simulators were shut
 
 1. Physically verify continuous Mac trackpad pinch. The available automation generated mouse drag/click, not a pinch gesture. The logical incremental-pinch regression passes, but that alone does not verify native delivery.
 2. Observe iOS touch interaction and animation pacing on a simulator with a GUI or a device. The previous installation had simulator runtimes and command-line tools but no Simulator application window.
-3. Resolve GitHub account billing/spending-limit block, then rerun Actions on both branches. Jobs fail before any steps start with: “The job was not started because recent account payments have failed or your spending limit needs to be increased.” These failures provide no evidence about source correctness.
+3. GitHub jobs started again on 2026-10-01. Recheck #6, #8, #9 and #10 after carrying the Apple toolchain repair from #11 into their integration base; their older billing-blocked runs provide no evidence about source correctness. PR #11's first real run exposed the Apple mismatch described above.
 4. After merging #6 and updating #8 from main, repeat portable tests and relevant builds for the combined code.
 
 ### PR #10 (2026-09-29)
@@ -248,7 +283,7 @@ For Rider, select the .NET CLI containing the workloads under Settings → Build
 
 DocFX also launches `dotnet restore` from the shell's `PATH`. Ensure the workload-equipped SDK is first in `PATH` and set `DOTNET_ROOT` to its installation; Rider's SDK selection alone does not configure DocFX. The 2026-09-28 default-shell metadata attempt selected the Homebrew SDK without workloads and failed; metadata and site generation then passed with zero warnings/errors using the user-local SDK.
 
-The previous Mac had Xcode 27.0 and Apple workload 26.5.10301, which expects Xcode 26.6. The demo currently sets `ValidateXcodeVersion=false` for Apple targets. That permitted local development, but does not establish official toolchain compatibility. CI selects Xcode 26.6; once jobs can start, verify the actual runner toolchain rather than generalizing local results.
+The previous Mac had Xcode 27.0 and Apple workload 26.5.10301, which expects Xcode 26.6. The demo currently sets `ValidateXcodeVersion=false` for Apple targets. That permitted local development, but does not establish official toolchain compatibility. The original CI selected Xcode 26.6, but later unpinned workload installation selected packs requiring Xcode 27. PR #11 now selects the Xcode 27 runner for Apple jobs; verify its hosted result rather than generalizing local results.
 
 For native tests, track the precise app/device you launch. Terminate the app, stop the Rider Run session, and shut down that simulator/emulator in a cleanup block even on failure. PR #9 adds that cleanup to the iOS smoke script, including INT/TERM handling. Until it is merged, use its script or provide equivalent cleanup locally. Android smoke app/device cleanup remains to be audited separately.
 

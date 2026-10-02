@@ -51,7 +51,7 @@
 - [x] Extend the executable example test and benchmark to cover all four scenes.
 - [x] Update README, getting started and example catalogue; generate and inspect the four PNGs.
 - [x] Run Core, MAUI and script suites, DocFX and native target builds; inspect the Mac gallery if available.
-- [ ] Review the diff, record precise evidence/limits in `docs/HANDOFF.md`, commit and push the branch, and open a draft PR.
+- [x] Review the diff, record precise evidence/limits in `docs/HANDOFF.md`, commit and push the branch, and open a draft PR.
 
 ## Review focus
 
