@@ -60,6 +60,7 @@ public sealed class SceneView : SKCanvasView
     private double _lastPanX, _lastPanY;
     private double _lastMacPinchScale = 1;
     private readonly List<IGestureRecognizer> _interactionGestures = new();
+    private readonly List<PaintedLabel> _paintLabels = new();
 #if MACCATALYST
     private UIView? _macGestureView;
     private UIPanGestureRecognizer? _macPanRecognizer;
@@ -508,6 +509,7 @@ public sealed class SceneView : SKCanvasView
         ReleasePaintBitmap();
         _frame = null;
         _paintTarget = null;
+        _paintLabels.Clear();
         _renderer = new DepthRenderer();
         _dirty = true;
         _paintTargetDirty = true;
@@ -527,6 +529,64 @@ public sealed class SceneView : SKCanvasView
         canvas.DrawRect(new SKRect(0, 0, width, height), paint);
     }
 
+    internal readonly record struct PaintedLabel(string Text, SKPoint Position, SKRect Bounds, uint Color);
+
+    internal IReadOnlyList<PaintedLabel> LayoutLabels(IReadOnlyList<ProjectedLabel> labels, SKFont font,
+        int width, int height, int renderWidth, int renderHeight)
+    {
+        _paintLabels.Clear();
+        var margin = font.Size * .25f;
+        if (width <= margin * 2 || height <= margin * 2) return _paintLabels;
+        foreach (var label in labels)
+        {
+            var text = FitLabelText(label.Label.Text, font, width - margin * 2);
+            font.MeasureText(text, out var bounds);
+            if (bounds.IsEmpty || bounds.Height > height - margin * 2) continue;
+            var x = Math.Clamp(label.Position.X * width / renderWidth, margin - bounds.Left, width - margin - bounds.Right);
+            var y = Math.Clamp(label.Position.Y * height / renderHeight, margin - bounds.Top, height - margin - bounds.Bottom);
+            var rowHeight = bounds.Height + margin;
+            // Search at most eight rows in either direction; dense labels must not stall a frame.
+            var rows = Math.Min(17, (int)(height / rowHeight) * 2 + 1);
+            for (var row = 0; row < rows; row++)
+            {
+                var rowY = y + ((row + 1) / 2) * rowHeight * (row % 2 == 0 ? -1 : 1);
+                var candidate = bounds;
+                candidate.Offset(x, rowY);
+                if (candidate.Top < margin || candidate.Bottom > height - margin) continue;
+                var padded = candidate;
+                padded.Inflate(margin, margin);
+                var overlaps = false;
+                foreach (var existing in _paintLabels)
+                    if (padded.IntersectsWith(existing.Bounds)) { overlaps = true; break; }
+                if (overlaps) continue;
+                _paintLabels.Add(new(text, new(x, rowY), candidate, label.Label.Color));
+                break;
+            }
+        }
+        return _paintLabels;
+    }
+
+    private static string FitLabelText(string text, SKFont font, float width)
+    {
+        font.MeasureText(text, out var bounds);
+        if (bounds.Width <= width) return text;
+        const string ellipsis = "…";
+        font.MeasureText(ellipsis, out bounds);
+        if (bounds.Width > width) return "";
+        var elements = System.Globalization.StringInfo.ParseCombiningCharacters(text);
+        var low = 0;
+        var high = elements.Length;
+        while (low < high)
+        {
+            var middle = (low + high + 1) / 2;
+            var end = middle == elements.Length ? text.Length : elements[middle];
+            font.MeasureText(text[..end] + ellipsis, out bounds);
+            if (bounds.Width <= width) low = middle;
+            else high = middle - 1;
+        }
+        return text[..(low == elements.Length ? text.Length : elements[low])] + ellipsis;
+    }
+
     private void Paint(object? sender, SKPaintSurfaceEventArgs args)
     {
         var canvas = args.Surface.Canvas;
@@ -536,12 +596,10 @@ public sealed class SceneView : SKCanvasView
         if (target.Labels.Count == 0) return;
         using var font = new SKFont(SKTypeface.Default, LabelFontSize(args.Info.Width, Width));
         using var paint = new SKPaint { IsAntialias = true };
-        var sx = (float)args.Info.Width / target.Width;
-        var sy = (float)args.Info.Height / target.Height;
-        foreach (var label in target.Labels)
+        foreach (var label in LayoutLabels(target.Labels, font, args.Info.Width, args.Info.Height, target.Width, target.Height))
         {
-            paint.Color = new SKColor((byte)(label.Label.Color >> 16), (byte)(label.Label.Color >> 8), (byte)label.Label.Color);
-            canvas.DrawText(label.Label.Text, label.Position.X * sx, label.Position.Y * sy, font, paint);
+            paint.Color = new SKColor((byte)(label.Color >> 16), (byte)(label.Color >> 8), (byte)label.Color);
+            canvas.DrawText(label.Text, label.Position.X, label.Position.Y, font, paint);
         }
     }
 }

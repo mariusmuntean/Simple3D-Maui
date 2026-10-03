@@ -472,6 +472,34 @@ var tests = new (string Name, Action Run)[]
         var buttons = ((HorizontalStackLayout)scroller.Content).Children.OfType<Button>().ToArray();
         Assert(buttons.Length == DemoScenes.All.Count, "not every example is in the gallery");
     }),
+    ("world labels stay readable inside a narrow viewport", () =>
+    {
+        using var font = new SKFont(SKTypeface.Default, 42);
+        var labels = new[]
+        {
+            new ProjectedLabel(new WorldLabel("INDEXED MESH · 512 TRIANGLES", System.Numerics.Vector3.Zero), new(370, 8), 1),
+            new ProjectedLabel(new WorldLabel("BOTTOM", System.Numerics.Vector3.Zero), new(370, 398), 1)
+        };
+        var placed = new SceneView().LayoutLabels(labels, font, 390, 400, 390, 400);
+        Assert(placed.Count == 2, "labels were dropped despite available space");
+        Assert(placed[0].Text.EndsWith("…"), "long label was clipped instead of abbreviated");
+        foreach (var label in placed)
+            Assert(label.Bounds.Left >= 0 && label.Bounds.Top >= 0 && label.Bounds.Right <= 390 && label.Bounds.Bottom <= 400,
+                "label glyphs extend outside the viewport");
+        Assert(new SceneView().LayoutLabels(labels, font, 390, 20, 390, 400).Count == 0,
+            "labels were painted where their height cannot fit");
+    }),
+    ("overlapping projected labels use separate nearby rows", () =>
+    {
+        using var font = new SKFont(SKTypeface.Default, 28);
+        var labels = new[] { "MOTOR", "OUTPUT", "SENSOR" }.Select(text =>
+            new ProjectedLabel(new WorldLabel(text, System.Numerics.Vector3.Zero), new(100, 100), 1)).ToArray();
+        var placed = new SceneView().LayoutLabels(labels, font, 400, 300, 400, 300);
+        Assert(placed.Count == 3, "labels were dropped despite available nearby rows");
+        for (var i = 0; i < placed.Count; i++)
+            for (var j = i + 1; j < placed.Count; j++)
+                Assert(!placed[i].Bounds.IntersectsWith(placed[j].Bounds), "label glyphs overlap");
+    }),
     ("label size follows display density", () =>
     {
         Assert(Math.Abs(SceneView.LabelFontSize(1170, 390) - 42) < .001f, "3x label is too small");

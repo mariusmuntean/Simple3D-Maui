@@ -18,6 +18,12 @@ The rebuilt Mac gallery was also launched and visually checked after unlocking: 
 
 Remaining gates: actual iOS touch/pinch and animation pacing; physical Mac trackpad pinch; fresh Rider launch of this configuration; full-resolution edge quality; Linux execution of the Skia dependency fix. Keep #6 draft until its native interaction gates are verified. No hosted checks were dispatched for this iteration.
 
+### Label layout checkpoint
+
+Native label painting now measures glyph bounds, keeps text inside the viewport, abbreviates oversized text at Unicode character boundaries and searches nearby rows to avoid overlap. It searches at most eight rows in either direction and omits labels that cannot fit. Core projected anchors and picking are unchanged. The placement list is reused between paints and cleared when render resources are released.
+
+Two new regressions failed against the original placement, then passed with the fix: narrow viewport clipping (including insufficient height) and overlapping anchors. Local Core 39/39, MAUI 32/32, scripts 13/13 and DocFX site build passed. Both Apple Debug builds passed with the same single local deprecated-settings warning. The rebuilt Mac gallery visibly separated MOTOR and OUTPUT at the rotation that previously overlapped them and displayed the full Surface annotation; the app was stopped. The iOS three-scene smoke check passed and its Surface screenshot now shows the entire annotation inside the viewport. Its test simulator was shut down and the user's separate session remained untouched. This fixes label layout, not the remaining antialiasing or physical gesture gates.
+
 Repository: `mariusmuntean/Simple3D-Maui` (private).
 
 PR #9 merged into `main` at `2d6f5c97417e4ec928e1a46a0e887e5de75c74a9`. It stops iOS smoke apps and simulators on success, failure and interruption, selects an idle supported iPhone, routes Apple builds to Xcode 27, raises the demo's Mac Catalyst minimum to 17, and adopts the iOS scene lifecycle. Local Core 39/39, MAUI 13/13 and script tests 11/11 passed. Both Apple builds and the real local three-scene iOS smoke check passed. [All six hosted jobs passed](https://github.com/mariusmuntean/Simple3D-Maui/actions/runs/37105153071), including iOS and Android app launches.
