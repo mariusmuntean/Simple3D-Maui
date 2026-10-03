@@ -28,6 +28,8 @@ if name == "xcrun" and args == ["simctl", "list", "devices", "available", "-j"]:
     ]}}))
 if name == "xcrun" and args[1:2] == [os.environ.get("SMOKE_FAIL")]:
     sys.exit(23)
+if name == "xcrun" and args[1:2] == ["launch"] and "--console" in args and not os.environ.get("SMOKE_NO_RENDER_MARKER"):
+    print("NATIVE_RENDER_PROBE_PASS")
 if name == "xcrun" and args[1:2] == ["bootstatus"] and os.environ.get("SMOKE_BLOCK"):
     pathlib.Path(os.environ["SMOKE_LOG"] + ".ready").touch()
     time.sleep(10)
@@ -35,7 +37,7 @@ if name == "xcrun" and args[1:2] == ["bootstatus"] and os.environ.get("SMOKE_BLO
 
 
 class IosSmokeCleanupTests(unittest.TestCase):
-    def run_smoke(self, terminate=False, **settings):
+    def run_smoke(self, terminate=False, render_probe=False, **settings):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             tools = root / "tools"
@@ -49,9 +51,10 @@ class IosSmokeCleanupTests(unittest.TestCase):
             log = root / "commands.jsonl"
             env = dict(os.environ, PATH=f"{tools}{os.pathsep}{os.environ['PATH']}",
                        SMOKE_LOG=str(log), **settings)
+            command = ["bash", str(SCRIPT), *(["--render-probe"] if render_probe else [])]
             if terminate:
                 env["SMOKE_BLOCK"] = "1"
-                process = subprocess.Popen(["bash", str(SCRIPT)], cwd=root, env=env,
+                process = subprocess.Popen(command, cwd=root, env=env,
                                            text=True, stdout=subprocess.PIPE,
                                            stderr=subprocess.PIPE, start_new_session=True)
                 try:
@@ -68,7 +71,7 @@ class IosSmokeCleanupTests(unittest.TestCase):
                         os.killpg(process.pid, signal.SIGKILL)
                         process.wait()
             else:
-                result = subprocess.run(["bash", str(SCRIPT)], cwd=root, env=env,
+                result = subprocess.run(command, cwd=root, env=env,
                                         text=True, capture_output=True, timeout=10)
             commands = [json.loads(line) for line in log.read_text().splitlines()]
             return result, commands
@@ -83,6 +86,17 @@ class IosSmokeCleanupTests(unittest.TestCase):
         result, commands = self.run_smoke()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn(["xcrun", "simctl", "boot", "test-device"], commands)
+        self.assert_cleanup(commands)
+
+    def test_native_render_probe_releases_device(self):
+        result, commands = self.run_smoke(render_probe=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(["xcrun", "simctl", "launch", "--console", "test-device", "dev.simple3d.gallery"], commands)
+        self.assert_cleanup(commands)
+
+    def test_native_render_probe_rejects_missing_success_marker(self):
+        result, commands = self.run_smoke(render_probe=True, SMOKE_NO_RENDER_MARKER="1")
+        self.assertNotEqual(result.returncode, 0)
         self.assert_cleanup(commands)
 
     def test_install_failure_releases_device_and_preserves_error(self):

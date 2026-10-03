@@ -224,12 +224,15 @@ internal static class CoreRegressionTests
             var renderer = new DepthRenderer();
             var target = new RenderTarget(1024, 1024);
             renderer.RenderInto(new Scene().Add(Shape.Box()), new Camera(5, 0, 0), target);
+            Check(target.RasterSamples > 0, "target omitted successful raster work");
             try { renderer.RenderInto(scene, new Camera(5, 0, 0), target); }
             catch (RasterBudgetExceededException)
             {
                 Check(target.Pick(512, 512) is null, "failed target render kept stale picking");
+                Check(target.RasterSamples == 0, "failed target kept stale raster work");
                 renderer.RenderInto(new Scene(), new Camera(), target);
                 Check(target.Pick(512, 512) is null, "target did not recover after failure");
+                Check(target.RasterSamples == 0, "empty scene reported raster work");
                 return;
             }
         }

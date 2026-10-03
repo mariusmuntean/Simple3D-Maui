@@ -51,6 +51,7 @@ public sealed class RenderTarget
     private Shape[] _shapes = [];
     private IReadOnlyList<ProjectedLabel> _labels = Array.Empty<ProjectedLabel>();
     private bool _valid;
+    private long _rasterSamples;
 
     /// <summary>Width in physical pixels.</summary>
     public int Width { get; }
@@ -60,6 +61,8 @@ public sealed class RenderTarget
     public ReadOnlyMemory<uint> Pixels => _pixels;
     /// <summary>Projected labels from the most recent render.</summary>
     public IReadOnlyList<ProjectedLabel> Labels => _labels;
+    /// <summary>Clipped triangle bounding-box samples evaluated by the most recent successful render.</summary>
+    public long RasterSamples => _rasterSamples;
 
     /// <summary>Allocates a reusable target with dimensions from 1 to 2048.</summary>
     public RenderTarget(int width, int height)
@@ -83,16 +86,20 @@ public sealed class RenderTarget
 
     internal uint[] PixelBuffer => _pixels;
     internal int[] IdBuffer => _ids;
+    internal ReadOnlySpan<int> VisibleIds => _valid ? _ids : ReadOnlySpan<int>.Empty;
+    internal ReadOnlySpan<Shape> VisibleShapes => _valid ? _shapes : ReadOnlySpan<Shape>.Empty;
     internal void BeginRender()
     {
         _valid = false;
+        _rasterSamples = 0;
         _shapes = [];
         _labels = Array.Empty<ProjectedLabel>();
     }
-    internal void Update(Shape[] shapes, ProjectedLabel[] labels)
+    internal void Update(Shape[] shapes, ProjectedLabel[] labels, long rasterSamples)
     {
         _shapes = shapes;
         _labels = Array.AsReadOnly(labels);
+        _rasterSamples = rasterSamples;
         _valid = true;
     }
 }
@@ -124,7 +131,7 @@ public sealed class DepthRenderer
         var count = width * height;
         var pixels = new uint[count];
         var ids = new int[count];
-        var (shapes, labels) = RenderCore(scene, camera, width, height, background, nodes, pixels, ids);
+        var (shapes, labels, _) = RenderCore(scene, camera, width, height, background, nodes, pixels, ids);
         return new(width, height, pixels, ids, shapes, labels);
     }
 
@@ -135,9 +142,9 @@ public sealed class DepthRenderer
         Validate(scene, camera, target.Width, target.Height, background);
         target.BeginRender();
         var nodes = PrepareNodes(scene);
-        var (shapes, labels) = RenderCore(scene, camera, target.Width, target.Height, background,
+        var (shapes, labels, rasterSamples) = RenderCore(scene, camera, target.Width, target.Height, background,
             nodes, target.PixelBuffer, target.IdBuffer);
-        target.Update(shapes, labels);
+        target.Update(shapes, labels, rasterSamples);
     }
 
     private static void Validate(Scene scene, Camera camera, int width, int height, uint background)
@@ -161,7 +168,7 @@ public sealed class DepthRenderer
         return nodes;
     }
 
-    private (Shape[] Shapes, ProjectedLabel[] Labels) RenderCore(Scene scene, Camera camera, int width, int height,
+    private (Shape[] Shapes, ProjectedLabel[] Labels, long RasterSamples) RenderCore(Scene scene, Camera camera, int width, int height,
         uint background, (Shape Shape, Matrix4x4 Transform)[] nodes, uint[] pixels, int[] ids)
     {
         var count = width * height;
@@ -230,12 +237,17 @@ public sealed class DepthRenderer
             if (p.X >= 0 && p.X < width && p.Y >= 0 && p.Y < height)
                 labels.Add(new(label, new((float)p.X, (float)p.Y), v.Z));
         }
-        return (nodes.Select(n => n.Shape).ToArray(), labels.ToArray());
+        return (nodes.Select(n => n.Shape).ToArray(), labels.ToArray(), rasterSamples);
 
         Vector3 View(Vector3 p)
         {
             var relative = p - basis.Eye;
-            return new(Vector3.Dot(relative, basis.Right), Vector3.Dot(relative, basis.Up), Vector3.Dot(relative, basis.Forward));
+            // Separate assignments avoid corrupt constructor arguments in Mono ARM64 AOT.
+            var result = default(Vector3);
+            result.X = Vector3.Dot(relative, basis.Right);
+            result.Y = Vector3.Dot(relative, basis.Up);
+            result.Z = Vector3.Dot(relative, basis.Forward);
+            return result;
         }
 
         // Double projection keeps tiny near planes and orthographic heights finite.

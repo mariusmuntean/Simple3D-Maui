@@ -8,7 +8,7 @@ namespace Simple3D.Demo;
 
 public sealed class GalleryPage : ContentPage
 {
-    private readonly SceneView _view = new() { HeightRequest = 440, SceneBackgroundColor = Color.FromArgb("#18243B") };
+    private readonly SceneView _view = new() { SceneBackgroundColor = Color.FromArgb("#18243B") };
     private readonly Label _caption = new() { FontSize = 15, TextColor = Color.FromArgb("#A9B8D4") };
     private readonly Label _selection = new() { FontSize = 14, TextColor = Color.FromArgb("#8EE1CD") };
     private readonly IReadOnlyList<DemoScene> _scenes = DemoScenes.All;
@@ -40,20 +40,32 @@ public sealed class GalleryPage : ContentPage
             HorizontalScrollBarVisibility = ScrollBarVisibility.Never, Content = scenes };
         var toolScroller = new ScrollView { Orientation = ScrollOrientation.Horizontal,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Never, Content = tools };
-        Content = new ScrollView { Content = new VerticalStackLayout
+        var header = new VerticalStackLayout
         {
-            Padding = new Thickness(22, 35), Spacing = 18,
-            Children = { title, subtitle, sceneScroller, new Border
-            {
-                BackgroundColor = Color.FromArgb("#18243B"),
-                Stroke = Color.FromArgb("#314361"), StrokeThickness = 1,
-                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 24 },
-                Content = _view
-            }, toolScroller, _caption, _selection, new Label
+            Padding = new Thickness(22, 20, 22, 12), Spacing = 12,
+            Children = { title, subtitle, sceneScroller }
+        };
+        var sceneBorder = new Border
+        {
+            Margin = new Thickness(22, 0),
+            BackgroundColor = Color.FromArgb("#18243B"),
+            Stroke = Color.FromArgb("#314361"), StrokeThickness = 1,
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 24 },
+            Content = _view
+        };
+        var footer = new ScrollView { MaximumHeightRequest = 180, Content = new VerticalStackLayout
+        {
+            Padding = new Thickness(22, 12, 22, 20), Spacing = 12,
+            Children = { toolScroller, _caption, _selection, new Label
             {
                 Text = "Drag to orbit · Pinch to zoom · Tap to select · Animate the scene", TextColor = Color.FromArgb("#8BA1C1"), FontSize = 13
             } }
         }};
+        var layout = new Grid { RowDefinitions = { new(GridLength.Auto), new(GridLength.Star), new(GridLength.Auto) } };
+        layout.Add(header, 0, 0);
+        layout.Add(sceneBorder, 0, 1);
+        layout.Add(footer, 0, 2);
+        Content = layout;
         var requested = Environment.GetEnvironmentVariable("SIMPLE3D_GALLERY_SCENE");
         Show(_scenes.FirstOrDefault(s => s.Name == requested) ?? _scenes[0]);
     }
