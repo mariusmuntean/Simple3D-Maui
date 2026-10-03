@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<!--[if IE]><![endif]-->
+<html>
+
+  <head>
+    <meta charset="utf-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+      <title>Architecture and rendering pipeline | Simple3D </title>
+      <meta name="viewport" content="width=device-width">
+      <meta name="title" content="Architecture and rendering pipeline | Simple3D ">
+    
+    
+      <link rel="shortcut icon" href="images/favicon.png">
+      <link rel="stylesheet" href="styles/docfx.vendor.min.css">
+      <link rel="stylesheet" href="styles/docfx.css">
+      <link rel="stylesheet" href="styles/main.css">
+      <meta property="docfx:navrel" content="toc.html">
+      <meta property="docfx:tocrel" content="toc.html">
+    
+    <meta property="docfx:rel" content="">
+    
+  </head>
+  <body data-spy="scroll" data-target="#affix" data-offset="120">
+    <div id="wrapper">
+      <header>
+
+        <nav id="autocollapse" class="navbar navbar-inverse ng-scope" role="navigation">
+          <div class="container">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+
+              <a class="navbar-brand" href="index.html">
+                <img id="logo" class="svg" src="images/navigation-mark.svg" alt="Simple3D">
+              </a>
+            </div>
+            <div class="collapse navbar-collapse" id="navbar">
+              <form class="navbar-form navbar-right" role="search" id="search">
+                <div class="form-group">
+                  <input type="text" class="form-control" id="search-query" placeholder="Search" autocomplete="off">
+                </div>
+              </form>
+            </div>
+          </div>
+        </nav>
+
+        <div class="subnav navbar navbar-default">
+          <div class="container hide-when-search" id="breadcrumb">
+            <ul class="breadcrumb">
+              <li></li>
+            </ul>
+          </div>
+        </div>
+      </header>
+      <div class="container body-content">
+
+        <div id="search-results">
+          <div class="search-list">Search Results for <span></span></div>
+          <div class="sr-items">
+            <p><i class="glyphicon glyphicon-refresh index-loading"></i></p>
+          </div>
+          <ul id="pagination" data-first=First data-prev=Previous data-next=Next data-last=Last></ul>
+        </div>
+      </div>
+      <div role="main" class="container body-content hide-when-search">
+        <div class="article row grid">
+          <div class="col-md-10">
+            <article class="content wrap" id="_content" data-uid="">
+<h1 id="architecture-and-rendering-pipeline">Architecture and rendering pipeline</h1>
+
+<p>Simple3D is a small CPU renderer for opaque 3D diagrams inside ordinary .NET MAUI pages. You describe geometry and a camera in Core. The MAUI control renders that geometry to a bitmap, presents it through SkiaSharp, and connects pointer gestures to the camera and selection.</p>
+<h2 id="package-boundaries">Package boundaries</h2>
+<p><img src="images/architecture.svg" alt="Application, portable Core, MAUI control and native platform boundaries"></p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Responsibility</th>
+<th>Dependencies</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Simple3D.Core</code></td>
+<td>Shapes, immutable meshes, hierarchy, camera, projection, depth rasterization and picking</td>
+<td>.NET 10 / System.Numerics</td>
+</tr>
+<tr>
+<td><code>Simple3D.Maui</code></td>
+<td><code>SceneView</code>, gestures, caching, bitmap presentation, selection and label layout</td>
+<td>Core, MAUI, SkiaSharp</td>
+</tr>
+<tr>
+<td>Your application</td>
+<td>Scene content, animation timing, selected-part details and layout</td>
+<td>MAUI control, or Core alone for exports</td>
+</tr>
+<tr>
+<td>Gallery</td>
+<td>Fifteen examples using shared scene factories</td>
+<td>Both libraries through the demo project</td>
+</tr>
+</tbody>
+</table>
+<p>Core has no MAUI or SkiaSharp dependency. You can render and query pixels in a console app without a native UI. <code>SceneView</code> uses <code>SKCanvasView</code>; SkiaSharp presents the raster image rather than executing the scene's triangles on a GPU.</p>
+<p>This boundary keeps geometry and rendering tests portable. Your page hosts a normal MAUI view without adopting a game engine's application lifecycle.</p>
+<h2 id="one-frame-step-by-step">One frame, step by step</h2>
+<p><img src="images/rendering-pipeline.svg" alt="Pipeline through transforms, clipping, depth rasterization and native presentation"></p>
+<ol>
+<li><strong>Invalidate.</strong> Scene and camera mutations raise synchronous notifications. The view marks cached output dirty and requests a paint. An unchanged native paint can reuse its previous target.</li>
+<li><strong>Flatten and validate.</strong> Core traverses groups iteratively, composes child and parent transforms, and collects geometry leaves. Repeated instances count separately. Node and triangle limits bound preparation.</li>
+<li><strong>Transform and shade.</strong> Each triangle moves to world coordinates. Core rejects degenerate triangles, applies optional back-face culling, and computes one color per triangle from its normal and a fixed world-space directional light. Unlit materials retain their color.</li>
+<li><strong>Clip and project.</strong> Points move into camera space. Core clips triangles against the near plane, then projects with perspective or orthographic math. It bounds each projected triangle to the viewport.</li>
+<li><strong>Rasterize.</strong> At each covered pixel center, Core compares interpolated depth with the nearest stored depth. A nearer triangle writes color and its leaf-shape ID together. Perspective uses reciprocal depth; orthographic mode uses linear depth. Equal-depth samples retain the earlier shape.</li>
+<li><strong>Present.</strong> The view copies changed pixels into a reusable Skia bitmap, optionally filters diagonal edges, adds selection tint and contour, and scales to the native surface. It draws labels afterward, with bounds and overlap handling.</li>
+</ol>
+<p>Scratch depth storage belongs to the <code>DepthRenderer</code> instance. Color and shape-ID arrays belong to the frame or reusable target. Core projects labels separately; labels overlay geometry without depth testing.</p>
+<h2 id="picking-shares-visibility">Picking shares visibility</h2>
+<p>A render records the winning leaf ID for each pixel. <code>Pick</code> looks up that ID and returns its shape without a second geometry pass. Hidden triangles cannot win a tap.</p>
+<p><code>SceneView.PickAt</code> maps layout coordinates into target pixels. Selection uses the same ID buffer, preserving occlusion without changing materials. Shape replacement transfers selection to the corresponding child position in the new tree. Keep logical child order stable during animation; removed or missing parts clear selection.</p>
+<h2 id="ownership-and-repeated-frames">Ownership and repeated frames</h2>
+<table>
+<thead>
+<tr>
+<th>API</th>
+<th>Storage lifetime</th>
+<th>Typical use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DepthRenderer.Render</code> / <code>SceneView.CaptureFrame</code></td>
+<td>Owned pixels and pick data survive later renders</td>
+<td>Export, screenshot, tests</td>
+</tr>
+<tr>
+<td><code>DepthRenderer.RenderInto</code></td>
+<td>Fixed-size <code>RenderTarget</code> reuses color and ID arrays; the next call overwrites content</td>
+<td>Animation and native painting</td>
+</tr>
+</tbody>
+</table>
+<p>Reuse a target at the same size and share immutable meshes between shape replacements. The renderer still allocates small per-frame collections for flattened nodes, shapes and labels; reuse does not mean zero allocation.</p>
+<p>A failed <code>RenderInto</code> invalidates picking and may leave partial pixels. Render successfully before reading that target again. A renderer instance is not thread safe because it shares depth scratch storage. Mutate and render a scene on the same thread; use the UI thread with <code>SceneView</code>.</p>
+<p>On native handler disconnect, the view releases subscriptions and rendering resources. Snapshots held by your application remain valid.</p>
+<h2 id="responsiveness-and-bounded-work">Responsiveness and bounded work</h2>
+<p>Core caps dimensions at 2,048 pixels, traversal at 100,000 node visits, aggregate triangles at 1,000,000, and raster bounding-box samples at 16,000,000 per frame. These are resource bounds, not recommended animation workloads. See <a href="rendering-limits.html">Rendering limits</a>.</p>
+<p>During pan or pinch, the view caps the longest render dimension at 512 pixels and restores configured detail after the gesture. If raster work exceeds the budget, native painting retries at half resolution and avoids probing an expensive full-size frame on every animation update. <code>MaximumRenderDimension</code> lets the application set an animation budget.</p>
+<p>Your application owns animation timing. Replace shapes from a UI timer and stop it when the page disappears. Cost grows with covered pixels and overlap as well as triangle count. Profile the native target and distinguish CPU render time from displayed frame rate.</p>
+<h2 id="deliberate-scope">Deliberate scope</h2>
+<p>The software path keeps rendering, visibility and picking in one inspectable pipeline. Its tradeoff is CPU work per covered pixel. Simple3D supports opaque triangles and fixed directional flat lighting; it has no image textures, transparency, PBR or shadows. Patterned Surface uses colored mesh cells.</p>
+<p><code>SceneRenderer</code> is the older projected-triangle API, retained for compatible primitive/default-camera code. <code>SceneView</code> uses <code>DepthRenderer</code>. Use the depth path for custom meshes, newer camera features and intersecting geometry.</p>
+<h2 id="read-the-implementation">Read the implementation</h2>
+<ul>
+<li><a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Core/Scene.cs">Scene traversal and notifications</a></li>
+<li><a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Core/DepthRenderer.cs">Clipping, rasterization and frame ownership</a></li>
+<li><a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Maui/SceneView.cs">Native presentation, interaction and selection</a></li>
+</ul>
+
+</article>
+          </div>
+
+          <div class="hidden-sm col-md-2" role="complementary">
+            <div class="sideaffix">
+              <div class="contribution">
+                <ul class="nav">
+                  <li>
+                    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/docs/site/architecture.md/#L1" class="contribution-link">Edit this page</a>
+                  </li>
+                </ul>
+              </div>
+              <nav class="bs-docs-sidebar hidden-print hidden-xs hidden-sm affix" id="affix">
+                <h5>In this article</h5>
+                <div></div>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <div class="grad-bottom"></div>
+        <div class="footer">
+          <div class="container">
+            <span class="pull-right">
+              <a href="#top">Back to top</a>
+            </span>
+      
+      <span>Generated by <strong>DocFX</strong></span>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <script type="text/javascript" src="styles/docfx.vendor.min.js"></script>
+    <script type="text/javascript" src="styles/docfx.js"></script>
+    <script type="text/javascript" src="styles/main.js"></script>
+  </body>
+</html>

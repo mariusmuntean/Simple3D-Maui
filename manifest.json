@@ -306,6 +306,16 @@
     },
     {
       "type": "Conceptual",
+      "source_relative_path": "architecture.md",
+      "output": {
+        ".html": {
+          "relative_path": "architecture.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
       "source_relative_path": "examples.md",
       "output": {
         ".html": {
@@ -476,6 +486,16 @@
     },
     {
       "type": "Resource",
+      "source_relative_path": "images/architecture.svg",
+      "output": {
+        "resource": {
+          "relative_path": "images/architecture.svg"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
       "source_relative_path": "images/brand-banner.svg",
       "output": {
         "resource": {
@@ -500,6 +520,16 @@
       "output": {
         "resource": {
           "relative_path": "images/navigation-mark.svg"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/rendering-pipeline.svg",
+      "output": {
+        "resource": {
+          "relative_path": "images/rendering-pipeline.svg"
         }
       },
       "version": ""
