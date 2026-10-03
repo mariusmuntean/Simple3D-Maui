@@ -66,6 +66,10 @@ PR #6 previously passed Core 39/39 and MAUI 23/23 and launched macOS/iOS from Ri
 3. Launch the combined gallery branch from Rider on macOS and iOS. Earlier #6 Rider launches do not validate the combined result; an IDE socket refusal means debugging/Hot Reload remains unproven.
 4. After integration, run the portable suites, package consumers, relevant native builds and smoke checks again. Inspect the exact hosted run for the head being merged.
 
+## Hosted testing policy
+
+The owner requested local development feedback and conserving Actions minutes (the supplied alert reported 1,827 of 2,000 included minutes used). Run local tests, native builds and Rider checks first. CI now uses only `workflow_dispatch` on the active rendering and package branches. Dispatch hosted checks later when the project is mature or a check specifically requires a GitHub runner. Do not rerun or dispatch checks on routine commits. Until this workflow policy reaches main and other branches, use `[skip ci]` on transfer-only pushes that would otherwise trigger hosted jobs. The two new checkpoint runs (`37108474550`, `37108476653`) were cancelled to avoid further resource use. Prior runs may already have completed; inspect their results only when needed.
+
 ## User requirements
 
 - Work autonomously, make routine decisions, verify milestones, commit and push context, and merge verified work.
