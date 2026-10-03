@@ -9,6 +9,8 @@ view.SelectionChanged += (_, shape) =>
     details.Text = shape?.Name ?? "Nothing selected";
 ```
 
+Set `IsInteractive = false` to disable built-in orbit, zoom and tap selection. Gestures your application adds to `GestureRecognizers`, such as a double tap command, remain installed when this property changes. Custom pointers can still call `SelectAt` and `ClearSelection`.
+
 Native label painting keeps glyphs inside the viewport and abbreviates text with an ellipsis when it cannot fit the available width. Overlapping labels move to a free nearby row, searching up to eight rows in either direction; labels without space are omitted. Earlier scene labels take priority. These adjustments affect the overlay only; Core projected anchors and picking remain unchanged. Labels still overlay geometry without depth testing.
 
 `SelectAt(x, y, viewWidth, viewHeight)` performs the same selection and feedback for a custom pointer. `PickAt` only queries; it does not change selection. Call `ClearSelection()` to clear the highlight from a reset command or other application action, including in display-only mode. It raises `SelectionChanged` with `null` only when a shape was selected. `Scene.Replace` transfers selection to the replacement node, so animated parts keep their highlight. For groups, corresponding child positions represent the same parts: preserve child order during animation. Missing children and removed shapes clear selection. `SelectionChanged` also reports the replacement instance, allowing details to follow changing names and values. `Scene.Changed` supplies `ShapeReplacementEventArgs` for replacements.

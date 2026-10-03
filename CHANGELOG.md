@@ -6,6 +6,7 @@
 - CPU depth rendering with visible-leaf picking, owned snapshots and reusable targets.
 - MAUI control for Android, iOS and Mac Catalyst with orbit, zoom, selection feedback and labels.
 - `SceneView.ClearSelection()` clears feedback from application commands; gallery Reset also clears the selected part.
+- Toggling `IsInteractive` preserves gestures supplied by the host application.
 - Seventeen gallery scenes with subject-specific animations, including colored checker cells, battery charge gauges and a gantry crane.
 - Bounded raster work, reduced gesture preview resolution and optional diagonal-edge filtering.
 - Indexed triangle traversal reduces allocation when rendering many small mesh instances.

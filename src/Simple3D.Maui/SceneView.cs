@@ -28,7 +28,7 @@ public sealed class SceneView : SKCanvasView
     /// <summary>The opaque clear color, expressed as a MAUI color.</summary>
     public static readonly BindableProperty SceneBackgroundColorProperty = BindableProperty.Create(nameof(SceneBackgroundColor), typeof(Color), typeof(SceneView),
         Color.FromArgb("#F4F6FA"), propertyChanged: (bindable, _, _) => ((SceneView)bindable).Refresh());
-    /// <summary>Whether the view installs orbit, zoom and picking gestures.</summary>
+    /// <summary>Whether the view installs orbit, zoom and picking gestures. Application gestures are preserved.</summary>
     public static readonly BindableProperty IsInteractiveProperty = BindableProperty.Create(nameof(IsInteractive), typeof(bool), typeof(SceneView),
         true, propertyChanged: (bindable, _, _) => ((SceneView)bindable).UpdateInteraction());
     /// <summary>Whether native painting softens high-contrast diagonal pixel steps.</summary>
@@ -128,7 +128,7 @@ public sealed class SceneView : SKCanvasView
         get => (Color)GetValue(SceneBackgroundColorProperty);
         set => SetValue(SceneBackgroundColorProperty, value ?? throw new ArgumentNullException(nameof(value)));
     }
-    /// <summary>Enable orbit, zoom and tap selection. Set false for a display only scene.</summary>
+    /// <summary>Enable orbit, zoom and tap selection. Set false for a display only scene. Application gestures are preserved.</summary>
     public bool IsInteractive
     {
         get => (bool)GetValue(IsInteractiveProperty);
@@ -402,9 +402,14 @@ public sealed class SceneView : SKCanvasView
     private void UpdateInteraction()
     {
         _panActive = _pinchActive = false;
-        GestureRecognizers.Clear();
-        if (IsInteractive)
-            foreach (var gesture in _interactionGestures) GestureRecognizers.Add(gesture);
+        foreach (var gesture in _interactionGestures)
+        {
+            if (IsInteractive)
+            {
+                if (!GestureRecognizers.Contains(gesture)) GestureRecognizers.Add(gesture);
+            }
+            else GestureRecognizers.Remove(gesture);
+        }
 #if MACCATALYST
         if (_macPinchRecognizer is not null) _macPinchRecognizer.Enabled = IsInteractive;
         if (_macPanRecognizer is not null) _macPanRecognizer.Enabled = IsInteractive;

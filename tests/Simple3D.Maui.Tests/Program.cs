@@ -508,6 +508,27 @@ var tests = new (string Name, Action Run)[]
         Assert(view.GestureRecognizers.OfType<PanGestureRecognizer>().Any(), "orbit gesture was not restored");
         Assert(view.GestureRecognizers.OfType<TapGestureRecognizer>().Any(), "picking gesture was not restored");
     }),
+    ("interaction toggles preserve host gestures without duplicating built in gestures", () =>
+    {
+        var view = new SceneView();
+        var builtIn = view.GestureRecognizers.ToArray();
+        var hostTap = new TapGestureRecognizer { NumberOfTapsRequired = 2 };
+        var hostSwipe = new SwipeGestureRecognizer { Direction = SwipeDirection.Left };
+        view.GestureRecognizers.Add(hostTap);
+        view.GestureRecognizers.Add(hostSwipe);
+        for (var cycle = 0; cycle < 3; cycle++)
+        {
+            view.IsInteractive = false;
+            Assert(view.GestureRecognizers.SequenceEqual(new IGestureRecognizer[] { hostTap, hostSwipe }),
+                "display only mode removed host gestures or retained built in gestures");
+            view.IsInteractive = true;
+            Assert(view.GestureRecognizers.Count == builtIn.Length + 2, "interaction toggle duplicated gestures");
+            Assert(view.GestureRecognizers.Contains(hostTap) && view.GestureRecognizers.Contains(hostSwipe), "enabling removed host gestures");
+            Assert(builtIn.All(gesture => view.GestureRecognizers.Count(item => ReferenceEquals(item, gesture)) == 1),
+                "built in gestures were recreated or duplicated");
+        }
+        view.ReleaseRenderResources();
+    }),
     ("surface render limit can be changed for animation and restored", () =>
     {
         var view = new SceneView { Scene = new Scene().Add(Shape.Box()) };
