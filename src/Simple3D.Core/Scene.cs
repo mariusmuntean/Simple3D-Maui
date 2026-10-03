@@ -83,17 +83,22 @@ public sealed class Scene
 
     internal IEnumerable<(Shape Shape, Matrix4x4 Transform)> Flatten()
     {
+        if (_shapes.Count == 0) yield break;
         var visited = 0;
-        foreach (var shape in _shapes)
-            foreach (var node in Walk(shape, Matrix4x4.Identity)) yield return node;
-
-        IEnumerable<(Shape, Matrix4x4)> Walk(Shape shape, Matrix4x4 parent)
+        // Keep one continuation per ancestor instead of allocating recursive
+        // iterators for every node. Pending storage is bounded by group depth,
+        // even when a group contains a very large number of children.
+        var pending = new Stack<(IReadOnlyList<Shape> Nodes, int Index, Matrix4x4 Parent)>();
+        pending.Push((_shapes, 0, Matrix4x4.Identity));
+        while (pending.TryPop(out var entry))
         {
+            var shape = entry.Nodes[entry.Index];
+            if (entry.Index + 1 < entry.Nodes.Count)
+                pending.Push((entry.Nodes, entry.Index + 1, entry.Parent));
             if (++visited > MaximumNodes) throw new ArgumentException("Scene exceeds node visit budget.");
-            var transform = shape.Transform * parent;
+            var transform = shape.Transform * entry.Parent;
             if (shape.Mesh.Count > 0) yield return (shape, transform);
-            foreach (var child in shape.Children)
-                foreach (var node in Walk(child, transform)) yield return node;
+            if (shape.Children.Count > 0) pending.Push((shape.Children, 0, transform));
         }
     }
 

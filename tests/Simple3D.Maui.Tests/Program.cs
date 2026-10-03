@@ -6,6 +6,8 @@ using Simple3D.Shared;
 using Simple3D.Demo;
 using SkiaSharp;
 
+if (args.Contains("--performance")) return PerformanceProbe.Run();
+
 var tests = new (string Name, Action Run)[]
 {
     ("diagonal antialiasing blends stair steps and preserves straight edges", () =>
@@ -100,21 +102,29 @@ var tests = new (string Name, Action Run)[]
         {
             var view = new SceneView { Scene = sample.Scene, Camera = sample.Camera };
             sample.Animate(0);
+            var roots = sample.Scene.Shapes.ToArray();
+            sample.Animate(.1f);
+            var animatedIndex = Enumerable.Range(0, roots.Length)
+                .Single(i => !ReferenceEquals(roots[i], sample.Scene.Shapes[i]));
+            sample.Animate(0);
             var before = view.CapturePaintTarget(200, 200);
-            var animated = sample.Scene.Shapes[sample.Name is "Equipment" or "Packing" or "Surface" or "City" ? 1 :
-                sample.Name == "Assembly" ? 2 : 0];
-            var parts = animated.Children.Count > 0 ? animated.Children : new[] { animated };
-            var point = Enumerable.Range(0, 40000).FirstOrDefault(i => parts.Contains(before.Pick(i % 200, i / 200)!), -1);
+            var animated = sample.Scene.Shapes[animatedIndex];
+            var parts = new Dictionary<Shape, int[]>();
+            Collect(animated, []);
+            var point = Enumerable.Range(0, 40000).FirstOrDefault(i =>
+                before.Pick(i % 200, i / 200) is Shape candidate && parts.ContainsKey(candidate), -1);
             Assert(point >= 0, $"{sample.Name}: fixture has no visible animated part");
             var part = before.Pick(point % 200, point / 200)!;
+            var path = parts[part];
             view.SelectAt(point % 200, point / 200, 200, 200);
             for (var tick = 1; tick <= 3; tick++)
             {
                 sample.Animate(tick * .2f);
                 var target = view.CapturePaintTarget(200, 200);
                 var selected = view.SelectedShape;
-                Assert(selected is not null && (!ReferenceEquals(selected, part) || sample.Name == "Molecule"),
-                    $"{sample.Name}: selection stayed on an obsolete instance");
+                var expected = sample.Scene.Shapes[animatedIndex];
+                foreach (var child in path) expected = expected.Children[child];
+                Assert(ReferenceEquals(selected, expected), $"{sample.Name}: selection did not follow the animated part");
                 var pixels = MemoryMarshal.Cast<byte, uint>(view.PaintBitmap(target).GetPixelSpan());
                 var outlines = 0;
                 for (var i = 0; i < pixels.Length; i++)
@@ -128,6 +138,12 @@ var tests = new (string Name, Action Run)[]
             sample.Scene.Clear();
             Assert(view.SelectedShape is null, "removed object stayed selected");
             view.ReleaseRenderResources();
+
+            void Collect(Shape shape, int[] path)
+            {
+                if (shape.Mesh.Count > 0) parts[shape] = path;
+                for (var i = 0; i < shape.Children.Count; i++) Collect(shape.Children[i], [.. path, i]);
+            }
         }
     }),
     ("selection bitmap matches picking for duplicate nodes and viewport edges", () =>

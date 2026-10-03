@@ -1,6 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# The emulator runner owns the device lifecycle. This script owns only the
+# gallery launch, including a start command that fails after creating a process.
+gallery_started=false
+cleanup() {
+    local status=$?
+    trap - EXIT INT TERM
+    if "$gallery_started"; then
+        if ! adb shell am force-stop dev.simple3d.gallery; then
+            echo 'Failed to stop Android gallery' >&2
+            if [ "$status" -eq 0 ]; then status=1; fi
+        fi
+    fi
+    exit "$status"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
 abi="$(adb shell getprop ro.product.cpu.abi | tr -d '\r')"
 case "$abi" in
     arm64-v8a) rid=android-arm64 ;;
@@ -19,6 +37,7 @@ case "$activity" in
     dev.simple3d.gallery/*) ;;
     *) echo "Gallery launcher activity not found: $activity" >&2; exit 1 ;;
 esac
+gallery_started=true
 adb shell am start -W -n "$activity"
 mkdir -p artifacts
 for attempt in 1 2 3; do

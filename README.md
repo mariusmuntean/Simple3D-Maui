@@ -45,7 +45,7 @@ Open [Simple3D.sln](Simple3D.sln) in a .NET 10 MAUI-capable IDE. Select `Simple3
 
 - `src/Simple3D.Core`: portable indexed meshes, scenes, cameras, depth rendering, owned frames and picking.
 - `src/Simple3D.Maui`: a SkiaSharp `SceneView` with bindable scene and camera, frame caching, gestures and selection.
-- `samples/Simple3D.Demo`: a seven-scene interactive gallery with relevant motion in each product, scientific, data and spatial illustration.
+- `samples/Simple3D.Demo`: a ten-scene interactive gallery with relevant motion in product, scientific, engineering, data and spatial illustrations.
 - `samples/Simple3D.Examples`: a portable console runner that renders those scenes to PPM images.
 - `tests/Simple3D.Core.Tests` and `tests/Simple3D.Maui.Tests`: executable regression runners.
 - [Hostable documentation](docs/site/index.md): getting started, scene design, complex meshes, interaction, limits and XML-generated API reference.
@@ -58,6 +58,8 @@ dotnet run --project tests/Simple3D.Maui.Tests -c Release
 python3 -m unittest discover -s scripts -p 'test_*.py'
 dotnet run --project samples/Simple3D.Examples -c Release -- --all output
 ```
+
+Compare selected animation and orbit CPU costs with `dotnet run --project tests/Simple3D.Maui.Tests -c Release -- --performance`. It reports median processing times, managed allocations and Core pixel hashes for every scene. Run comparisons under similar machine load; this probe excludes native presentation and does not measure displayed FPS.
 
 The console runner writes binary PPM images. To regenerate the PNG documentation illustrations, install Pillow and run `python3 scripts/render-doc-images.py`.
 

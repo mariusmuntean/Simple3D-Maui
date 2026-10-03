@@ -1,6 +1,6 @@
 # Executable examples
 
-The portable console runner renders the same seven scene factories used by the MAUI gallery. It writes binary PPM images using only the Core library and .NET. Each scene demonstrates a different use:
+The portable console runner renders the same ten scene factories used by the MAUI gallery. It writes binary PPM images using only the Core library and .NET. Each scene demonstrates a different use:
 
 | Scene | Capability | Gallery animation | Image |
 | --- | --- | --- | --- |
@@ -11,8 +11,11 @@ The portable console runner renders the same seven scene factories used by the M
 | Molecule | Scientific model made from spheres and bonds | Whole molecule rotates | [Molecule](images/Molecule.png) |
 | Telemetry | Orthographic chart with named samples | Bars change height and color within 0–2.5 | [Telemetry](images/Telemetry.png) |
 | City | Architectural massing with selectable blocks | Building masses rise and settle | [City](images/City.png) |
+| Robot Arm | Nested transforms and individually pickable joints | Shoulder and elbow articulate | [Robot Arm](images/Robot%20Arm.png) |
+| Orbit | Parent-child motion and an orbital path | Planet revolves while its moon follows | [Orbit](images/Orbit.png) |
+| Wind | Three blades sharing a rotating hub | Turbine rotor spins while its tower stays fixed | [Wind](images/Wind.png) |
 
-Render one scene or all seven:
+Render one scene or all ten:
 
 ```bash
 dotnet run --project samples/Simple3D.Examples -c Release -- Equipment equipment.ppm

@@ -4,6 +4,16 @@ Updated: 2026-10-03. Fetch remote state before resuming.
 
 ## Current integration state
 
+### Engineering showcase integration (2026-10-03)
+
+PR #10 was closed without merging at the owner's request. Its `package-readiness` branch was deleted locally and remotely; its clean separate worktree was archived. Package metadata and package-consumer additions were not integrated.
+
+PR #8 has been updated from current `main`. Robot Arm, Orbit and Wind use prebuilt immutable static parts and the same time-based `AnimateNode` helper as the existing showcases. Child order remains stable for animated selection. The MAUI regression now identifies the animated subtree and verifies the corresponding selected leaf without hard-coded scene names or node indices. Its original version failed on Robot Arm. The new allocation guard failed before reuse (3,232 bytes per Robot Arm animation update) and passes afterward, keeping each engineering animation update below 2,000 managed bytes on this runtime.
+
+Core 44/44, MAUI 39/39 and scripts 20/20 passed. Android Debug with embedded assemblies, iOS simulator Debug and Mac Catalyst Debug builds passed; Apple builds have the existing local deprecated Xamarin settings warning. The Mac native render probe passed all ten scenes and exited. Code review found no blocking defects. The current `SceneView`, gallery layout, interpreter/JIT configuration and manual CI policy are unchanged from `main`. Iterative Core hierarchy traversal preserves node order and transforms while reducing allocation. Invalid render requests invalidate the reusable target before validation.
+
+For the original seven scenes, a matched selected-animation-and-pan CPU comparison at 410×512 produced identical Core pixel hashes. Median processing times differed by -2.9% to +0.5%, and managed allocations fell for all seven scenes. These measurements exclude native presentation and do not establish displayed FPS. Repeat with `dotnet run --project tests/Simple3D.Maui.Tests -c Release -- --performance`; compare under similar machine load. The owner's running iPhone 17 app was preserved; a diagnostic listener attached to it was stopped without claiming probe results. Use the current `Simple3D.Demo.app` bundle for Mac checks: an obsolete `Simple3D Gallery.app` output contains old code.
+
 ### Rendering integration and branch cleanup (2026-10-03)
 
 PR #6 merged into `main` at `f11746c8d7f5f6f0c2e149ec70ded672a32d459c`. This checkpoint supersedes its earlier draft-only gates below. The owner reports good performance on a physical iPhone 17 Pro and confirms a full Mac trackpad pinch now zooms continuously and smoothly. Android interaction was previously confirmed by the owner. These are hands-on reports, not measured 60/120 FPS guarantees. The merged `main` was retested: Core 40/40 and MAUI 39/39 passed.

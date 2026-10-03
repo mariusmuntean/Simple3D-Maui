@@ -32,4 +32,4 @@ For simple animation, replace immutable shapes on the UI thread. Each replacemen
 
 Colors passed to Core use opaque `0xAARRGGBB` values. `SceneView.SceneBackgroundColor` accepts a MAUI `Color` and must be opaque. Angles are radians. Shape transforms return copies; adding a changed shape requires `Scene.Replace` or `Scene.Add`. `Scene.Changed` and `Camera.Changed` trigger a redraw automatically. Keep scene and camera mutations on the UI thread.
 
-Run the [demo app](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Demo/GalleryPage.cs) or the [console examples](examples.md) to explore the seven compositions. On Mac Catalyst, use the .NET installation with MAUI workloads and a compatible Xcode. The README has the tested local command.
+Run the [demo app](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Demo/GalleryPage.cs) or the [console examples](examples.md) to explore the ten compositions. On Mac Catalyst, use the .NET installation with MAUI workloads and a compatible Xcode. The README has the tested local command.
