@@ -66,6 +66,16 @@ PR #6 previously passed Core 39/39 and MAUI 23/23 and launched macOS/iOS from Ri
 3. Launch the combined gallery branch from Rider on macOS and iOS. Earlier #6 Rider launches do not validate the combined result; an IDE socket refusal means debugging/Hot Reload remains unproven.
 4. After integration, run the portable suites, package consumers, relevant native builds and smoke checks again. Inspect the exact hosted run for the head being merged.
 
+## Interaction checkpoint (2026-10-03)
+
+Local rendering branch work now includes native Mac mouse pan handling, a 512-pixel drag preview, and visible selection feedback (mint tint plus an inner gold contour using depth picking). Materials and owned captures stay unchanged. Native Mac clicks, background deselection and camera orbit with a selected motor were visibly verified. Short drags preserve translation at the beginning and release. Local MAUI checks passed 28/28 and Mac Catalyst Debug built with zero warnings/errors. Temporary pan diagnostics were removed. The comparison benchmark reduced typical drag raster samples by about 75%; Molecule render/bitmap cost fell from 5.56 to around 1.6 ms/frame on this Mac, not displayed FPS.
+
+The test project now references matching Skia Linux native assets; local output contains the Linux libraries. Linux execution has not been repeated, so do not claim its prior hosted failure is resolved. The user reports Mac rotation is much smoother, but iOS remains laggy, trackpad zoom still lags, and diagonal edges need antialiasing. Those are the active next tasks: bound zoom work throughout the gesture, investigate iOS input/render pacing, and improve presentation sampling/edge quality while measuring its cost locally. An iPhone 17 was booted again by the user after our cleanup; do not shut down that user session as if it were an abandoned test session.
+
+## Hosted testing policy
+
+The owner requested local development feedback and conserving Actions minutes (the supplied alert reported 1,827 of 2,000 included minutes used). Run local tests, native builds and Rider checks first. CI now uses only `workflow_dispatch` on the active rendering and package branches. Dispatch hosted checks later when the project is mature or a check specifically requires a GitHub runner. Do not rerun or dispatch checks on routine commits. Until this workflow policy reaches main and other branches, use `[skip ci]` on transfer-only pushes that would otherwise trigger hosted jobs. The two new checkpoint runs (`37108474550`, `37108476653`) were cancelled to avoid further resource use. Prior runs may already have completed; inspect their results only when needed.
+
 ## User requirements
 
 - Work autonomously, make routine decisions, verify milestones, commit and push context, and merge verified work.

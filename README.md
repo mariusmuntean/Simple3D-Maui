@@ -39,6 +39,8 @@ Core colors are opaque ARGB (`0xFFRRGGBB`). Shape transforms return immutable co
 
 For current branch status, validation evidence and continuation steps, see the [project handoff](docs/HANDOFF.md).
 
+Development checks run locally. The hosted workflow is manually triggered from Actions when runner-specific validation is needed; ordinary commits do not schedule builds.
+
 Open [Simple3D.sln](Simple3D.sln) in a .NET 10 MAUI-capable IDE. Select `Simple3D.Demo` as the startup project and a device or simulator. The solution includes:
 
 - `src/Simple3D.Core`: portable indexed meshes, scenes, cameras, depth rendering, owned frames and picking.
