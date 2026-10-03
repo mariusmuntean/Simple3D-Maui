@@ -47,20 +47,24 @@ jobs:
       - name: Validate packaged Core API
         run: python3 -m unittest discover -s scripts -p test_packages.py -v
   platforms:
-    runs-on: macos-26
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - tfm: net10.0-ios
             rid: iossimulator-arm64
+            runner: xcode-27
           - tfm: net10.0-maccatalyst
             rid: maccatalyst-arm64
+            runner: xcode-27
           - tfm: net10.0-android
             rid: android-arm64
+            runner: macos-26
     steps:
       - uses: actions/checkout@v4
-      - run: sudo xcode-select --switch /Applications/Xcode_26.6.app
+      - run: sudo xcode-select --switch /Applications/Xcode_27.0.app
+        if: matrix.tfm != 'net10.0-android'
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
