@@ -111,7 +111,7 @@ public sealed class RasterBudgetExceededException : ArgumentException
     public RasterBudgetExceededException() : base("Scene exceeds raster sample budget.", "scene") { }
 }
 
-/// <summary>Opaque software triangle rasterizer with per-pixel depth and picking. Instances reuse depth scratch storage and are not thread safe.</summary>
+/// <summary>Opaque software triangle rasterizer with per-pixel depth and picking. Instances reuse depth and traversal scratch storage and are not thread safe.</summary>
 /// <remarks>Transforms use single precision; triangles whose transformed positions or normals overflow or collapse are skipped. There is no far clipping plane.</remarks>
 public sealed class DepthRenderer
 {
@@ -122,17 +122,22 @@ public sealed class DepthRenderer
     /// <summary>Maximum total clipped triangle bounding-box samples evaluated per frame.</summary>
     public const long MaximumRasterSamples = 16_000_000;
     private float[] _depth = [];
+    private readonly List<(Shape Shape, Matrix4x4 Transform)> _nodes = new();
 
     /// <summary>Renders an owned snapshot. Dimensions must be 1..2048; background must be opaque. Equal-depth pixels favor earlier shapes. Scenes exceeding triangle or node budgets throw.</summary>
     public RenderFrame Render(Scene scene, Camera camera, int width, int height, uint background = 0xFFF4F6FA)
     {
         Validate(scene, camera, width, height, background);
-        var nodes = PrepareNodes(scene);
-        var count = width * height;
-        var pixels = new uint[count];
-        var ids = new int[count];
-        var (shapes, labels, _) = RenderCore(scene, camera, width, height, background, nodes, pixels, ids);
-        return new(width, height, pixels, ids, shapes, labels);
+        try
+        {
+            var nodes = PrepareNodes(scene);
+            var count = width * height;
+            var pixels = new uint[count];
+            var ids = new int[count];
+            var (shapes, labels, _) = RenderCore(scene, camera, width, height, background, nodes, pixels, ids);
+            return new(width, height, pixels, ids, shapes, labels);
+        }
+        finally { _nodes.Clear(); }
     }
 
     /// <summary>Renders into a reusable target. Its previous pixels and picks are overwritten; after an exception, render again before reading it.</summary>
@@ -141,10 +146,14 @@ public sealed class DepthRenderer
         ArgumentNullException.ThrowIfNull(target);
         target.BeginRender();
         Validate(scene, camera, target.Width, target.Height, background);
-        var nodes = PrepareNodes(scene);
-        var (shapes, labels, rasterSamples) = RenderCore(scene, camera, target.Width, target.Height, background,
-            nodes, target.PixelBuffer, target.IdBuffer);
-        target.Update(shapes, labels, rasterSamples);
+        try
+        {
+            var nodes = PrepareNodes(scene);
+            var (shapes, labels, rasterSamples) = RenderCore(scene, camera, target.Width, target.Height, background,
+                nodes, target.PixelBuffer, target.IdBuffer);
+            target.Update(shapes, labels, rasterSamples);
+        }
+        finally { _nodes.Clear(); }
     }
 
     private static void Validate(Scene scene, Camera camera, int width, int height, uint background)
@@ -156,20 +165,20 @@ public sealed class DepthRenderer
         if ((background >> 24) != 255) throw new ArgumentOutOfRangeException(nameof(background));
     }
 
-    private static (Shape Shape, Matrix4x4 Transform)[] PrepareNodes(Scene scene)
+    private List<(Shape Shape, Matrix4x4 Transform)> PrepareNodes(Scene scene)
     {
-        var nodes = scene.Flatten().ToArray();
         long triangles = 0;
-        foreach (var node in nodes)
+        foreach (var node in scene.Flatten())
         {
             triangles += node.Shape.TriangleCount;
             if (triangles > MaximumTriangles) throw new ArgumentException("Scene exceeds triangle budget.", nameof(scene));
+            _nodes.Add(node);
         }
-        return nodes;
+        return _nodes;
     }
 
     private (Shape[] Shapes, ProjectedLabel[] Labels, long RasterSamples) RenderCore(Scene scene, Camera camera, int width, int height,
-        uint background, (Shape Shape, Matrix4x4 Transform)[] nodes, uint[] pixels, int[] ids)
+        uint background, List<(Shape Shape, Matrix4x4 Transform)> nodes, uint[] pixels, int[] ids)
     {
         var count = width * height;
         if (_depth.Length < count) _depth = new float[count];
@@ -185,7 +194,7 @@ public sealed class DepthRenderer
         var light = Vector3.Normalize(new Vector3(-.4f, .8f, 1));
         Span<Vector3> input = stackalloc Vector3[3];
         Span<Vector3> clipped = stackalloc Vector3[4];
-        for (var id = 0; id < nodes.Length; id++)
+        for (var id = 0; id < nodes.Count; id++)
         {
             var (shape, transform) = nodes[id];
             var mesh = shape.Mesh;

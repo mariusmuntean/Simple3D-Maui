@@ -666,7 +666,8 @@ var tests = new (string Name, Action Run)[]
     {
         var page = new GalleryPage();
         var grid = (Grid)page.Content;
-        var view = (SceneView)grid.Children.OfType<Border>().Single().Content;
+        var view = grid.Children.OfType<Border>().Single().Content as SceneView
+            ?? throw new InvalidOperationException("gallery border does not contain its scene view");
         var footer = (VerticalStackLayout)grid.Children.OfType<ScrollView>().Single().Content;
         var tools = (HorizontalStackLayout)footer.Children.OfType<ScrollView>().Single().Content;
         var reset = tools.Children.OfType<Button>().Single(button => button.Text == "Reset");
