@@ -43,7 +43,7 @@ A render records the winning leaf ID for each pixel. `Pick` looks up that ID and
 | `DepthRenderer.Render` / `SceneView.CaptureFrame` | Owned pixels and pick data survive later renders | Export, screenshot, tests |
 | `DepthRenderer.RenderInto` | Fixed-size `RenderTarget` reuses color and ID arrays; the next call overwrites content | Animation and native painting |
 
-Reuse a target at the same size and share immutable meshes between shape replacements. The renderer still allocates small per-frame collections for flattened nodes, shapes and labels; reuse does not mean zero allocation.
+Reuse a target at the same size and share immutable meshes between shape replacements. Core reads triangles by index, avoiding a separate triangle enumerator for each leaf. The renderer still allocates small per-frame collections for flattened nodes, shapes and labels; reuse does not mean zero allocation.
 
 A failed `RenderInto` invalidates picking and may leave partial pixels. Render successfully before reading that target again. A renderer instance is not thread safe because it shares depth scratch storage. Mutate and render a scene on the same thread; use the UI thread with `SceneView`.
 

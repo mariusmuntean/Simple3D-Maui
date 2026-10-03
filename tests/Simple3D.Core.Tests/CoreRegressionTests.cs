@@ -19,6 +19,7 @@ internal static class CoreRegressionTests
         ("reusable target matches owned frames across updates", ReusableRenderTarget),
         ("failed render validation clears reusable picking and labels", ReusableValidationFailure),
         ("group traversal avoids per-node iterator allocation", GroupTraversalAllocation),
+        ("repeated small meshes stay within reusable render allocation budget", SmallMeshRenderAllocation),
         ("branching groups preserve transform and equal-depth order", BranchingGroupTraversal),
         ("legacy renderer rejects unsupported scene features", LegacyFeatureGuard),
         ("sample scenes use depth rendering and fit the camera", SampleScenes),
@@ -317,6 +318,18 @@ internal static class CoreRegressionTests
             for (var i = 0; i < 20; i++) renderer.RenderInto(scene, camera, target);
             return (GC.GetAllocatedBytesForCurrentThread() - before) / 20;
         }
+    }
+
+    private static void SmallMeshRenderAllocation()
+    {
+        var sample = DemoScenes.PatternedSurface();
+        var renderer = new DepthRenderer();
+        var target = new RenderTarget(64, 64);
+        for (var i = 0; i < 20; i++) renderer.RenderInto(sample.Scene, sample.Camera, target);
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var i = 0; i < 80; i++) renderer.RenderInto(sample.Scene, sample.Camera, target);
+        var bytes = (GC.GetAllocatedBytesForCurrentThread() - before) / 80;
+        Check(bytes <= 8192, $"small meshes allocated {bytes} bytes per reusable render; budget is 8192");
     }
 
     private static void ReusableValidationFailure()

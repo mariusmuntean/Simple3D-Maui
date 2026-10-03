@@ -7,6 +7,7 @@
 - MAUI control for Android, iOS and Mac Catalyst with orbit, zoom, selection feedback and labels.
 - Fifteen gallery scenes with subject-specific animations, including colored checker cells.
 - Bounded raster work, reduced gesture preview resolution and optional diagonal-edge filtering.
+- Indexed triangle traversal reduces allocation when rendering many small mesh instances.
 - MIT licensing, public API documentation, architecture diagrams and independent package consumers.
 - Portable symbols, Source Link and SDK package validation for preview packages.
 

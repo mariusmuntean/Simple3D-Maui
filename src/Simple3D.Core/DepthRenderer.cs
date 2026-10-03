@@ -188,8 +188,11 @@ public sealed class DepthRenderer
         for (var id = 0; id < nodes.Length; id++)
         {
             var (shape, transform) = nodes[id];
-            foreach (var triangle in shape.Mesh)
+            var mesh = shape.Mesh;
+            var triangleCount = mesh.Count;
+            for (var triangleIndex = 0; triangleIndex < triangleCount; triangleIndex++)
             {
+                var triangle = mesh[triangleIndex];
                 var a = Vector3.Transform(triangle.A, transform);
                 var b = Vector3.Transform(triangle.B, transform);
                 var c = Vector3.Transform(triangle.C, transform);
