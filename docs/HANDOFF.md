@@ -4,6 +4,14 @@ Updated: 2026-10-03. Fetch remote state before resuming.
 
 ## Current integration state
 
+### Rider mobile launch checkpoint (2026-10-03)
+
+Android launch failed before deployment because Rider requires the source `samples/Simple3D.Demo/Platforms/Android/AndroidManifest.xml`, which was missing even though terminal builds generated a manifest. Added the minimal application manifest. Rider then built, deployed and launched the gallery using Debug on Pixel 5 / Android 13 (API 33, ARM64); the actual rendered Equipment scene was visibly verified in Running Devices.
+
+The iPhone 17 / iOS 26.5 launch was reproduced: CoreSimulator's bridge stalled before returning an application process handle, then returned `NSPOSIXErrorDomain code 3` / `HE0042`. Restarting only the affected simulator recovered it without erasing data. Both a subsequent Rider Run and a second Rider Debug launch displayed the gallery, with native app processes confirmed. The user's iPhone 16e uses iOS 18.6, a separate runtime. This establishes launch using Debug, not breakpoint or Hot Reload behavior. Test apps and the test simulator/emulator were stopped afterward. No hosted runs were dispatched.
+
+Local antialiasing changes in `SceneView.cs` and its source-linked tests remain unfinished drafts; they are excluded from this launch fix milestone and still need native image-quality and performance verification.
+
 ### Native rendering checkpoint (2026-10-03)
 
 The rendering branch now uses a supported local Apple toolchain: .NET SDK 10.0.401, workload set 10.0.401.1, Apple packs 27.0.10722 and Xcode 27.0. Xcode version validation is enabled. The Apple Debug demo interprets its own assembly and compiles the rendering libraries and framework assemblies (`MtouchInterpreter=-all,Simple3D.Demo`). Clean and rebuild when changing workloads or interpreter settings. Rider's local toolset was updated to SDK 10.0.401. Its fresh solution build passed with no reported problems after a default demo restore repaired Android runtime targets overwritten by targeted Apple builds. A fresh Rider launch still needs verification.

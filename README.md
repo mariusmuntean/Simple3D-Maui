@@ -82,6 +82,10 @@ In Rider, open **Settings → Build, Execution, Deployment → Toolset and Build
 
 After terminal builds with an explicit runtime identifier, run `dotnet restore samples/Simple3D.Demo` before building the whole solution in Rider. A targeted restore can replace the shared assets file and leave other platforms' runtime targets missing.
 
+Choose the `Simple3D.Demo` configuration with the Android, iOS or macOS platform icon; the library projects are not runnable demos. Android requires the checked-in `Platforms/Android/AndroidManifest.xml`: a generated build manifest alone does not satisfy Rider's launcher.
+
+If an iOS simulator launch hangs and ends with `HE0042` / `NSPOSIXErrorDomain code 3` (no process handle), stop the Rider run and restart only that simulator in Device Hub, then retry. This recovered the observed iPhone 17 / iOS 26.5 failure without erasing its data. The same simulator subsequently displayed the gallery from both Rider Run and Debug. The working iPhone 16e used the separate iOS 18.6 runtime.
+
 If the default `dotnet` installation has no MAUI workloads, use the installation that has them (`dotnet workload list`), such as `$HOME/.dotnet/dotnet`:
 
 ```bash
