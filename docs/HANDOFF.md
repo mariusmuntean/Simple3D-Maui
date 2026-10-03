@@ -4,6 +4,16 @@ Updated: 2026-10-03. Fetch remote state before resuming.
 
 ## Current integration state
 
+### Combined workflow showcase integration (2026-10-03)
+
+PR #8 merged into `main` at `99399c7026c5800e67303d6a0a1e6abba1101098`. PR #11 is retargeted to `main` and includes that integration. The combined gallery has fourteen scenes. All use the existing `DemoScene` contract and time-based `AnimateNode` helper, with fixed anchors and stable child positions. Engineering parts, parcel status templates, routing packets, solar cells and drone parts are constructed once and reused during animation. Core's original rendering loops, `SceneView`, gallery layout and runtime compilation settings remain unchanged from the validated rendering milestone, apart from #8's allocation-saving hierarchy traversal and target invalidation fix.
+
+Conveyor and Packet Routing updates each allocate less than 1,200 managed bytes per animation update on this runtime; the new guard failed on the previous Conveyor implementation at 1,904 bytes. Solar Tracker's panel rotation was corrected to face the moving sun. A strengthened regression failed before the fix and now verifies improved alignment on both sides of the sun's path, together with reset behavior. Core 51/51 and MAUI 39/39 pass on the combined source; the latter includes moving selection coverage for all fourteen scenes. Independent review found no remaining code blockers.
+
+Final local checks passed: Core 51/51 and MAUI 39/39 on macOS and Linux ARM64, scripts 20/20, and DocFX metadata/site builds with zero warnings/errors. Android Debug with embedded assemblies built with zero warnings/errors. iOS simulator and Mac Catalyst Debug builds passed with the existing deprecated local Xamarin settings warning. Both Apple native render probes passed all fourteen scenes. The rebuilt Mac gallery opened with fourteen entries and its Drone Survey animation control worked. These checks do not establish displayed FPS or physical-device input latency.
+
+The matched selected-animation-and-pan CPU benchmark retained identical pixel hashes for the original seven scenes. Median CPU time varied by -0.2% to +3.6%, while managed allocations decreased by 16–56%. The rendering and interaction implementation remains unchanged from merged #8. No hosted Actions run was dispatched. The owned Mac test app was stopped, the test iPhone 17 Pro simulator was shut down, and the disposable Linux container removed itself; the owner's existing iPhone 17 session was preserved.
+
 ### Engineering showcase integration (2026-10-03)
 
 PR #10 was closed without merging at the owner's request. Its `package-readiness` branch was deleted locally and remotely; its clean separate worktree was archived. Package metadata and package-consumer additions were not integrated.

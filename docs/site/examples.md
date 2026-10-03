@@ -1,6 +1,6 @@
 # Executable examples
 
-The portable console runner renders the same ten scene factories used by the MAUI gallery. It writes binary PPM images using only the Core library and .NET. Each scene demonstrates a different use:
+The portable console runner renders the same fourteen scene factories used by the MAUI gallery. It writes binary PPM images using only the Core library and .NET. Each scene demonstrates a different use:
 
 | Scene | Capability | Gallery animation | Image |
 | --- | --- | --- | --- |
@@ -14,8 +14,12 @@ The portable console runner renders the same ten scene factories used by the MAU
 | Robot Arm | Nested transforms and individually pickable joints | Shoulder and elbow articulate | [Robot Arm](images/Robot%20Arm.png) |
 | Orbit | Parent-child motion and an orbital path | Planet revolves while its moon follows | [Orbit](images/Orbit.png) |
 | Wind | Three blades sharing a rotating hub | Turbine rotor spins while its tower stays fixed | [Wind](images/Wind.png) |
+| Conveyor Inspection | Visual inspection and status on a production line | Parcels cross a fixed scanner and change color after passing | [Conveyor Inspection](images/Conveyor%20Inspection.png) |
+| Solar Tracker | Energy equipment with a moving light source | A panel tilts to follow the sun above its fixed mount | [Solar Tracker](images/Solar%20Tracker.png) |
+| Packet Routing | Selectable network devices, links and traffic | Packets traverse two links through a router | [Packet Routing](images/Packet%20Routing.png) |
+| Drone Survey | A field survey vehicle with individually pickable parts | The drone hovers as four propellers spin over its pad | [Drone Survey](images/Drone%20Survey.png) |
 
-Render one scene or all ten:
+Render one scene or all fourteen:
 
 ```bash
 dotnet run --project samples/Simple3D.Examples -c Release -- Equipment equipment.ppm

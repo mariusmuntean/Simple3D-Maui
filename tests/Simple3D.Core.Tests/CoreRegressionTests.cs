@@ -25,7 +25,14 @@ internal static class CoreRegressionTests
         ("each sample animation moves and resets its scene", SampleAnimations),
         ("equipment output arrow keeps its tail fixed", EquipmentAnimation),
         ("telemetry bars animate within scale and change color", TelemetryAnimation),
-        ("engineering scenes move their subject while anchors stay fixed", EngineeringAnimations)
+        ("engineering scenes move their subject while anchors stay fixed", EngineeringAnimations),
+        ("conveyor scan moves parcels through a fixed gate and updates status", ConveyorInspectionAnimation),
+        ("solar tracker follows a moving sun above a fixed mount", SolarTrackerAnimation),
+        ("network packets traverse fixed links between named racks", PacketRoutingAnimation),
+        ("survey drone moves and spins propellers above a fixed pad", DroneSurveyAnimation),
+        ("survey animation reuses its static geometry", DroneSurveyAllocation),
+        ("solar animation reuses its panel cells", SolarTrackerAllocation),
+        ("workflow movers reuse static parcel and packet parts", WorkflowMovingPartsAllocation)
     ];
 
     private static void CameraNotifications()
@@ -390,7 +397,7 @@ internal static class CoreRegressionTests
     private static void SampleScenes()
     {
         var names = DemoScenes.All.Select(sample => sample.Name).ToArray();
-        foreach (var name in new[] { "Equipment", "Packing", "Surface", "Assembly", "Molecule", "Telemetry", "City", "Robot Arm", "Orbit", "Wind" })
+        foreach (var name in new[] { "Equipment", "Packing", "Surface", "Assembly", "Molecule", "Telemetry", "City", "Robot Arm", "Orbit", "Wind", "Conveyor Inspection", "Solar Tracker", "Packet Routing", "Drone Survey" })
             Check(names.Count(candidate => candidate == name) == 1, $"missing or duplicate {name} example");
         foreach (var sample in DemoScenes.All)
         {
@@ -513,6 +520,143 @@ internal static class CoreRegressionTests
                 var node = sample.Scene.Flatten().Single(node => node.Shape.Name == shapeName);
                 return Vector3.Transform(Vector3.Zero, node.Transform);
             }
+        }
+    }
+
+    private static void ConveyorInspectionAnimation()
+    {
+        var sample = DemoScenes.All.Single(scene => scene.Name == "Conveyor Inspection");
+        var gate = sample.Scene.Flatten().Single(node => node.Shape.Name == "Scanner head");
+        var gateBefore = gate.Transform;
+        var parcelBefore = sample.Scene.Flatten().Single(node => node.Shape.Name == "Parcel 1: pending");
+        var start = Vector3.Transform(Vector3.Zero, parcelBefore.Transform);
+        sample.Animate(2f);
+        var parcelAfter = sample.Scene.Flatten().Single(node => node.Shape.Name == "Parcel 1: passed");
+        var end = Vector3.Transform(Vector3.Zero, parcelAfter.Transform);
+        Check(end.X > start.X + 1f, "parcel did not pass through scan gate");
+        Check(parcelAfter.Shape.Color != parcelBefore.Shape.Color, "scan status did not change color");
+        Check(sample.Scene.Flatten().Single(node => node.Shape.Name == "Scanner head").Transform == gateBefore,
+            "scan gate moved during inspection");
+        sample.Animate(0);
+        var restored = sample.Scene.Flatten().Single(node => node.Shape.Name == "Parcel 1: pending");
+        Check(Vector3.Distance(Vector3.Transform(Vector3.Zero, restored.Transform), start) < .0001f,
+            "parcel did not reset to the start of the belt");
+    }
+
+    private static void SolarTrackerAnimation()
+    {
+        var sample = DemoScenes.All.Single(scene => scene.Name == "Solar Tracker");
+        var mount = sample.Scene.Flatten().Single(node => node.Shape.Name == "Tracker mount");
+        var panel = sample.Scene.Flatten().Single(node => node.Shape.Name == "Solar panel");
+        var sun = sample.Scene.Flatten().Single(node => node.Shape.Name == "Sun");
+        var mountBefore = mount.Transform;
+        var panelUp = Vector3.Normalize(Vector3.TransformNormal(Vector3.UnitY, panel.Transform));
+        var sunBefore = Vector3.Transform(Vector3.Zero, sun.Transform);
+        sample.Animate(.85f);
+        var panelAfter = sample.Scene.Flatten().Single(node => node.Shape.Name == "Solar panel");
+        var sunAfter = sample.Scene.Flatten().Single(node => node.Shape.Name == "Sun");
+        Check(Vector3.Distance(Vector3.Normalize(Vector3.TransformNormal(Vector3.UnitY, panelAfter.Transform)), panelUp) > .1f,
+            "solar panel did not tilt toward the sun");
+        Check(Vector3.Distance(Vector3.Transform(Vector3.Zero, sunAfter.Transform), sunBefore) > .5f,
+            "sun did not move along its path");
+        Check(sample.Scene.Flatten().Single(node => node.Shape.Name == "Tracker mount").Transform == mountBefore,
+            "solar tracker moved its fixed mount");
+        foreach (var time in new[] { .85f, 4.35f })
+        {
+            sample.Animate(time);
+            var tilted = sample.Scene.Flatten().Single(node => node.Shape.Name == "Solar panel");
+            var currentSun = sample.Scene.Flatten().Single(node => node.Shape.Name == "Sun");
+            var normal = Vector3.Normalize(Vector3.TransformNormal(Vector3.UnitY, tilted.Transform));
+            var direction = Vector3.Normalize(Vector3.Transform(Vector3.Zero, currentSun.Transform) -
+                Vector3.Transform(Vector3.Zero, tilted.Transform));
+            Check(Vector3.Dot(normal, direction) > Vector3.Dot(panelUp, direction) + .05f,
+                "solar panel tilts away from the sun instead of improving alignment");
+        }
+        sample.Animate(0);
+        var restored = sample.Scene.Flatten().Single(node => node.Shape.Name == "Solar panel");
+        Check(Vector3.Distance(Vector3.Normalize(Vector3.TransformNormal(Vector3.UnitY, restored.Transform)), panelUp) < .0001f,
+            "solar panel did not reset");
+    }
+
+    private static void PacketRoutingAnimation()
+    {
+        var sample = DemoScenes.All.Single(scene => scene.Name == "Packet Routing");
+        var sourceLink = sample.Scene.Flatten().Single(node => node.Shape.Name == "Source link");
+        var destinationLink = sample.Scene.Flatten().Single(node => node.Shape.Name == "Destination link");
+        var packet = sample.Scene.Flatten().Single(node => node.Shape.Name == "Packet 1");
+        var sourceBefore = sourceLink.Transform;
+        var destinationBefore = destinationLink.Transform;
+        var start = Vector3.Transform(Vector3.Zero, packet.Transform);
+        var sourceRack = sample.Scene.Flatten().Single(node => node.Shape.Name == "Source rack");
+        var rackCenter = Vector3.Transform(Vector3.Zero, sourceRack.Transform);
+        Check(MathF.Abs(start.Y - (rackCenter.Y + sourceRack.Shape.Size.Y / 2)) < .1f,
+            "packet route floats above the source rack");
+        sample.Animate(.85f);
+        var moved = sample.Scene.Flatten().Single(node => node.Shape.Name == "Packet 1");
+        Check(Vector3.Distance(Vector3.Transform(Vector3.Zero, moved.Transform), start) > .5f,
+            "network packet did not traverse a link");
+        Check(sample.Scene.Flatten().Single(node => node.Shape.Name == "Source link").Transform == sourceBefore &&
+              sample.Scene.Flatten().Single(node => node.Shape.Name == "Destination link").Transform == destinationBefore,
+            "routing links moved during animation");
+        sample.Animate(0);
+        var restored = sample.Scene.Flatten().Single(node => node.Shape.Name == "Packet 1");
+        Check(Vector3.Distance(Vector3.Transform(Vector3.Zero, restored.Transform), start) < .0001f,
+            "network packet did not reset to source");
+    }
+
+    private static void DroneSurveyAnimation()
+    {
+        var sample = DemoScenes.All.Single(scene => scene.Name == "Drone Survey");
+        var pad = sample.Scene.Flatten().Single(node => node.Shape.Name == "Landing pad");
+        var body = sample.Scene.Flatten().Single(node => node.Shape.Name == "Drone body");
+        var blade = sample.Scene.Flatten().Single(node => node.Shape.Name == "Propeller 1");
+        var padBefore = pad.Transform;
+        var bodyBefore = Vector3.Transform(Vector3.Zero, body.Transform);
+        var bladeAxis = Vector3.Normalize(Vector3.TransformNormal(Vector3.UnitX, blade.Transform));
+        sample.Animate(.85f);
+        var bodyAfter = sample.Scene.Flatten().Single(node => node.Shape.Name == "Drone body");
+        var bladeAfter = sample.Scene.Flatten().Single(node => node.Shape.Name == "Propeller 1");
+        Check(Vector3.Distance(Vector3.Transform(Vector3.Zero, bodyAfter.Transform), bodyBefore) > .2f,
+            "survey drone did not move over the pad");
+        Check(Vector3.Distance(Vector3.Normalize(Vector3.TransformNormal(Vector3.UnitX, bladeAfter.Transform)), bladeAxis) > .2f,
+            "survey propeller did not spin");
+        Check(sample.Scene.Flatten().Single(node => node.Shape.Name == "Landing pad").Transform == padBefore,
+            "landing pad moved with the drone");
+        sample.Animate(0);
+        var restored = sample.Scene.Flatten().Single(node => node.Shape.Name == "Drone body");
+        Check(Vector3.Distance(Vector3.Transform(Vector3.Zero, restored.Transform), bodyBefore) < .0001f,
+            "survey drone did not reset");
+    }
+
+    private static void DroneSurveyAllocation()
+    {
+        var sample = DemoScenes.DroneSurvey();
+        for (var i = 0; i < 10; i++) sample.Animate(i / 60f);
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var i = 0; i < 60; i++) sample.Animate(i / 60f);
+        var perFrame = (GC.GetAllocatedBytesForCurrentThread() - before) / 60;
+        Check(perFrame < 12_000, $"survey animation rebuilt static geometry: {perFrame} bytes/frame");
+    }
+
+    private static void SolarTrackerAllocation()
+    {
+        var sample = DemoScenes.SolarTracker();
+        for (var i = 0; i < 10; i++) sample.Animate(i / 60f);
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var i = 0; i < 60; i++) sample.Animate(i / 60f);
+        var perFrame = (GC.GetAllocatedBytesForCurrentThread() - before) / 60;
+        Check(perFrame < 4_000, $"solar animation rebuilt panel cells: {perFrame} bytes/frame");
+    }
+
+    private static void WorkflowMovingPartsAllocation()
+    {
+        foreach (var sample in new[] { DemoScenes.ConveyorInspection(), DemoScenes.PacketRouting() })
+        {
+            for (var i = 0; i < 10; i++) sample.Animate(i / 60f);
+            var allocated = GC.GetAllocatedBytesForCurrentThread();
+            for (var i = 0; i < 120; i++) sample.Animate(i / 60f);
+            var perFrame = (GC.GetAllocatedBytesForCurrentThread() - allocated) / 120;
+            Check(perFrame < 1_200, $"{sample.Name} rebuilt static moving parts: {perFrame} bytes/frame");
         }
     }
 
