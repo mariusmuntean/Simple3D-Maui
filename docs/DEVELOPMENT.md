@@ -6,6 +6,8 @@ Use .NET 10 with MAUI workloads. Check `dotnet --info` and `dotnet workload list
 
 Use matching Xcode and Apple workload versions. The locally validated combination is SDK 10.0.401, workload set 10.0.401.1 and Xcode 27. Keep Xcode validation enabled. After a targeted terminal build, run `dotnet restore samples/Simple3D.Demo` before building all platforms in Rider; targeted restores can replace shared runtime assets.
 
+The manual validation workflow pins that SDK and workload set, creating a job-local `global.json` to prevent a newer preinstalled SDK from taking precedence. Apple builds and documentation use the `xcode-27` runner with Xcode 27.0 selected explicitly. Update those versions together after local validation; installing the latest workload against an older Xcode can break an otherwise unchanged build.
+
 Choose the `Simple3D.Demo` configuration with the appropriate platform icon. Android uses the checked-in manifest. If an iOS simulator launch returns `HE0042` / `NSPOSIXErrorDomain code 3`, stop the run and restart that simulator, then retry. Preserve other simulator sessions.
 
 ## Local checks
