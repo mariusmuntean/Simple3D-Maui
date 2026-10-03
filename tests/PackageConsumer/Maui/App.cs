@@ -26,11 +26,18 @@ public sealed class App : Application
                 throw new InvalidOperationException("Packaged control cannot pick geometry");
             var point = Enumerable.Range(0, 192 * 128).First(index => view.PickAt(index % 192, index / 192, 192, 128) is not null);
             view.SelectAt(point % 192, point / 192, 192, 128);
+            var hostTap = new TapGestureRecognizer { NumberOfTapsRequired = 2 };
+            view.GestureRecognizers.Add(hostTap);
             view.IsInteractive = false;
+            if (view.GestureRecognizers.Count != 1 || !view.GestureRecognizers.Contains(hostTap))
+                throw new InvalidOperationException("Packaged control removed the host application's gesture");
             view.ClearSelection();
             if (view.SelectedShape is not null)
                 throw new InvalidOperationException("Packaged control retained selection after clearing");
-            Console.WriteLine("PACKAGE_MAUI_PASS: native control, pixels, picking and selection clearing");
+            view.IsInteractive = true;
+            if (!view.GestureRecognizers.Contains(hostTap))
+                throw new InvalidOperationException("Packaged control lost host gesture when enabling interaction");
+            Console.WriteLine("PACKAGE_MAUI_PASS: native control, pixels, picking, selection clearing and host gestures");
         };
         return new Window(new ContentPage
         {
