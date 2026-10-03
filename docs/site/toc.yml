@@ -2,12 +2,8 @@
   href: index.md
 - name: Getting started
   href: getting-started.md
-- name: Scenes and cameras
-  href: scenes-and-cameras.md
-- name: Meshes and groups
-  href: meshes-and-groups.md
-- name: Interaction and picking
-  href: interaction-and-picking.md
+- name: Architecture
+  href: architecture.md
 - name: Showcases
   href: examples.md
 - name: Rendering limits

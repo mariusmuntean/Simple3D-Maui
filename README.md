@@ -8,7 +8,7 @@ Small 3D scenes for .NET 10 MAUI on iOS, Android and Mac Catalyst. Build a scene
 
 ## Start with a scene
 
-Reference `src/Simple3D.Core` and `src/Simple3D.Maui` from your MAUI app. Register SkiaSharp in `MauiProgram`:
+Preview packages are not yet on NuGet.org. Build and install them from a local feed using the [package instructions](docs/PACKAGING.md), or reference `src/Simple3D.Maui` from your MAUI app. Core is a transitive dependency. Register SkiaSharp in `MauiProgram`:
 
 ```csharp
 using SkiaSharp.Views.Maui.Controls.Hosting;
@@ -43,6 +43,7 @@ Open [Simple3D.sln](Simple3D.sln) in Rider or another MAUI IDE. Choose **Simple3
 Read the [documentation site](https://mariusmuntean.github.io/Simple3D-Maui/), including the API reference, or browse the sources below.
 
 - [Getting started](docs/site/getting-started.md)
+- [Architecture and rendering pipeline](docs/site/architecture.md)
 - [Scenes and cameras](docs/site/scenes-and-cameras.md)
 - [Meshes and groups](docs/site/meshes-and-groups.md)
 - [Interaction and selection](docs/site/interaction-and-picking.md)
@@ -58,7 +59,7 @@ dotnet run --project tests/Simple3D.Core.Tests -c Release
 dotnet run --project tests/Simple3D.Maui.Tests -c Release
 ```
 
-See [development and native validation](docs/DEVELOPMENT.md) for Rider setup, documentation builds, image generation and performance comparisons. Checks run locally; the hosted validation workflow requires a manual trigger. [Project handoff](docs/HANDOFF.md) records verified milestones and remaining publication work.
+See [development and native validation](docs/DEVELOPMENT.md) for Rider setup, documentation builds, image generation and performance comparisons, and [packaging](docs/PACKAGING.md) for independent package consumers. Checks run locally; hosted native validation requires a manual trigger.
 
 ## License and contributions
 

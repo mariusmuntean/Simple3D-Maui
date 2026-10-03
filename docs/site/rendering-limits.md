@@ -26,7 +26,7 @@ ReadOnlyMemory<uint> pixels = target.Pixels; // Changes on the next RenderInto c
 Shape? visible = target.Pick(384, 288);
 ```
 
-In the checked-in animated Surface benchmark at 768×576 on one Mac, the owned path allocated about 3.54 MB per frame and the reusable target about 1.55 KB per frame. These are managed allocations in the Core renderer, not native presentation costs or a guaranteed device frame rate.
+After its tests pass, the Core runner compares owned and reusable rendering at 768×576, including managed allocations per frame. Reuse avoids allocating full-size color and ID arrays each frame. These measurements exclude native presentation and do not establish a device frame rate.
 
 `SceneView.MaximumRenderDimension` controls the largest physical render dimension used during native painting. Its default is 2,048. Lower it while animating or while a scene is being manipulated, then restore it for still images. The view keeps the aspect ratio and upscales the rendered image to its layout size. Because both pixel and picking buffers scale with pixel count, changing the maximum dimension from 2,048 to 768 can substantially reduce allocation and raster work. This control does not change explicit `CaptureFrame(width, height)` requests. A display-only `SceneView` can set `IsInteractive = false` to release its built-in gestures.
 

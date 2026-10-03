@@ -4,7 +4,7 @@
 
 Use .NET 10 with MAUI workloads. Check `dotnet --info` and `dotnet workload list`. In Rider, choose that CLI installation and its .NET SDK MSBuild under **Settings → Build, Execution, Deployment → Toolset and Build**. A second installation without workloads can produce missing references in the editor.
 
-Use matching Xcode and Apple workload versions. This Mac uses SDK 10.0.401, workload set 10.0.401.1 and Xcode 27. Xcode validation stays enabled. After a targeted terminal build, run `dotnet restore samples/Simple3D.Demo` before building all platforms in Rider; targeted restores can replace shared runtime assets.
+Use matching Xcode and Apple workload versions. The locally validated combination is SDK 10.0.401, workload set 10.0.401.1 and Xcode 27. Keep Xcode validation enabled. After a targeted terminal build, run `dotnet restore samples/Simple3D.Demo` before building all platforms in Rider; targeted restores can replace shared runtime assets.
 
 Choose the `Simple3D.Demo` configuration with the appropriate platform icon. Android uses the checked-in manifest. If an iOS simulator launch returns `HE0042` / `NSPOSIXErrorDomain code 3`, stop the run and restart that simulator, then retry. Preserve other simulator sessions.
 
@@ -35,7 +35,7 @@ Use the current `Simple3D.Demo.app` bundle. An obsolete `Simple3D Gallery.app` o
 ### Release on macOS
 
 ```bash
-dotnet restore samples/Simple3D.Demo
+dotnet restore samples/Simple3D.Demo -p:Configuration=Release
 dotnet clean samples/Simple3D.Demo -f net10.0-maccatalyst -c Release
 dotnet build samples/Simple3D.Demo -f net10.0-maccatalyst -c Release
 open samples/Simple3D.Demo/bin/Release/net10.0-maccatalyst/Simple3D.Demo.app
@@ -63,7 +63,7 @@ dotnet tool install docfx --tool-path .tools --version 2.81.0
 python3 -m http.server 8000 --directory _site
 ```
 
-DocFX needs the workload-enabled `dotnet` first in `PATH`; set `DOTNET_ROOT` if you have multiple installations. The built `_site` contains only user documentation, images and generated API reference. Handoff records and internal plans stay outside it.
+DocFX needs the workload-enabled `dotnet` first in `PATH`; set `DOTNET_ROOT` if you have multiple installations. The built `_site` contains user documentation, images and generated API reference. Contributor setup and package validation remain in the repository's `docs` directory.
 
 After reviewing `_site`, run `bash scripts/publish-docs.sh`. It publishes generated files to `gh-pages` through a temporary checkout and a normal push. It preserves the source checkout and cleans up its temporary directory. GitHub Pages serves the branch root; `.nojekyll` keeps DocFX assets intact. This triggers only the Pages deployment, not the manual MAUI validation workflow.
 
