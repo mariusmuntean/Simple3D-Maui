@@ -144,7 +144,7 @@
 </tr>
 </tbody>
 </table>
-<p>Reuse a target at the same size and share immutable meshes between shape replacements. The renderer still allocates small per-frame collections for flattened nodes, shapes and labels; reuse does not mean zero allocation.</p>
+<p>Reuse a target at the same size and share immutable meshes between shape replacements. Core reads triangles by index, avoiding a separate triangle enumerator for each leaf. The renderer still allocates small per-frame collections for flattened nodes, shapes and labels; reuse does not mean zero allocation.</p>
 <p>A failed <code>RenderInto</code> invalidates picking and may leave partial pixels. Render successfully before reading that target again. A renderer instance is not thread safe because it shares depth scratch storage. Mutate and render a scene on the same thread; use the UI thread with <code>SceneView</code>.</p>
 <p>On native handler disconnect, the view releases subscriptions and rendering resources. Snapshots held by your application remain valid.</p>
 <h2 id="responsiveness-and-bounded-work">Responsiveness and bounded work</h2>
