@@ -397,7 +397,7 @@ internal static class CoreRegressionTests
     private static void SampleScenes()
     {
         var names = DemoScenes.All.Select(sample => sample.Name).ToArray();
-        foreach (var name in new[] { "Equipment", "Packing", "Surface", "Assembly", "Molecule", "Telemetry", "City", "Robot Arm", "Orbit", "Wind", "Conveyor Inspection", "Solar Tracker", "Packet Routing", "Drone Survey" })
+        foreach (var name in new[] { "Equipment", "Packing", "Surface", "Assembly", "Molecule", "Telemetry", "City", "Robot Arm", "Orbit", "Wind", "Conveyor Inspection", "Solar Tracker", "Packet Routing", "Drone Survey", "Patterned Surface" })
             Check(names.Count(candidate => candidate == name) == 1, $"missing or duplicate {name} example");
         foreach (var sample in DemoScenes.All)
         {

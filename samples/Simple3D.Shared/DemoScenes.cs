@@ -11,7 +11,34 @@ public static class DemoScenes
 {
     /// <summary>Creates independent examples of product, scientific, data and spatial illustrations.</summary>
     public static IReadOnlyList<DemoScene> All =>
-        [Equipment(), Packing(), Surface(), Assembly(), Molecule(), Telemetry(), City(), RobotArm(), Orbit(), Wind(), ConveyorInspection(), SolarTracker(), PacketRouting(), DroneSurvey()];
+        [Equipment(), Packing(), Surface(), Assembly(), Molecule(), Telemetry(), City(), RobotArm(), Orbit(), Wind(), ConveyorInspection(), SolarTracker(), PacketRouting(), DroneSurvey(), PatternedSurface()];
+
+    /// <summary>Builds a curved checker mesh with fixed directional lighting and individually selectable cells.</summary>
+    public static DemoScene PatternedSurface()
+    {
+        const int cells = 8;
+        var parts = new List<Shape>();
+        for (var row = 0; row < cells; row++)
+            for (var col = 0; col < cells; col++)
+            {
+                var x = (col - cells / 2f) * .35f;
+                var z = (row - cells / 2f) * .35f;
+                var mesh = new Mesh([Point(x, z), Point(x + .35f, z), Point(x, z + .35f), Point(x + .35f, z + .35f)],
+                    [0, 2, 1, 1, 2, 3]);
+                parts.Add(Shape.FromMesh(mesh, new Material((row + col) % 2 == 0 ? 0xFFECCB95u : 0xFF396E78u))
+                    .Named($"Cell {row + 1}, {col + 1}"));
+            }
+        var panel = Shape.Group(parts.ToArray()).Named("Checker surface");
+        var scene = new Scene().Add(panel)
+            .Add(Shape.Box(0xFF526B9A).Scaled(3.25f, .15f, 3.25f).At(0, -.65f, 0).Named("Display plinth"));
+        scene.AddLabel(new("MESH PATTERN · DIRECTIONAL LIGHT", new(0, .95f, 0), 0xFFE4ECFF));
+        var camera = new Camera(5.5f, .5f, .7f);
+        camera.FitToScene(scene, 4f / 3);
+        return new("Patterned Surface", "Tilt a checker mesh to inspect fixed directional lighting. Each cell is selectable; no image texture mapping.",
+            scene, camera, AnimateNode(scene, panel, time => panel.Rotated(.28f * MathF.Sin(time * 1.3f), 0, .18f * MathF.Sin(time))));
+
+        static Vector3 Point(float x, float z) => new(x, .22f * MathF.Cos(x * 1.3f) * MathF.Cos(z * 1.3f), z);
+    }
 
     /// <summary>Builds a labeled tabletop equipment illustration with grouped parts.</summary>
     public static DemoScene Equipment()

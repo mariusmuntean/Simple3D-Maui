@@ -10,7 +10,7 @@ DEST = ROOT / "docs" / "site" / "images"
 
 with tempfile.TemporaryDirectory() as directory:
     subprocess.run(
-        ["dotnet", "run", "--project", "samples/Simple3D.Examples", "-c", "Release", "--", "--all", directory],
+        ["dotnet", "run", "--project", "tests/Simple3D.Core.Tests", "-c", "Release", "--", "--render-images", "--all", directory],
         cwd=ROOT, check=True,
     )
     DEST.mkdir(parents=True, exist_ok=True)
