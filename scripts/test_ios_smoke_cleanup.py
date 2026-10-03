@@ -22,7 +22,9 @@ if name == "xcrun" and args == ["simctl", "list", "devices", "available", "-j"]:
     print(json.dumps({"devices": {"com.apple.CoreSimulator.SimRuntime.iOS-26-5": [
         {"name": "iPhone 17 Pro", "udid": "user-device", "state": "Booted", "isAvailable": True},
         *([] if os.environ.get("SMOKE_NO_IDLE") else [
-            {"name": "iPhone 17 Pro", "udid": "test-device", "state": "Shutdown", "isAvailable": True}])
+            {"name": "iPhone 17 Pro", "udid": "test-device", "state": "Shutdown", "isAvailable": True}]),
+        *([{"name": "iPhone 18 Pro", "udid": "fallback-device", "state": "Shutdown", "isAvailable": True}]
+          if os.environ.get("SMOKE_FALLBACK") else [])
     ]}}))
 if name == "xcrun" and args[1:2] == [os.environ.get("SMOKE_FAIL")]:
     sys.exit(23)
@@ -71,10 +73,10 @@ class IosSmokeCleanupTests(unittest.TestCase):
             commands = [json.loads(line) for line in log.read_text().splitlines()]
             return result, commands
 
-    def assert_cleanup(self, commands):
+    def assert_cleanup(self, commands, device="test-device"):
         self.assertEqual(commands[-2:], [
-            ["xcrun", "simctl", "terminate", "test-device", "dev.simple3d.gallery"],
-            ["xcrun", "simctl", "shutdown", "test-device"],
+            ["xcrun", "simctl", "terminate", device, "dev.simple3d.gallery"],
+            ["xcrun", "simctl", "shutdown", device],
         ])
 
     def test_success_releases_test_device(self):
@@ -98,6 +100,12 @@ class IosSmokeCleanupTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse(any(command[1:2] == ["simctl"] and command[2:3] in
                              (["boot"], ["terminate"], ["shutdown"]) for command in commands))
+
+    def test_uses_idle_newer_phone_when_preferred_model_is_unavailable(self):
+        result, commands = self.run_smoke(SMOKE_NO_IDLE="1", SMOKE_FALLBACK="1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(["xcrun", "simctl", "boot", "fallback-device"], commands)
+        self.assert_cleanup(commands, "fallback-device")
 
     def test_shutdown_failure_is_not_reported_as_success(self):
         result, commands = self.run_smoke(SMOKE_FAIL="shutdown")

@@ -81,11 +81,11 @@ DOTNET_ROOT="$HOME/.dotnet" "$HOME/.dotnet/dotnet" build samples/Simple3D.Demo -
 open "samples/Simple3D.Demo/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/Simple3D.Demo.app"
 ```
 
-The demo's iOS and Mac Catalyst builds skip the Xcode version check so the locally tested Xcode 27 / Apple workload 26.5.10301 combination builds directly from Rider in Debug and Release. This does not make that toolchain combination officially supported. GitHub's macOS jobs select Xcode 26.6 explicitly. The Mac Catalyst bundle uses the project assembly name so Rider's macOS run configuration finds the executable; its visible title remains Simple3D Gallery. The Mac app registers a MAUI scene delegate for the scene lifecycle required when launching this build on macOS 27.
+The demo's iOS and Mac Catalyst builds skip the Xcode version check so the locally tested Xcode 27 / Apple workload 26.5.10301 combination builds directly from Rider in Debug and Release. This does not make that toolchain combination officially supported. GitHub's Apple builds use the Xcode 27 runner to match the current .NET 10 Apple workload; Android and documentation jobs remain on macOS 26. The demo targets Mac Catalyst 17 or later, the minimum required by that Apple workload. The Mac Catalyst bundle uses the project assembly name so Rider's macOS run configuration finds the executable; its visible title remains Simple3D Gallery. The Mac and iOS apps register MAUI scene delegates for launch on current Apple systems.
 
 ### iOS simulator smoke check
 
-After building the signed Debug simulator app, run `bash scripts/ios-simulator-smoke.sh` from the repository root. It selects an idle iPhone 17 Pro, launches three scenes and checks their screenshots. Existing booted simulator sessions are left untouched. On success, failure or interruption, it terminates the gallery and shuts down the selected simulator. A failed shutdown fails the check; an earlier failure keeps its original exit code. Screenshots remain in `artifacts` for inspection.
+After building the signed Debug simulator app, run `bash scripts/ios-simulator-smoke.sh` from the repository root. It selects an idle iPhone 17 Pro, iPhone 18 Pro or iPhone 17, launches three scenes and checks their screenshots. Existing booted simulator sessions are left untouched. On success, failure or interruption, it terminates the gallery and shuts down the selected simulator. A failed shutdown fails the check; an earlier failure keeps its original exit code. Screenshots remain in `artifacts` for inspection.
 
 ## Scope
 

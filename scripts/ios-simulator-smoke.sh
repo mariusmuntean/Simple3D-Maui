@@ -4,11 +4,14 @@ set -euo pipefail
 device="$(python3 - <<'PY'
 import json, subprocess
 devices = json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', 'devices', 'available', '-j']))['devices']
-matches = [(runtime, item['udid']) for runtime, items in devices.items() for item in items
-           if item['name'] == 'iPhone 17 Pro' and item['state'] == 'Shutdown']
-if not matches:
-    raise SystemExit('No idle iPhone 17 Pro simulator; existing sessions are left untouched')
-print(sorted(matches, reverse=True)[0][1])
+for name in ('iPhone 17 Pro', 'iPhone 18 Pro', 'iPhone 17'):
+    matches = [(runtime, item['udid']) for runtime, items in devices.items() for item in items
+               if item['name'] == name and item['state'] == 'Shutdown']
+    if matches:
+        print(max(matches)[1])
+        break
+else:
+    raise SystemExit('No idle supported iPhone simulator; existing sessions are left untouched')
 PY
 )"
 
