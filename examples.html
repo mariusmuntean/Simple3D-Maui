@@ -72,7 +72,7 @@
             <article class="content wrap" id="_content" data-uid="">
 <h1 id="showcases">Showcases</h1>
 
-<p>The MAUI gallery uses fifteen shared scene factories. Each demonstrates a different use:</p>
+<p>The MAUI gallery uses seventeen shared scene factories. Each demonstrates a different use:</p>
 <table>
 <thead>
 <tr>
@@ -173,14 +173,27 @@
 <td>Surface tilts to show shading; each cell stays selectable</td>
 <td><a href="images/Patterned%20Surface.png">Patterned Surface</a></td>
 </tr>
+<tr>
+<td>Battery Storage</td>
+<td>Energy equipment with six selectable charge gauges</td>
+<td>Gauge heights and colors track synthetic charge states within fixed scales</td>
+<td><a href="images/Battery%20Storage.png">Battery Storage</a></td>
+</tr>
+<tr>
+<td>Gantry Crane</td>
+<td>A material-handling mechanism with linked moving parts</td>
+<td>Trolley traverses while a variable-length cable lifts its load</td>
+<td><a href="images/Gantry%20Crane.png">Gantry Crane</a></td>
+</tr>
 </tbody>
 </table>
-<p>Render one scene or all fifteen:</p>
+<p>Render one scene or all seventeen:</p>
 <pre><code class="lang-bash">dotnet run --project tests/Simple3D.Core.Tests -c Release -- --render-images Equipment equipment.ppm
 dotnet run --project tests/Simple3D.Core.Tests -c Release -- --render-images --all output
 </code></pre>
 <p>The Core runner exports the initial still frame; <code>--render-images</code> skips its tests. Open PPM files in an image viewer or convert them to PNG. Run <code>python3 scripts/render-doc-images.py</code> to regenerate the documentation images. The shared factories demonstrate groups, meshes, materials, camera fitting and time-based animation. The gallery adds selection, orbit and zoom with a 60-updates-per-second animation target. Actual displayed frame rate depends on the device and viewport. The Solar Tracker's sun is a visual marker; lighting uses the renderer's fixed direction.</p>
 <p>Patterned Surface uses separate colored mesh cells, not image texture mapping. Its parts are built once and reused during animation. The current renderer provides flat directional lighting; it does not provide physically based materials or shadows.</p>
+<p>Battery Storage and Gantry Crane demonstrate updating a visualization from application state. Their animations are illustrative, not energy-system or mechanical simulations. Each replaces a small moving group while reusing its immutable geometry and preserving child order for selection. To connect real telemetry, replace the synthetic time functions with your measured charge levels, trolley position and lift height.</p>
 
 </article>
           </div>

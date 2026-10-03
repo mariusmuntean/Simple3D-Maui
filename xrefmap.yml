@@ -1515,6 +1515,19 @@ references:
   isSpec: "True"
   fullName: Simple3D.Maui.SceneView.CaptureFrame
   nameWithType: SceneView.CaptureFrame
+- uid: Simple3D.Maui.SceneView.ClearSelection
+  name: ClearSelection()
+  href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_ClearSelection
+  commentId: M:Simple3D.Maui.SceneView.ClearSelection
+  fullName: Simple3D.Maui.SceneView.ClearSelection()
+  nameWithType: SceneView.ClearSelection()
+- uid: Simple3D.Maui.SceneView.ClearSelection*
+  name: ClearSelection
+  href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_ClearSelection_
+  commentId: Overload:Simple3D.Maui.SceneView.ClearSelection
+  isSpec: "True"
+  fullName: Simple3D.Maui.SceneView.ClearSelection
+  nameWithType: SceneView.ClearSelection
 - uid: Simple3D.Maui.SceneView.IsAntialiasEnabled
   name: IsAntialiasEnabled
   href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_IsAntialiasEnabled

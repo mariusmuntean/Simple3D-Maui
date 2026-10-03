@@ -346,6 +346,16 @@
     },
     {
       "type": "Resource",
+      "source_relative_path": "images/Battery Storage.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/Battery Storage.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
       "source_relative_path": "images/City.png",
       "output": {
         "resource": {
@@ -380,6 +390,16 @@
       "output": {
         "resource": {
           "relative_path": "images/Equipment.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/Gantry Crane.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/Gantry Crane.png"
         }
       },
       "version": ""
