@@ -15,7 +15,7 @@ namespace Simple3D.Maui;
 /// <summary>A depth-rendered, touch-enabled surface for small opaque scenes. Mutate its scene and camera on the UI thread.</summary>
 public sealed class SceneView : SKCanvasView
 {
-    private const int DragPreviewMaximumDimension = 1024;
+    private const int DragPreviewMaximumDimension = 512;
     /// <summary>The scene displayed by this view.</summary>
     public static readonly BindableProperty SceneProperty = BindableProperty.Create(nameof(Scene), typeof(Scene), typeof(SceneView),
         defaultValueCreator: _ => new Scene(), propertyChanged: (bindable, oldValue, newValue) =>
@@ -40,6 +40,7 @@ public sealed class SceneView : SKCanvasView
     private RenderTarget? _paintTarget;
     private RenderTarget? _paintBitmapTarget;
     private SKBitmap? _paintBitmap;
+    private Shape? _bitmapSelection;
     private long _paintVersion;
     private long _bitmapVersion;
     private int _paintSurfaceWidth, _paintSurfaceHeight;
@@ -59,7 +60,8 @@ public sealed class SceneView : SKCanvasView
     private double _lastMacPinchScale = 1;
     private readonly List<IGestureRecognizer> _interactionGestures = new();
 #if MACCATALYST
-    private UIView? _macPinchView;
+    private UIView? _macGestureView;
+    private UIPanGestureRecognizer? _macPanRecognizer;
     private UIPinchGestureRecognizer? _macPinchRecognizer;
 #endif
 
@@ -73,20 +75,10 @@ public sealed class SceneView : SKCanvasView
     {
         PaintSurface += Paint;
         SetSubscriptions(true);
-        var pan = new PanGestureRecognizer();
-        pan.PanUpdated += (_, args) =>
-        {
-            if (args.StatusType == GestureStatus.Started) { _lastPanX = _lastPanY = 0; _panActive = true; }
-            else if (args.StatusType == GestureStatus.Running)
-            {
-                Orbit((float)((args.TotalX - _lastPanX) * .012), (float)(-(args.TotalY - _lastPanY) * .012));
-                _lastPanX = args.TotalX;
-                _lastPanY = args.TotalY;
-            }
-            else { _panActive = false; Refresh(); }
-        };
-        _interactionGestures.Add(pan);
 #if !MACCATALYST
+        var pan = new PanGestureRecognizer();
+        pan.PanUpdated += (_, args) => ApplyPan(args.StatusType, args.TotalX, args.TotalY);
+        _interactionGestures.Add(pan);
         var pinch = new PinchGestureRecognizer();
         pinch.PinchUpdated += (_, args) => { if (args.Status == GestureStatus.Running) Zoom((float)args.Scale); };
         _interactionGestures.Add(pinch);
@@ -96,8 +88,7 @@ public sealed class SceneView : SKCanvasView
         {
             var point = args.GetPosition(this);
             if (point is null) return;
-            SelectedShape = PickAt(point.Value.X, point.Value.Y, Width, Height);
-            SelectionChanged?.Invoke(this, SelectedShape);
+            SelectAt(point.Value.X, point.Value.Y, Width, Height);
         };
         _interactionGestures.Add(tap);
         UpdateInteraction();
@@ -138,6 +129,42 @@ public sealed class SceneView : SKCanvasView
     public void Orbit(float yawDelta, float pitchDelta) => Camera.Orbit(yawDelta, pitchDelta);
     /// <summary>Zoom by an incremental factor.</summary>
     public void Zoom(float factor) => Camera.Zoom(factor);
+    internal void ApplyPan(GestureStatus status, double totalX, double totalY)
+    {
+        if (!IsInteractive) return;
+        if (status == GestureStatus.Started)
+        {
+            _lastPanX = _lastPanY = 0;
+            _panActive = true;
+            return;
+        }
+        if (status == GestureStatus.Running)
+        {
+            if (!_panActive || !double.IsFinite(totalX) || !double.IsFinite(totalY)) return;
+            Orbit((float)((totalX - _lastPanX) * .012), (float)(-(totalY - _lastPanY) * .012));
+            _lastPanX = totalX;
+            _lastPanY = totalY;
+            return;
+        }
+        _panActive = false;
+        Refresh();
+    }
+
+    internal void ApplyMacPan(GestureStatus status, double totalX, double totalY)
+    {
+        if (status == GestureStatus.Started)
+        {
+            ApplyPan(status, 0, 0);
+            ApplyPan(GestureStatus.Running, totalX, totalY);
+        }
+        else if (status == GestureStatus.Completed)
+        {
+            ApplyPan(GestureStatus.Running, totalX, totalY);
+            ApplyPan(status, totalX, totalY);
+        }
+        else ApplyPan(status, totalX, totalY);
+    }
+
     internal void ApplyMacPinch(GestureStatus status, double scale)
     {
         if (!IsInteractive) return;
@@ -168,6 +195,17 @@ public sealed class SceneView : SKCanvasView
         return _frame;
     }
 
+    /// <summary>Select a visible shape at layout coordinates, or clear selection on the background.</summary>
+    public Shape? SelectAt(double x, double y, double viewWidth, double viewHeight)
+    {
+        var selected = PickAt(x, y, viewWidth, viewHeight);
+        if (ReferenceEquals(selected, SelectedShape)) return selected;
+        SelectedShape = selected;
+        InvalidateSurface();
+        SelectionChanged?.Invoke(this, SelectedShape);
+        return SelectedShape;
+    }
+
     /// <summary>Pick at view coordinates measured from the top left. Uses the native paint target when available, otherwise the last owned frame.</summary>
     public Shape? PickAt(double x, double y, double viewWidth, double viewHeight)
     {
@@ -195,12 +233,18 @@ public sealed class SceneView : SKCanvasView
     protected override void OnHandlerChanged()
     {
 #if MACCATALYST
+        if (_macPanRecognizer is not null)
+        {
+            _macGestureView?.RemoveGestureRecognizer(_macPanRecognizer);
+            _macPanRecognizer.Dispose();
+            _macPanRecognizer = null;
+        }
         if (_macPinchRecognizer is not null)
         {
-            _macPinchView?.RemoveGestureRecognizer(_macPinchRecognizer);
+            _macGestureView?.RemoveGestureRecognizer(_macPinchRecognizer);
             _macPinchRecognizer.Dispose();
             _macPinchRecognizer = null;
-            _macPinchView = null;
+            _macGestureView = null;
         }
 #endif
         base.OnHandlerChanged();
@@ -218,25 +262,36 @@ public sealed class SceneView : SKCanvasView
 #if MACCATALYST
             if (Handler.PlatformView is UIView platformView)
             {
+                // Mouse pans can report zero touches during Changed; use native translation directly.
+                _macPanRecognizer = new UIPanGestureRecognizer(recognizer =>
+                {
+                    var translation = recognizer.TranslationInView(platformView);
+                    ApplyMacPan(MacGestureStatus(recognizer.State), translation.X, translation.Y);
+                });
+                _macPanRecognizer.Enabled = IsInteractive;
+                platformView.AddGestureRecognizer(_macPanRecognizer);
                 // Trackpad pinches have zero UIKit touches; the MAUI bridge ends them after one update.
                 _macPinchRecognizer = new UIPinchGestureRecognizer(recognizer =>
                 {
-                    var status = recognizer.State switch
-                    {
-                        UIGestureRecognizerState.Began => GestureStatus.Started,
-                        UIGestureRecognizerState.Changed => GestureStatus.Running,
-                        UIGestureRecognizerState.Ended => GestureStatus.Completed,
-                        _ => GestureStatus.Canceled
-                    };
-                    ApplyMacPinch(status, recognizer.Scale);
+                    ApplyMacPinch(MacGestureStatus(recognizer.State), recognizer.Scale);
                 });
                 _macPinchRecognizer.Enabled = IsInteractive;
                 platformView.AddGestureRecognizer(_macPinchRecognizer);
-                _macPinchView = platformView;
+                _macGestureView = platformView;
             }
 #endif
         }
     }
+
+#if MACCATALYST
+    private static GestureStatus MacGestureStatus(UIGestureRecognizerState state) => state switch
+    {
+        UIGestureRecognizerState.Began => GestureStatus.Started,
+        UIGestureRecognizerState.Changed => GestureStatus.Running,
+        UIGestureRecognizerState.Ended => GestureStatus.Completed,
+        _ => GestureStatus.Canceled
+    };
+#endif
 
     private void SetSubscriptions(bool active)
     {
@@ -278,6 +333,7 @@ public sealed class SceneView : SKCanvasView
             foreach (var gesture in _interactionGestures) GestureRecognizers.Add(gesture);
 #if MACCATALYST
         if (_macPinchRecognizer is not null) _macPinchRecognizer.Enabled = IsInteractive;
+        if (_macPanRecognizer is not null) _macPanRecognizer.Enabled = IsInteractive;
 #endif
         Refresh();
     }
@@ -389,9 +445,35 @@ public sealed class SceneView : SKCanvasView
             ReleasePaintBitmap();
             _paintBitmap = new SKBitmap(new SKImageInfo(target.Width, target.Height, SKColorType.Bgra8888, SKAlphaType.Opaque));
         }
-        if (!ReferenceEquals(_paintBitmapTarget, target) || _bitmapVersion != _paintVersion)
+        if (!ReferenceEquals(_paintBitmapTarget, target) || _bitmapVersion != _paintVersion ||
+            !ReferenceEquals(_bitmapSelection, SelectedShape))
         {
             MemoryMarshal.AsBytes(target.Pixels.Span).CopyTo(_paintBitmap.GetPixelSpan());
+            if (SelectedShape is not null)
+            {
+                var pixels = MemoryMarshal.Cast<byte, uint>(_paintBitmap.GetPixelSpan());
+                for (var y = 0; y < target.Height; y++)
+                    for (var x = 0; x < target.Width; x++)
+                        if (ReferenceEquals(target.Pick(x, y), SelectedShape))
+                        {
+                            var index = y * target.Width + x;
+                            if (!ReferenceEquals(target.Pick(x - 2, y), SelectedShape) ||
+                                !ReferenceEquals(target.Pick(x + 2, y), SelectedShape) ||
+                                !ReferenceEquals(target.Pick(x, y - 2), SelectedShape) ||
+                                !ReferenceEquals(target.Pick(x, y + 2), SelectedShape))
+                            {
+                                pixels[index] = 0xFFFFD27Au;
+                                continue;
+                            }
+                            var pixel = pixels[index];
+                            // A mint tint preserves the underlying light and never changes scene materials.
+                            var red = (((pixel >> 16) & 255) * 2 + 142) / 3;
+                            var green = (((pixel >> 8) & 255) * 2 + 225) / 3;
+                            var blue = ((pixel & 255) * 2 + 205) / 3;
+                            pixels[index] = 0xFF000000u | (red << 16) | (green << 8) | blue;
+                        }
+            }
+            _bitmapSelection = SelectedShape;
             _paintBitmap.NotifyPixelsChanged();
             _paintBitmapTarget = target;
             _bitmapVersion = _paintVersion;
@@ -404,6 +486,7 @@ public sealed class SceneView : SKCanvasView
         _paintBitmap?.Dispose();
         _paintBitmap = null;
         _paintBitmapTarget = null;
+        _bitmapSelection = null;
         _bitmapVersion = 0;
     }
 

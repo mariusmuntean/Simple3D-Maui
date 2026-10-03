@@ -2,12 +2,16 @@
 
 `SceneView` is an `SKCanvasView` backed by the CPU `DepthRenderer`. It keeps one owned `RenderFrame` per view and reuses it until a bound scene, camera, background, or viewport size changes. The frame contains packed opaque ARGB pixels, projected labels, and shape IDs for depth-aware picking.
 
-The control installs drag, pinch, and tap gestures. Drag orbits, each pinch event applies its incremental zoom factor, and tap selects the visible leaf shape. Projected label text scales with display density. Handle the event to show details:
+The control installs drag, pinch, and tap gestures. On Mac Catalyst, native UIKit pan and pinch recognizers handle mouse and trackpad updates without MAUI touch-count gating. Drag orbits, each pinch event applies its incremental zoom factor, and tap selects the visible leaf shape. Projected label text scales with display density. The selected leaf gets a mint tint and a gold contour inside its visible boundary. Hidden pixels remain hidden; scene materials and exported frames are unchanged. Tap the background to clear the highlight. Handle the event to show details:
 
 ```csharp
 view.SelectionChanged += (_, shape) =>
     details.Text = shape?.Name ?? "Nothing selected";
 ```
+
+`SelectAt(x, y, viewWidth, viewHeight)` performs the same selection and feedback for a custom pointer. `PickAt` only queries; it does not change selection. Selection refers to an immutable shape instance, so replacing that instance in an animation removes its highlight until it is selected again.
+
+While dragging, native rendering uses a preview capped at 512 pixels on its longest side, keeping the aspect ratio and depth picking. On release or cancellation the view restores its configured `MaximumRenderDimension`. Animation may independently use a lower configured limit.
 
 For custom pointers, `view.PickAt(x, y, viewWidth, viewHeight)` maps layout coordinates to the last rendered frame. `CaptureFrame(width, height)` produces or retrieves an owned physical-pixel frame; `frame.Pick(x, y)` accepts physical pixels. `CaptureFrame` is useful for tests and exports. The renderer is not thread safe: use it and mutate its scene or camera on the same thread.
 

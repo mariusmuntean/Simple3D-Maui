@@ -21,6 +21,46 @@ var tests = new (string Name, Action Run)[]
         camera.Orbit(.2f, 0);
         Assert(!ReferenceEquals(second, view.CaptureFrame(96, 80)), "camera mutation kept stale frame");
     }),
+    ("selection highlights only visible pixels and restores original materials", () =>
+    {
+        var back = Shape.Box(0xFF4080C0).Scaled(2).Named("back");
+        var front = Shape.Box(0xFFC08040).Scaled(.6f).At(0, 0, 1).Named("front");
+        var scene = new Scene().Add(back).Add(front);
+        var view = new SceneView { Scene = scene, Camera = new Camera(5, 0, 0) };
+        var target = view.CapturePaintTarget(120, 120);
+        var original = view.PaintBitmap(target).GetPixelSpan().ToArray();
+        var pickX = -1;
+        var pickY = -1;
+        for (var y = 0; y < 120 && pickX < 0; y++)
+            for (var x = 0; x < 120; x++)
+                if (ReferenceEquals(target.Pick(x, y), back)) { pickX = x; pickY = y; break; }
+        Assert(pickX >= 0, "fixture has no visible back pixels");
+        var notifications = 0;
+        view.SelectionChanged += (_, _) => notifications++;
+        Assert(ReferenceEquals(view.SelectAt(pickX, pickY, 120, 120), back), "wrong selected object");
+        var highlighted = view.PaintBitmap(target).GetPixelSpan();
+        var changes = 0;
+        for (var y = 0; y < 120; y++)
+            for (var x = 0; x < 120; x++)
+            {
+                var offset = (y * 120 + x) * 4;
+                var changed = !highlighted.Slice(offset, 4).SequenceEqual(original.AsSpan(offset, 4));
+                Assert(changed == ReferenceEquals(target.Pick(x, y), back), "highlight leaked through occlusion or missed selected pixels");
+                if (changed) changes++;
+            }
+        Assert(changes > 0, "no selected pixels changed");
+        Assert(back.Color == 0xFF4080C0 && front.Color == 0xFFC08040, "highlight changed scene materials");
+        Assert(target.Pixels.Span.SequenceEqual(view.CaptureFrame(120, 120).Pixels.Span), "highlight changed owned captures");
+        view.SelectAt(60, 60, 120, 120);
+        Assert(ReferenceEquals(view.SelectedShape, front), "selection did not switch to front object");
+        view.SelectAt(0, 0, 120, 120);
+        Assert(view.SelectedShape is null && notifications == 3, "background did not clear selection");
+        Assert(view.PaintBitmap(target).GetPixelSpan().SequenceEqual(original), "deselection did not restore original pixels");
+        view.SelectAt(60, 60, 120, 120);
+        view.Scene = new Scene().Add(Shape.Sphere());
+        Assert(view.SelectedShape is null, "scene replacement kept selection");
+        view.ReleaseRenderResources();
+    }),
     ("native paint bitmap is reused and tracks rendered pixels", () =>
     {
         var scene = new Scene().Add(Shape.Box());
@@ -170,6 +210,67 @@ var tests = new (string Name, Action Run)[]
         view.ApplyMacPinch(GestureStatus.Running, .8);
         Assert(Math.Abs(view.Camera.Distance - 10f / 1.2f) < .0001f, "next gesture did not reset scale");
     }),
+    ("short mouse drags retain translation at beginning and release", () =>
+    {
+        var view = new SceneView { Camera = new Camera(5, 0, 0) };
+        view.ApplyMacPan(GestureStatus.Started, 10, 5);
+        view.ApplyMacPan(GestureStatus.Completed, 25, 10);
+        Assert(Math.Abs(view.Camera.Yaw - .3f) < .0001f && Math.Abs(view.Camera.Pitch + .12f) < .0001f,
+            "short drag lost its initial or final translation");
+    }),
+    ("native mouse pan applies every update and ends preview on cancellation", () =>
+    {
+        var view = new SceneView { Camera = new Camera(5, 0, 0), Scene = new Scene().Add(Shape.Box()) };
+        view.ApplyPan(GestureStatus.Started, 0, 0);
+        view.ApplyPan(GestureStatus.Running, 10, 5);
+        view.ApplyPan(GestureStatus.Running, 25, 10);
+        Assert(Math.Abs(view.Camera.Yaw - .3f) < .0001f && Math.Abs(view.Camera.Pitch + .12f) < .0001f,
+            "mouse movement stopped or cumulative translation was applied twice");
+        Assert(view.CapturePaintTarget(2048, 1260).Width == 512, "native pan did not enter preview");
+        view.ApplyPan(GestureStatus.Canceled, 0, 0);
+        Assert(view.CapturePaintTarget(2048, 1260).Width == 2048, "canceled pan left the view in preview");
+        view.ApplyPan(GestureStatus.Running, 40, 20);
+        Assert(Math.Abs(view.Camera.Yaw - .3f) < .0001f, "a late event changed the camera after cancellation");
+        view.IsInteractive = false;
+        view.ApplyPan(GestureStatus.Started, 0, 0);
+        view.ApplyPan(GestureStatus.Running, 50, 20);
+        Assert(Math.Abs(view.Camera.Yaw - .3f) < .0001f, "display-only view accepted native pan");
+    }),
+    ("dragging bounds raster work and restores detail on release", () =>
+    {
+        var view = new SceneView { Scene = new Scene().Add(Shape.Box()), Camera = new Camera(5, 0, 0) };
+        var fullWork = view.CapturePaintTarget(2048, 1260).RasterSamples;
+        var pan = (IPanGestureController)view.GestureRecognizers.OfType<PanGestureRecognizer>().Single();
+        pan.SendPanStarted(view, 1);
+        pan.SendPan(view, 1, 0, 1);
+        var preview = view.CapturePaintTarget(2048, 1260);
+        Assert(preview.RasterSamples < fullWork / 8, "drag still performs too much full-size raster work");
+        pan.SendPanCompleted(view, 1);
+        var final = view.CapturePaintTarget(2048, 1260);
+        Assert(final.Width == 2048 && final.Height == 1260, "release failed to restore full detail");
+        view.ReleaseRenderResources();
+    }),
+    ("gallery drag benchmark", () =>
+    {
+        foreach (var sample in DemoScenes.All)
+        {
+            var view = new SceneView { Scene = sample.Scene, Camera = sample.Camera };
+            var pan = (IPanGestureController)view.GestureRecognizers.OfType<PanGestureRecognizer>().Single();
+            pan.SendPanStarted(view, 1);
+            for (var i = 0; i < 5; i++) { pan.SendPan(view, i, 0, 1); view.PaintBitmap(view.CapturePaintTarget(2048, 1260)); }
+            var start = System.Diagnostics.Stopwatch.GetTimestamp();
+            long work = 0;
+            for (var i = 0; i < 30; i++)
+            {
+                pan.SendPan(view, i * 2, i, 1);
+                var target = view.CapturePaintTarget(2048, 1260);
+                work += target.RasterSamples;
+                view.PaintBitmap(target);
+            }
+            Console.WriteLine($"Drag {sample.Name}: {System.Diagnostics.Stopwatch.GetElapsedTime(start).TotalMilliseconds / 30:F2} ms/frame; {work / 30:N0} raster samples/frame");
+            view.ReleaseRenderResources();
+        }
+    }),
     ("orbit preview restores full resolution after mouse drag", () =>
     {
         var view = new SceneView { Scene = new Scene().Add(Shape.Box()) };
@@ -177,7 +278,7 @@ var tests = new (string Name, Action Run)[]
         pan.SendPanStarted(view, 1);
         pan.SendPan(view, 24, 0, 1);
         var preview = view.CapturePaintTarget(2048, 630);
-        Assert(preview.Width == 1024 && preview.Height == 315, "drag preview still renders at full desktop resolution");
+        Assert(preview.Width == 512 && preview.Height == 158, "drag preview still renders at full desktop resolution");
         pan.SendPanCompleted(view, 1);
         var final = view.CapturePaintTarget(2048, 630);
         Assert(final.Width == 2048 && final.Height == 630, "full resolution was not restored after drag");
