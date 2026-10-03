@@ -11,7 +11,9 @@ view.SelectionChanged += (_, shape) =>
 
 Native label painting keeps glyphs inside the viewport and abbreviates text with an ellipsis when it cannot fit the available width. Overlapping labels move to a free nearby row, searching up to eight rows in either direction; labels without space are omitted. Earlier scene labels take priority. These adjustments affect the overlay only; Core projected anchors and picking remain unchanged. Labels still overlay geometry without depth testing.
 
-`SelectAt(x, y, viewWidth, viewHeight)` performs the same selection and feedback for a custom pointer. `PickAt` only queries; it does not change selection. Selection refers to an immutable shape instance, so replacing that instance in an animation removes its highlight until it is selected again.
+`SelectAt(x, y, viewWidth, viewHeight)` performs the same selection and feedback for a custom pointer. `PickAt` only queries; it does not change selection. `Scene.Replace` transfers selection to the replacement node, so animated parts keep their highlight. For groups, corresponding child positions represent the same parts: preserve child order during animation. Missing children and removed shapes clear selection. `SelectionChanged` also reports the replacement instance, allowing details to follow changing names and values. `Scene.Changed` supplies `ShapeReplacementEventArgs` for replacements.
+
+Keep an interactive scene outside a parent `ScrollView` when drags should belong exclusively to the scene. The gallery places it in a flexible grid row, with scrolling confined to the scene catalogue and controls.
 
 While dragging or pinching, native rendering uses a preview capped at 512 pixels on its longest side, keeping the aspect ratio and depth picking. Scaled previews use linear sampling to soften magnified pixel steps. This filters the rendered bitmap; it is not multisample triangle rasterization. On release or cancellation the view restores its configured `MaximumRenderDimension`. Animation may independently use a lower configured limit.
 

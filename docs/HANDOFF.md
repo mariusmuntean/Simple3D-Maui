@@ -4,6 +4,18 @@ Updated: 2026-10-03. Fetch remote state before resuming.
 
 ## Current integration state
 
+### Gallery interaction and animated selection checkpoint (2026-10-03)
+
+The gallery scene now occupies a flexible grid row outside all scroll views. Catalogue buttons scroll horizontally, and the footer scrolls within its own bounded area. A regression reproduced the previous scrolling ancestor. The rebuilt Mac gallery visibly rotates on a vertical drag while its header and controls stay fixed.
+
+`Scene.Replace` supplies `ShapeReplacementEventArgs` through the existing `Changed` event. `SceneView` follows the selected node into its replacement tree by child position, preserving the tint and contour during animation. Keep child order stable for logical parts; missing children and removed shapes clear selection. Selection notifications report the current instance. Regressions cover all seven animated showcases, duplicate names, missing children and visible outline pixels at their new positions. The rebuilt Mac output arrow visibly retained its outline while moving.
+
+Local verification: Core 40/40; the isolated staged MAUI milestone 35/35; the working tree including the two earlier antialiasing tests 37/37. Android Debug build passed with zero warnings/errors. Mac Catalyst Debug build passed with the existing deprecated Xamarin settings warning. DocFX metadata and site builds passed with zero warnings/errors. iOS was not rebuilt or launched for this checkpoint. Antialiasing remains a separate local draft.
+
+Android deployment caution: Rider fast deployment supplied old assemblies even after a successful build. The deployed MAUI assembly hash differed from both current build outputs, and the running app still logged removed `PAINT_PROFILE` instrumentation. Use an APK with embedded assemblies and remove the test installation before reinstalling when verifying new behavior; do not trust a successful deployment alone.
+
+Rebuilt Android Debug with `-t:Rebuild -p:EmbedAssembliesIntoApk=true` (zero warnings/errors), reinstalled the disposable test app, and visibly verified vertical orbit with fixed page controls and the selected output arrow retaining its contour during animation. The Android test app and emulator were stopped afterward; the Mac test app was also stopped. A later Mac app launched by the owner was preserved. No hosted runs were dispatched. The earlier Android Debug `UseInterpreter=false` performance setting and antialiasing changes remain uncommitted local drafts, separate from this milestone.
+
 ### Rider mobile launch checkpoint (2026-10-03)
 
 Android launch failed before deployment because Rider requires the source `samples/Simple3D.Demo/Platforms/Android/AndroidManifest.xml`, which was missing even though terminal builds generated a manifest. Added the minimal application manifest. Rider then built, deployed and launched the gallery using Debug on Pixel 5 / Android 13 (API 33, ARM64); the actual rendered Equipment scene was visibly verified in Running Devices.

@@ -61,6 +61,78 @@ var tests = new (string Name, Action Run)[]
         Assert(view.SelectedShape is null, "scene replacement kept selection");
         view.ReleaseRenderResources();
     }),
+    ("selection follows animated replacements and their visible outline", () =>
+    {
+        foreach (var sample in DemoScenes.All)
+        {
+            var view = new SceneView { Scene = sample.Scene, Camera = sample.Camera };
+            sample.Animate(0);
+            var before = view.CapturePaintTarget(200, 200);
+            var animated = sample.Scene.Shapes[sample.Name is "Equipment" or "Packing" or "Surface" or "City" ? 1 :
+                sample.Name == "Assembly" ? 2 : 0];
+            var parts = animated.Children.Count > 0 ? animated.Children : new[] { animated };
+            var point = Enumerable.Range(0, 40000).FirstOrDefault(i => parts.Contains(before.Pick(i % 200, i / 200)!), -1);
+            Assert(point >= 0, $"{sample.Name}: fixture has no visible animated part");
+            var part = before.Pick(point % 200, point / 200)!;
+            view.SelectAt(point % 200, point / 200, 200, 200);
+            for (var tick = 1; tick <= 3; tick++)
+            {
+                sample.Animate(tick * .2f);
+                var target = view.CapturePaintTarget(200, 200);
+                var selected = view.SelectedShape;
+                Assert(selected is not null && (!ReferenceEquals(selected, part) || sample.Name == "Molecule"),
+                    $"{sample.Name}: selection stayed on an obsolete instance");
+                var pixels = MemoryMarshal.Cast<byte, uint>(view.PaintBitmap(target).GetPixelSpan());
+                var outlines = 0;
+                for (var i = 0; i < pixels.Length; i++)
+                    if (pixels[i] == 0xFFFFD27A)
+                    {
+                        Assert(ReferenceEquals(target.Pick(i % 200, i / 200), selected), "outline stayed at the old position");
+                        outlines++;
+                    }
+                Assert(outlines > 0, $"{sample.Name}: moving selection lost its outline");
+            }
+            sample.Scene.Clear();
+            Assert(view.SelectedShape is null, "removed object stayed selected");
+            view.ReleaseRenderResources();
+        }
+    }),
+    ("selection follows child positions despite duplicate names and clears missing children", () =>
+    {
+        var left = Shape.Box().At(-1, 0, 0).Named("duplicate");
+        var right = Shape.Box().At(1, 0, 0).Named("duplicate");
+        var old = Shape.Group(left, right);
+        var scene = new Scene().Add(old);
+        var view = new SceneView { Scene = scene, Camera = new Camera(6, 0, 0) };
+        var target = view.CapturePaintTarget(120, 120);
+        var point = Enumerable.Range(0, 14400).First(i => ReferenceEquals(target.Pick(i % 120, i / 120), right));
+        view.SelectAt(point % 120, point / 120, 120, 120);
+        var moved = right.At(1, .2f, 0);
+        var next = Shape.Group(left, moved);
+        scene.Replace(old, next);
+        Assert(ReferenceEquals(view.SelectedShape, moved), "selection matched duplicate names instead of child position");
+        scene.Replace(next, Shape.Group(left));
+        Assert(view.SelectedShape is null, "missing replacement child stayed selected");
+        view.ReleaseRenderResources();
+    }),
+    ("gallery scene has no scrolling ancestor", () =>
+    {
+        var page = new GalleryPage();
+        var view = FindScene(page.Content);
+        Assert(view is not null, "gallery has no scene");
+        for (Element? parent = view!.Parent; parent is not null; parent = parent.Parent)
+            Assert(parent is not ScrollView, "scene drag can scroll its parent");
+
+        static SceneView? FindScene(IView root) => root switch
+        {
+            SceneView scene => scene,
+            ContentView content => content.Content is null ? null : FindScene(content.Content),
+            Border border => border.Content is null ? null : FindScene(border.Content),
+            ScrollView scroll => FindScene(scroll.Content),
+            Layout layout => layout.Children.Select(FindScene).FirstOrDefault(scene => scene is not null),
+            _ => null
+        };
+    }),
     ("native paint bitmap is reused and tracks rendered pixels", () =>
     {
         var scene = new Scene().Add(Shape.Box());
@@ -464,7 +536,8 @@ var tests = new (string Name, Action Run)[]
     ("all gallery scenes remain reachable on narrow screens", () =>
     {
         var page = new GalleryPage();
-        var content = (VerticalStackLayout)((ScrollView)page.Content).Content;
+        var content = page.Content is Grid grid ? grid.Children.OfType<VerticalStackLayout>().Single() :
+            (VerticalStackLayout)((ScrollView)page.Content).Content;
         var scroller = content.Children.OfType<ScrollView>()
             .Single(view => view.Content is HorizontalStackLayout row &&
                 row.Children.OfType<Button>().Any(button => button.Text == "City"));

@@ -337,7 +337,47 @@ public sealed class SceneView : SKCanvasView
         _lastFailedProbeTimestamp = 0;
         Refresh();
     }
-    private void SourceChanged(object? sender, EventArgs args) => Refresh();
+    private void SourceChanged(object? sender, EventArgs args)
+    {
+        if (ReferenceEquals(sender, Scene) && SelectedShape is not null)
+        {
+            var previous = SelectedShape;
+            if (args is ShapeReplacementEventArgs replacement)
+            {
+                var remaining = Scene.MaximumNodes;
+                var mapped = MapSelection(replacement.OldShape, replacement.NewShape, previous, ref remaining);
+                if (mapped.Found) SelectedShape = mapped.Shape;
+            }
+            else
+            {
+                var remaining = Scene.MaximumNodes;
+                var present = false;
+                foreach (var root in Scene.Shapes)
+                    if (MapSelection(root, root, previous, ref remaining).Found) { present = true; break; }
+                if (!present) SelectedShape = null;
+            }
+            if (!ReferenceEquals(previous, SelectedShape))
+            {
+                Refresh();
+                SelectionChanged?.Invoke(this, SelectedShape);
+                return;
+            }
+        }
+        Refresh();
+    }
+
+    private static (bool Found, Shape? Shape) MapSelection(Shape oldShape, Shape? newShape, Shape selected, ref int remaining)
+    {
+        if (--remaining < 0) throw new ArgumentException("Scene exceeds node visit budget.");
+        if (ReferenceEquals(oldShape, selected)) return (true, newShape);
+        for (var i = 0; i < oldShape.Children.Count; i++)
+        {
+            var next = newShape is not null && i < newShape.Children.Count ? newShape.Children[i] : null;
+            var result = MapSelection(oldShape.Children[i], next, selected, ref remaining);
+            if (result.Found) return result;
+        }
+        return (false, null);
+    }
 
     private void UpdateInteraction()
     {
