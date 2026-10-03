@@ -24,7 +24,13 @@ public sealed class App : Application
                 throw new InvalidOperationException("Packaged control rendered only background");
             if (!Enumerable.Range(0, 128).Any(y => Enumerable.Range(0, 192).Any(x => frame.Pick(x, y) != null)))
                 throw new InvalidOperationException("Packaged control cannot pick geometry");
-            Console.WriteLine("PACKAGE_MAUI_PASS: native control, pixels and picking");
+            var point = Enumerable.Range(0, 192 * 128).First(index => view.PickAt(index % 192, index / 192, 192, 128) is not null);
+            view.SelectAt(point % 192, point / 192, 192, 128);
+            view.IsInteractive = false;
+            view.ClearSelection();
+            if (view.SelectedShape is not null)
+                throw new InvalidOperationException("Packaged control retained selection after clearing");
+            Console.WriteLine("PACKAGE_MAUI_PASS: native control, pixels, picking and selection clearing");
         };
         return new Window(new ContentPage
         {

@@ -93,6 +93,7 @@ public sealed class GalleryPage : ContentPage
             OrthographicHeight = sample.Camera.OrthographicHeight,
             NearPlane = sample.Camera.NearPlane
         };
+        _view.ClearSelection();
         _caption.Text = $"{sample.Name} · {sample.Description}";
         _selection.Text = "Tap an object to inspect it";
     }

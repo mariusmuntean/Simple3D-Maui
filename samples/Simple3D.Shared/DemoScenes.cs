@@ -11,7 +11,86 @@ public static class DemoScenes
 {
     /// <summary>Creates independent examples of product, scientific, data and spatial illustrations.</summary>
     public static IReadOnlyList<DemoScene> All =>
-        [Equipment(), Packing(), Surface(), Assembly(), Molecule(), Telemetry(), City(), RobotArm(), Orbit(), Wind(), ConveyorInspection(), SolarTracker(), PacketRouting(), DroneSurvey(), PatternedSurface()];
+        [Equipment(), Packing(), Surface(), Assembly(), Molecule(), Telemetry(), City(), RobotArm(), Orbit(), Wind(), ConveyorInspection(), SolarTracker(), PacketRouting(), DroneSurvey(), PatternedSurface(), BatteryStorage(), GantryCrane()];
+
+    /// <summary>Builds six battery modules with bounded, independently changing charge gauges.</summary>
+    public static DemoScene BatteryStorage()
+    {
+        var cabinets = new List<Shape>
+        {
+            Shape.Box(0xFF526B9A).Named("Battery plinth").Scaled(3.6f, .12f, 1.2f).At(0, -.72f, 0)
+        };
+        var gauges = new Shape[6];
+        for (var i = 0; i < gauges.Length; i++)
+        {
+            var x = (i % 3 - 1) * 1.1f;
+            var y = i / 3 * 1.7f;
+            cabinets.Add(Shape.Box(0xFF7894C8).Named($"Module {i + 1} cabinet")
+                .Scaled(.85f, 1.5f, .7f).At(x, .1f + y, 0));
+            cabinets.Add(Shape.Box(0xFF162238).Named($"Module {i + 1} gauge scale")
+                .Scaled(.62f, 1.1f, .035f).At(x, .05f + y, .37f));
+            cabinets.Add(Shape.Box(0xFFB7C6E2).Named($"Module {i + 1} terminal")
+                .Scaled(.35f, .08f, .28f).At(x, .89f + y, 0));
+            gauges[i] = Shape.Box().Named($"Charge {i + 1}").At(x, -.5f + y, .41f);
+        }
+        Shape ChargeAt(float time)
+        {
+            var charges = new Shape[gauges.Length];
+            for (var i = 0; i < charges.Length; i++)
+            {
+                var level = .12f + .78f * (.5f + .5f * MathF.Sin(time * .9f + i * .9f));
+                var color = level < .5f
+                    ? Mix(0xFFFF927B, 0xFFFFD27A, (level - .12f) / .38f)
+                    : Mix(0xFFFFD27A, 0xFF76DBC7, (level - .5f) / .4f);
+                var height = 1.1f * level;
+                charges[i] = gauges[i].WithMaterial(new Material(color, lit: false))
+                    .Scaled(.48f, height, .035f).At(gauges[i].Position.X, gauges[i].Position.Y + height / 2, gauges[i].Position.Z);
+            }
+            return Shape.Group(charges).Named("Module charges");
+        }
+        var charge = ChargeAt(0);
+        var scene = new Scene().Add(Shape.Group(cabinets.ToArray()).Named("Battery cabinets")).Add(charge);
+        scene.AddLabel(new("ENERGY STORAGE / CHARGE STATE", new(-1.4f, 2.95f, 0), 0xFFE4ECFF));
+        var camera = new Camera(6, .4f, .25f);
+        camera.FitToScene(scene, 4f / 3);
+        return new("Battery Storage", "Six modules charge and discharge. Gauge height and color show synthetic charge state within a fixed scale.",
+            scene, camera, AnimateNode(scene, charge, ChargeAt));
+    }
+
+    /// <summary>Builds a gantry with a moving trolley and a variable-length hoist attached to its load.</summary>
+    public static DemoScene GantryCrane()
+    {
+        var structure = new List<Shape>
+        {
+            Shape.Box(0xFF526B9A).Named("Crane floor").Scaled(3.8f, .1f, 2.4f).At(0, -.82f, 0)
+        };
+        for (var i = 0; i < 4; i++)
+            structure.Add(Shape.Box(0xFF7894C8).Named($"Gantry column {i + 1}").Scaled(.18f, 2.3f, .18f)
+                .At((i % 2 == 0 ? -1 : 1) * 1.55f, .35f, (i / 2 == 0 ? -1 : 1) * .85f));
+        for (var i = 0; i < 2; i++)
+            structure.Add(Shape.Box(0xFF8DA9FF).Named($"Runway rail {i + 1}").Scaled(3.5f, .2f, .18f)
+                .At(0, 1.58f, (i == 0 ? -1 : 1) * .85f));
+        var bridge = Shape.Box(0xFFFFBE79).Named("Moving bridge").Scaled(.35f, .2f, 1.9f).At(0, 1.7f, 0);
+        var trolley = Shape.Box(0xFF76DBC7).Named("Hoist trolley").Scaled(.5f, .3f, .5f).At(0, 1.45f, 0);
+        var cable = Shape.Cylinder(0xFFB7C6E2).Named("Hoist cable");
+        var load = Shape.Box(0xFFFFC18B).Named("Carried load").Scaled(.52f, .44f, .52f);
+        Shape TrolleyAt(float time)
+        {
+            var lift = -.45f + .65f * (.5f - .5f * MathF.Cos(time * 1.1f));
+            var cableBottom = lift + .22f;
+            var length = 1.3f - cableBottom;
+            return Shape.Group(bridge, trolley,
+                cable.Scaled(.035f, length, .035f).At(0, (1.3f + cableBottom) / 2, 0),
+                load.At(0, lift, 0)).Named("Crane carriage").At(.95f * MathF.Sin(time * .75f), 0, 0);
+        }
+        var carriage = TrolleyAt(0);
+        var scene = new Scene().Add(Shape.Group(structure.ToArray()).Named("Gantry structure")).Add(carriage);
+        scene.AddLabel(new("GANTRY / TRAVERSE + HOIST", new(-1.6f, 2.12f, 0), 0xFFE4ECFF));
+        var camera = new Camera(6, .5f, .4f);
+        camera.FitToScene(scene, 4f / 3);
+        return new("Gantry Crane", "Inspect a moving bridge and trolley. The hoist raises and lowers a load while its cable stays attached.",
+            scene, camera, AnimateNode(scene, carriage, TrolleyAt));
+    }
 
     /// <summary>Builds a curved checker mesh with fixed directional lighting and individually selectable cells.</summary>
     public static DemoScene PatternedSurface()

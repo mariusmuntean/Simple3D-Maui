@@ -36,7 +36,7 @@ Core colors use opaque `0xFFRRGGBB`; angles use radians. Shape transforms return
 
 ## Try the gallery
 
-Open [Simple3D.sln](Simple3D.sln) in Rider or another MAUI IDE. Choose **Simple3D.Demo** and an Android device, iOS simulator or Mac Catalyst target. The gallery contains fifteen scenes with animations specific to each subject. Read the [scene factories](samples/Simple3D.Shared/DemoScenes.cs) to adapt an example. Patterned Surface demonstrates selectable checker cells and directional shading using colored meshes.
+Open [Simple3D.sln](Simple3D.sln) in Rider or another MAUI IDE. Choose **Simple3D.Demo** and an Android device, iOS simulator or Mac Catalyst target. The gallery contains seventeen scenes with animations specific to each subject, including battery charge gauges and a traversing gantry crane. Read the [scene factories](samples/Simple3D.Shared/DemoScenes.cs) to adapt an example. Patterned Surface demonstrates selectable checker cells and directional shading using colored meshes.
 
 ## Documentation
 

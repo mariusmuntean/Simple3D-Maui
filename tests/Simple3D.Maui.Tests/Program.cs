@@ -641,6 +641,30 @@ var tests = new (string Name, Action Run)[]
         Assert(recovered.Width == 1170 && recovered.Height == 1320,
             "widening the camera view did not restore full resolution");
     }),
+    ("gallery reset clears highlighting and notifies once even in display only mode", () =>
+    {
+        var page = new GalleryPage();
+        var grid = (Grid)page.Content;
+        var view = (SceneView)grid.Children.OfType<Border>().Single().Content;
+        var footer = (VerticalStackLayout)grid.Children.OfType<ScrollView>().Single().Content;
+        var tools = (HorizontalStackLayout)footer.Children.OfType<ScrollView>().Single().Content;
+        var reset = tools.Children.OfType<Button>().Single(button => button.Text == "Reset");
+        var target = view.CapturePaintTarget(200, 200);
+        var original = view.PaintBitmap(target).GetPixelSpan().ToArray();
+        var point = Enumerable.Range(0, 40000).First(i => target.Pick(i % 200, i / 200) is not null);
+        view.SelectAt(point % 200, point / 200, 200, 200);
+        Assert(view.SelectedShape is not null, "fixture did not select a shape");
+        var cleared = 0;
+        view.SelectionChanged += (_, shape) => { if (shape is null) cleared++; };
+        view.IsInteractive = false;
+        ((IButtonController)reset).SendClicked();
+        Assert(view.SelectedShape is null, "Reset cleared the label but retained the selected shape");
+        Assert(view.PaintBitmap(view.CapturePaintTarget(200, 200)).GetPixelSpan().SequenceEqual(original),
+            "Reset retained highlighted pixels");
+        ((IButtonController)reset).SendClicked();
+        Assert(cleared == 1, "Reset omitted or repeated the selection-cleared notification");
+        view.ReleaseRenderResources();
+    }),
     ("all gallery scenes remain reachable on narrow screens", () =>
     {
         var page = new GalleryPage();
