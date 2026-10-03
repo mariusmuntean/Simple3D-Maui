@@ -4,6 +4,20 @@ Updated: 2026-10-03. Fetch remote state before resuming.
 
 ## Current integration state
 
+### Native rendering checkpoint (2026-10-03)
+
+The rendering branch now uses a supported local Apple toolchain: .NET SDK 10.0.401, workload set 10.0.401.1, Apple packs 27.0.10722 and Xcode 27.0. Xcode version validation is enabled. The Apple Debug demo interprets its own assembly and compiles the rendering libraries and framework assemblies (`MtouchInterpreter=-all,Simple3D.Demo`). Clean and rebuild when changing workloads or interpreter settings. Rider's local toolset was updated to SDK 10.0.401. Its fresh solution build passed with no reported problems after a default demo restore repaired Android runtime targets overwritten by targeted Apple builds. A fresh Rider launch still needs verification.
+
+A native ARM64 compilation defect produced invalid view coordinates when three `Vector3.Dot` calls appeared directly as constructor arguments. Portable tests did not reproduce it. Assigning the three vector fields separately fixes the observed native failure without changing the public API or camera math. The Debug-only `NativeRenderProbe` checks visible pixels, picking, owned/reusable equivalence and retained snapshots for all seven scenes inside the actual Apple runtime. Run `bash scripts/ios-simulator-smoke.sh --render-probe` after building the iOS bundle; a completion marker is required and the script cleans up its own session.
+
+The final configuration passed all seven native scene probes on Mac Catalyst and the iPhone 17 Pro / iOS 26.5 simulator. At 512×315, native Core rendering measured 2.6–8.2 ms/frame across those scenes. Molecule fell from about 61 ms to 8.2 ms in the same simulator after compiling the rendering path. These are Core render costs, not displayed FPS or input latency. The ordinary iOS smoke check also displayed Equipment, Packing and Surface and stopped its app and simulator afterward. Leave the user's separate booted iPhone 17 session untouched.
+
+Local portable checks passed Core 39/39, MAUI 30/30 and scripts 13/13. DocFX metadata and site builds passed with zero warnings/errors. Apple Debug builds passed with one warning about the deprecated user-level Xamarin Settings.plist. Zoom now uses a bounded preview throughout its gesture; linear bitmap sampling softens enlarged preview edges. Tests cover both touch and cumulative Mac pinch preview completion/cancellation and interpolated pixels. This does not establish full static-scene antialiasing or physically smooth gestures.
+
+The rebuilt Mac gallery was also launched and visually checked after unlocking: clicking selected the motor with a visible contour, mouse orbit retained selection, and Telemetry animation changed bar heights. The app was stopped afterward. Rotation exposed overlapping world labels; the iOS Surface screenshot also exposes a label clipped at the right edge. Improve label layout.
+
+Remaining gates: actual iOS touch/pinch and animation pacing; physical Mac trackpad pinch; fresh Rider launch of this configuration; full-resolution edge quality; Linux execution of the Skia dependency fix. Keep #6 draft until its native interaction gates are verified. No hosted checks were dispatched for this iteration.
+
 Repository: `mariusmuntean/Simple3D-Maui` (private).
 
 PR #9 merged into `main` at `2d6f5c97417e4ec928e1a46a0e887e5de75c74a9`. It stops iOS smoke apps and simulators on success, failure and interruption, selects an idle supported iPhone, routes Apple builds to Xcode 27, raises the demo's Mac Catalyst minimum to 17, and adopts the iOS scene lifecycle. Local Core 39/39, MAUI 13/13 and script tests 11/11 passed. Both Apple builds and the real local three-scene iOS smoke check passed. [All six hosted jobs passed](https://github.com/mariusmuntean/Simple3D-Maui/actions/runs/37105153071), including iOS and Android app launches.
@@ -97,7 +111,7 @@ git switch --track origin/render-bitmap-reuse
 
 Use a separate checkout or worktree for another branch. Read the live PR and branch state before editing. The original maturity branch and old handoff are historical.
 
-Use a .NET 10 SDK with appropriate MAUI workloads. There is no committed `global.json`; check installed SDK/workload and Xcode versions. On the original Mac the workload-enabled SDK was under `$HOME/.dotnet`, while the Homebrew SDK lacked MAUI workloads. The demo's local `ValidateXcodeVersion=false` setting permits its tested local toolchain combination; it does not establish official support. Hosted Apple jobs use the Xcode 27 preview image.
+Use a .NET 10 SDK with appropriate MAUI workloads. There is no committed `global.json`; check installed SDK/workload and Xcode versions. On the original Mac the workload-enabled SDK is under `$HOME/.dotnet`, while the Homebrew SDK lacks MAUI workloads. Use SDK 10.0.401 and workload set 10.0.401.1 with Xcode 27; the demo validates Xcode during builds. Hosted Apple jobs use the Xcode 27 image.
 
 ```bash
 dotnet run --project tests/Simple3D.Core.Tests -c Release

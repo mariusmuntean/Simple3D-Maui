@@ -56,6 +56,7 @@ public sealed class SceneView : SKCanvasView
     private bool _subscriptionsActive;
     private bool _wasConnected;
     private bool _panActive;
+    private bool _pinchActive;
     private double _lastPanX, _lastPanY;
     private double _lastMacPinchScale = 1;
     private readonly List<IGestureRecognizer> _interactionGestures = new();
@@ -80,7 +81,12 @@ public sealed class SceneView : SKCanvasView
         pan.PanUpdated += (_, args) => ApplyPan(args.StatusType, args.TotalX, args.TotalY);
         _interactionGestures.Add(pan);
         var pinch = new PinchGestureRecognizer();
-        pinch.PinchUpdated += (_, args) => { if (args.Status == GestureStatus.Running) Zoom((float)args.Scale); };
+        pinch.PinchUpdated += (_, args) =>
+        {
+            _pinchActive = args.Status is GestureStatus.Started or GestureStatus.Running;
+            if (args.Status == GestureStatus.Running) Zoom((float)args.Scale);
+            else if (!_pinchActive) Refresh();
+        };
         _interactionGestures.Add(pinch);
 #endif
         var tap = new TapGestureRecognizer();
@@ -168,8 +174,15 @@ public sealed class SceneView : SKCanvasView
     internal void ApplyMacPinch(GestureStatus status, double scale)
     {
         if (!IsInteractive) return;
-        if (status == GestureStatus.Started) { _lastMacPinchScale = 1; return; }
-        if (status != GestureStatus.Running) { _lastMacPinchScale = 1; return; }
+        if (status == GestureStatus.Started) { _lastMacPinchScale = 1; _pinchActive = true; return; }
+        if (status != GestureStatus.Running)
+        {
+            _lastMacPinchScale = 1;
+            _pinchActive = false;
+            Refresh();
+            return;
+        }
+        _pinchActive = true;
         if (!double.IsFinite(scale) || scale <= 0) return;
         Zoom((float)(scale / _lastMacPinchScale));
         _lastMacPinchScale = scale;
@@ -250,7 +263,7 @@ public sealed class SceneView : SKCanvasView
         base.OnHandlerChanged();
         if (Handler is null)
         {
-            _panActive = false;
+            _panActive = _pinchActive = false;
             ReleaseRenderResources();
             if (_wasConnected) SetSubscriptions(false);
         }
@@ -327,7 +340,7 @@ public sealed class SceneView : SKCanvasView
 
     private void UpdateInteraction()
     {
-        _panActive = false;
+        _panActive = _pinchActive = false;
         GestureRecognizers.Clear();
         if (IsInteractive)
             foreach (var gesture in _interactionGestures) GestureRecognizers.Add(gesture);
@@ -350,7 +363,7 @@ public sealed class SceneView : SKCanvasView
         _paintSurfaceWidth = surfaceWidth;
         _paintSurfaceHeight = surfaceHeight;
         var (width, height) = RenderSize(surfaceWidth, surfaceHeight,
-            _panActive ? Math.Min(DragPreviewMaximumDimension, MaximumRenderDimension) : MaximumRenderDimension);
+            (_panActive || _pinchActive) ? Math.Min(DragPreviewMaximumDimension, MaximumRenderDimension) : MaximumRenderDimension);
         var requestedWidth = width;
         var requestedHeight = height;
         if (_paintTarget is not null && !_paintTargetDirty &&
@@ -505,12 +518,21 @@ public sealed class SceneView : SKCanvasView
         _failedProbeSamples = 0;
     }
 
+    internal static void DrawSceneBitmap(SKCanvas canvas, SKBitmap bitmap, int width, int height)
+    {
+        using var shader = bitmap.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp,
+            new SKSamplingOptions(SKFilterMode.Linear),
+            SKMatrix.CreateScale((float)width / bitmap.Width, (float)height / bitmap.Height));
+        using var paint = new SKPaint { Shader = shader };
+        canvas.DrawRect(new SKRect(0, 0, width, height), paint);
+    }
+
     private void Paint(object? sender, SKPaintSurfaceEventArgs args)
     {
         var canvas = args.Surface.Canvas;
         if (args.Info.Width < 1 || args.Info.Height < 1) return;
         var target = CapturePaintTarget(args.Info.Width, args.Info.Height);
-        canvas.DrawBitmap(PaintBitmap(target), new SKRect(0, 0, args.Info.Width, args.Info.Height));
+        DrawSceneBitmap(canvas, PaintBitmap(target), args.Info.Width, args.Info.Height);
         if (target.Labels.Count == 0) return;
         using var font = new SKFont(SKTypeface.Default, LabelFontSize(args.Info.Width, Width));
         using var paint = new SKPaint { IsAntialias = true };

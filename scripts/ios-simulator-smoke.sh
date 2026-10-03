@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+mode="${1:-}"
+case "$mode" in
+    ''|--render-probe) ;;
+    *) echo 'Usage: ios-simulator-smoke.sh [--render-probe]' >&2; exit 2 ;;
+esac
+
 device="$(python3 - <<'PY'
 import json, subprocess
 devices = json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', 'devices', 'available', '-j']))['devices']
@@ -38,6 +44,12 @@ xcrun simctl boot "$device"
 xcrun simctl bootstatus "$device" -b
 xcrun simctl install "$device" "$app"
 mkdir -p artifacts
+if [ "$mode" = --render-probe ]; then
+    SIMCTL_CHILD_SIMPLE3D_RENDER_PROBE=1 xcrun simctl launch --console "$device" dev.simple3d.gallery \
+        2>&1 | tee artifacts/ios-render-probe.log
+    grep -q NATIVE_RENDER_PROBE_PASS artifacts/ios-render-probe.log
+    exit 0
+fi
 for scene in Equipment Packing Surface; do
     xcrun simctl terminate "$device" dev.simple3d.gallery 2>/dev/null || true
     SIMCTL_CHILD_SIMPLE3D_GALLERY_SCENE="$scene" xcrun simctl launch "$device" dev.simple3d.gallery

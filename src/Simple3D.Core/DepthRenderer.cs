@@ -240,7 +240,12 @@ public sealed class DepthRenderer
         Vector3 View(Vector3 p)
         {
             var relative = p - basis.Eye;
-            return new(Vector3.Dot(relative, basis.Right), Vector3.Dot(relative, basis.Up), Vector3.Dot(relative, basis.Forward));
+            // Separate assignments avoid corrupt constructor arguments in Mono ARM64 AOT.
+            var result = default(Vector3);
+            result.X = Vector3.Dot(relative, basis.Right);
+            result.Y = Vector3.Dot(relative, basis.Up);
+            result.Z = Vector3.Dot(relative, basis.Forward);
+            return result;
         }
 
         // Double projection keeps tiny near planes and orthographic heights finite.

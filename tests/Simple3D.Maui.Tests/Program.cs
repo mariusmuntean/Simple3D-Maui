@@ -72,7 +72,7 @@ var tests = new (string Name, Action Run)[]
             "first bitmap pixels differ from frame");
         using var painted = new SKBitmap(new SKImageInfo(96, 80, SKColorType.Bgra8888, SKAlphaType.Opaque));
         using var canvas = new SKCanvas(painted);
-        canvas.DrawBitmap(bitmap, 0, 0);
+        SceneView.DrawSceneBitmap(canvas, bitmap, 96, 80);
         var before = painted.GetPixelSpan().ToArray();
         scene.Add(Shape.Sphere().At(1, 0, 0));
         var second = view.CapturePaintTarget(96, 80);
@@ -80,7 +80,7 @@ var tests = new (string Name, Action Run)[]
         Assert(ReferenceEquals(bitmap, view.PaintBitmap(second)), "same-size paint allocated a new bitmap");
         Assert(bitmap.GetPixelSpan().SequenceEqual(MemoryMarshal.AsBytes(second.Pixels.Span)),
             "updated bitmap pixels differ from frame");
-        canvas.DrawBitmap(bitmap, 0, 0);
+        SceneView.DrawSceneBitmap(canvas, bitmap, 96, 80);
         Assert(!before.SequenceEqual(painted.GetPixelSpan().ToArray()), "native paint stayed stale after a scene update");
         Assert(painted.GetPixelSpan().SequenceEqual(MemoryMarshal.AsBytes(second.Pixels.Span)),
             "native paint differs from the updated frame");
@@ -183,6 +183,39 @@ var tests = new (string Name, Action Run)[]
         Assert(view.PickAt(40, 40, 80, 80) is not null, "initial pick missed");
         scene.Clear();
         Assert(view.PickAt(40, 40, 80, 80) is null, "stale shape was picked");
+    }),
+    ("zoom uses a bounded preview for its entire gesture", () =>
+    {
+        var view = new SceneView { Scene = new Scene().Add(Shape.Box()), Camera = new Camera(10) };
+        view.ApplyMacPinch(GestureStatus.Started, 1);
+        foreach (var scale in new[] { 1.1, 1.2, 1.4 })
+        {
+            view.ApplyMacPinch(GestureStatus.Running, scale);
+            Assert(view.CapturePaintTarget(2048, 1260).Width <= 512, "zoom rendered full desktop resolution during the gesture");
+        }
+        view.ApplyMacPinch(GestureStatus.Completed, 1.4);
+        Assert(view.CapturePaintTarget(2048, 1260).Width == 2048, "zoom release did not restore detail");
+        var pinch = (IPinchGestureController)view.GestureRecognizers.OfType<PinchGestureRecognizer>().Single();
+        pinch.SendPinchStarted(view, new Microsoft.Maui.Graphics.Point(.5, .5));
+        pinch.SendPinch(view, 1.1, new Microsoft.Maui.Graphics.Point(.5, .5));
+        Assert(view.CapturePaintTarget(2048, 1260).Width <= 512, "touch pinch did not use the preview");
+        pinch.SendPinchCanceled(view);
+        Assert(view.CapturePaintTarget(2048, 1260).Width == 2048, "cancelled touch pinch left a preview");
+    }),
+    ("scaled scene edges use interpolated pixels", () =>
+    {
+        using var source = new SKBitmap(new SKImageInfo(2, 2, SKColorType.Bgra8888, SKAlphaType.Opaque));
+        source.SetPixel(0, 0, SKColors.Black);
+        source.SetPixel(0, 1, SKColors.Black);
+        source.SetPixel(1, 0, SKColors.White);
+        source.SetPixel(1, 1, SKColors.White);
+        using var destination = new SKBitmap(new SKImageInfo(20, 20, SKColorType.Bgra8888, SKAlphaType.Opaque));
+        using var canvas = new SKCanvas(destination);
+        SceneView.DrawSceneBitmap(canvas, source, 20, 20);
+        Assert(destination.GetPixel(1, 10).Red == 0 && destination.GetPixel(18, 10).Red == 255,
+            "sampling changed solid interior colors");
+        var edge = destination.GetPixel(9, 10).Red;
+        Assert(edge > 0 && edge < 255, "magnified boundary still uses nearest-neighbor pixel steps");
     }),
     ("pinch applies incremental updates", () =>
     {

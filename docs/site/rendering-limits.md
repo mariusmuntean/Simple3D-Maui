@@ -30,6 +30,20 @@ In the checked-in animated Surface benchmark at 768×576 on one Mac, the owned p
 
 `SceneView.MaximumRenderDimension` controls the largest physical render dimension used during native painting. Its default is 2,048. Lower it while animating or while a scene is being manipulated, then restore it for still images. The view keeps the aspect ratio and upscales the rendered image to its layout size. Because both pixel and picking buffers scale with pixel count, changing the maximum dimension from 2,048 to 768 can substantially reduce allocation and raster work. This control does not change explicit `CaptureFrame(width, height)` requests. A display-only `SceneView` can set `IsInteractive = false` to release its built-in gestures.
 
+## Native diagnostics
+
+The Apple demo's Debug configuration compiles the rendering libraries and framework assemblies, while retaining interpreter support for the demo assembly. Changes to compiled rendering code require a rebuild. Interpreter overhead can make Debug rendering substantially slower than the same renderer running compiled; measure the configuration you intend to use.
+
+After building the Debug iOS simulator app, run:
+
+```bash
+bash scripts/ios-simulator-smoke.sh --render-probe
+```
+
+This runs a Debug-only check inside the native app runtime. It verifies a visible, pickable box and every gallery scene, compares owned and reusable pixels, checks retained snapshots, and measures ten camera-orbit renders per scene at 512×315. It exits before opening the gallery and shuts down its test simulator. A missing completion marker fails the script even if the launcher reports success. Timings cover Core rendering, not displayed frame rate or input latency. Run the ordinary smoke check separately to verify the actual gallery UI.
+
+Clean and rebuild native outputs after changing interpreter settings or Apple workloads so cached native assemblies do not mix configurations. Use a matching SDK, workload and Xcode combination; the [Xcode 27 release instructions](https://github.com/dotnet/macios/releases/tag/dotnet-10.0.1xx-xcode27.0-10722) specify .NET SDK 10.0.401 and workload set 10.0.401.1.
+
 `SceneView` uses a reusable `RenderTarget` for native painting and picking. It reuses its Skia bitmap at the same render dimensions, copies pixels only when the target changes, and allocates a new target and bitmap when dimensions change. Explicit `CaptureFrame` calls still return owned snapshots. On native handler disconnect, the view releases its bitmap, reusable target, cached owned frame, and depth scratch buffer; snapshots held by callers remain valid.
 
 If a zoomed scene exceeds the raster work budget at the requested paint size, the view halves its internal render size until it can draw a frame. It keeps that size during ongoing interaction, then probes full resolution when camera or scene complexity falls or painting becomes idle. A failed probe has a short cooldown so animation does not repeat the expensive attempt every frame. `RenderTarget.RasterSamples` reports the bounding-box work of its last successful render; it resets to zero when a render starts or fails.
