@@ -12,12 +12,36 @@ The remaining work is committed on these branches:
 
 | Branch | PR | Scope and next gate |
 | --- | --- | --- |
-| `render-bitmap-reuse` | [#6](https://github.com/mariusmuntean/Simple3D-Maui/pull/6) | Native bitmap and render-target reuse, raster fallback/recovery. Update from main; verify physical Mac trackpad pinch and native interaction/frame pacing before merge. |
+| `render-bitmap-reuse` | [#6](https://github.com/mariusmuntean/Simple3D-Maui/pull/6) | Native bitmap and render-target reuse, raster fallback/recovery. Updated from main at `8ecfb6f`; fix the Linux Skia native dependency failure, then verify physical Mac trackpad pinch and native interaction/frame pacing before merge. |
 | `showcase-engineering-scenes` | [#8](https://github.com/mariusmuntean/Simple3D-Maui/pull/8) | Robot Arm, Orbit, Wind, renderer recovery/traversal improvements and Android smoke cleanup. Update from main and combine with #6 after #6 passes its gates. |
-| `package-readiness` | [#10](https://github.com/mariusmuntean/Simple3D-Maui/pull/10) | Package metadata and isolated package consumers. Updated from main; check the current hosted run before merging. |
+| `package-readiness` | [#10](https://github.com/mariusmuntean/Simple3D-Maui/pull/10) | Package metadata and isolated package consumers. Updated from main at `37793b3`; check hosted run `37107900337` before merging. |
 | `showcase-workflows` | [#11](https://github.com/mariusmuntean/Simple3D-Maui/pull/11) | Conveyor Inspection, Solar Tracker, Packet Routing, Drone Survey. Stacked on #8; retarget to main after #8 merges and repeat combined validation. |
 
 Preserve the existing PRs. All subsequent work should be additive. Keep each PR draft and unmerged while checks required for its scope remain incomplete.
+
+## Transfer checkpoint (2026-10-03)
+
+The owner requested committing and pushing all work and context to continue on another computer. Both working trees had no uncommitted source drafts or local-only branch commits before this handoff update. All implementation branches are on GitHub. Generated build outputs, restored packages, local IDE settings and tools remain ignored and reproducible; do not transfer them as source.
+
+Start from `render-bitmap-reuse` and read this file first. The other current checkout is `package-readiness`. Branch heads before this documentation commit:
+
+- `main`: `2d6f5c97417e4ec928e1a46a0e887e5de75c74a9` (PR #9 merged).
+- `render-bitmap-reuse`: `8ecfb6f6f369edb8236108c8c6d011dbfffc9f0b`.
+- `package-readiness`: `37793b3532dc40c4d30edac9c4d31823b1b8d807`.
+- `showcase-engineering-scenes`: `8a3dd728ded298a8a7341dc399bf898a1ae5e08e`.
+- `showcase-workflows`: `cc6f8cee7701d46300198dbcdfc31ee1f6f88714`.
+
+Fresh local checks on the rendering branch: Core **39/39**, MAUI **23/23**, scripts **11/11**, all exit 0. Rider build session `9757d90f-3a82-467e-bd00-d2b34655bc83` completed successfully with no reported problems. These results do not establish that hosted Linux native dependencies work.
+
+**Next concrete failure:** [rendering run 37107955413](https://github.com/mariusmuntean/Simple3D-Maui/actions/runs/37107955413) has a failed `core` job. Core passed 39/39, but MAUI passed 19/23: four native paint tests failed loading `libSkiaSharp` on Linux (`DllNotFoundException` from `SKImageInfo`). Inspect the test project's native asset references and add the appropriate Linux runtime dependency; preserve the native paint tests. Android build/launch, Mac Catalyst build and documentation jobs passed; iOS was still running at this checkpoint. Recheck the exact head's run after a fix.
+
+[Package run 37107900337](https://github.com/mariusmuntean/Simple3D-Maui/actions/runs/37107900337) had five successful jobs and an iOS job still running at this checkpoint. It is not yet a confirmed all-green run. New documentation pushes create new head runs: inspect those before merging.
+
+The latest Rider iOS run started an iPhone 17 / iOS 26.5 app, but reported an IDE socket refusal and an old lifecycle warning. The auto-generated iOS configuration has no Build-before-launch step; a stale Debug bundle remains a possibility, not a proven diagnosis. There are duplicate `Simple3D.Demo` names across Android, iOS and macOS configurations, so choosing by name is ambiguous. No portable `.run` configurations have been added yet. Next: save distinct repository-relative Apple configurations with a build step, verify Rider recognizes them, build fresh bundles, launch each and verify the actual UI. Do not copy machine-specific ignored workspace settings or assume debugging/Hot Reload works.
+
+The active Rider run was stopped through Rider, its exact simulator was shut down, and process/device inspection found no remaining gallery or mlaunch process and no booted simulator. No testing sessions need to be resumed or cleaned up on this machine.
+
+Suggested order: fix #6 Linux dependencies; complete its native checks; merge verified #10 independently; merge ready #6; update #8 from main and verify/merge; then retarget and verify #11. Fetch first and inspect current PR state, because CI or integration may have changed since this snapshot. Keep the existing PRs and preserve additive work. Publication is still a separate future milestone.
 
 ## Package checkpoint
 
