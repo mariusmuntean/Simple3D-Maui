@@ -1,0 +1,14 @@
+<Project>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Simple3D.Core' or '$(MSBuildProjectName)' == 'Simple3D.Maui'">
+    <Version>0.1.0-preview.1</Version>
+    <Authors>Marius Muntean</Authors>
+    <Copyright>Copyright (c) 2026 Marius Muntean</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/mariusmuntean/Simple3D-Maui</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://mariusmuntean.github.io/Simple3D-Maui/</PackageProjectUrl>
+    <PackageTags>maui;3d;graphics;skia;visualization</PackageTags>
+    <Description Condition="'$(MSBuildProjectName)' == 'Simple3D.Core'">Portable opaque 3D scenes, meshes, cameras, software depth rendering and picking.</Description>
+    <Description Condition="'$(MSBuildProjectName)' == 'Simple3D.Maui'">Interactive SkiaSharp 3D scene control for .NET MAUI on iOS, Android and Mac Catalyst.</Description>
+  </PropertyGroup>
+</Project>

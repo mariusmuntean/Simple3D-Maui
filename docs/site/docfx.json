@@ -17,6 +17,12 @@
     "globalMetadata": {
       "_appTitle": "Simple3D",
       "_appName": "Simple3D",
+      "_appLogoPath": "images/brand-mark.svg",
+      "_appFaviconPath": "images/favicon.png",
+      "_gitContribute": {
+        "repo": "https://github.com/mariusmuntean/Simple3D-Maui",
+        "branch": "main"
+      },
       "_enableSearch": true
     }
   }

@@ -8,7 +8,7 @@
 | Scene node visits | 100,000 | Bounds grouping traversal |
 | Aggregate triangles | 1,000,000 | Bounds and render traversal |
 | Raster bounding-box samples | 16,000,000 per frame | Bounds overlapping screen-filling work |
-| Group hierarchy | 64 levels | Bounds recursion |
+| Group hierarchy | 64 levels | Bounds nesting |
 
 The sample-work budget counts clipped triangle bounding boxes, including pixels outside the triangle but inside its box. Dense overlapping scenes can reach it before the triangle limit. Direct `DepthRenderer.Render` calls then throw `RasterBudgetExceededException`; reduce scene complexity, viewport size, or visible overlap. `SceneView` retries the native paint at half resolution when this happens, keeping interactive zoom usable at the cost of image sharpness. `Camera.FitToScene` calculates bounds before mutation and leaves the camera unchanged if a budget or overflow check fails.
 

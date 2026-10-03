@@ -25,7 +25,9 @@ case "$abi" in
     x86_64) rid=android-x64 ;;
     *) echo "Unsupported emulator ABI: $abi" >&2; exit 1 ;;
 esac
-app="$(find "samples/Simple3D.Demo/bin/Debug/net10.0-android/$rid" \
+configuration="${BUILD_CONFIGURATION:-Debug}"
+case "$configuration" in Debug|Release) ;; *) echo 'Invalid BUILD_CONFIGURATION' >&2; exit 2 ;; esac
+app="$(find "samples/Simple3D.Demo/bin/$configuration/net10.0-android/$rid" \
     -maxdepth 1 -type f -name '*-Signed.apk' -print -quit)"
 test -n "$app" || { echo 'Built Android APK not found' >&2; exit 1; }
 adb install -r "$app"

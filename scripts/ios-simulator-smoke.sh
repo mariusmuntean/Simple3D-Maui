@@ -21,7 +21,9 @@ else:
 PY
 )"
 
-app="$(find samples/Simple3D.Demo/bin/Debug/net10.0-ios/iossimulator-arm64 \
+configuration="${BUILD_CONFIGURATION:-Debug}"
+case "$configuration" in Debug|Release) ;; *) echo 'Invalid BUILD_CONFIGURATION' >&2; exit 2 ;; esac
+app="$(find "samples/Simple3D.Demo/bin/$configuration/net10.0-ios/iossimulator-arm64" \
     -maxdepth 2 -type d -name Simple3D.Demo.app -print -quit)"
 test -n "$app" || { echo 'Built demo app bundle not found' >&2; exit 1; }
 codesign --verify --deep --strict --verbose=2 "$app"
