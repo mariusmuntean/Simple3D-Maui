@@ -1,8 +1,5 @@
 name: Build and test
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
 concurrency:
   group: build-${{ github.workflow }}-${{ github.ref }}
@@ -34,6 +31,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install native text prerequisites
+        run: sudo apt-get update && sudo apt-get install -y fontconfig fonts-dejavu-core
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
@@ -42,20 +41,24 @@ jobs:
       - run: dotnet build src/Simple3D.Core --configuration Release --no-restore
       - run: dotnet pack src/Simple3D.Core --configuration Release --no-build --output artifacts/packages
   platforms:
-    runs-on: macos-26
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - tfm: net10.0-ios
             rid: iossimulator-arm64
+            runner: xcode-27
           - tfm: net10.0-maccatalyst
             rid: maccatalyst-arm64
+            runner: xcode-27
           - tfm: net10.0-android
             rid: android-arm64
+            runner: macos-26
     steps:
       - uses: actions/checkout@v4
-      - run: sudo xcode-select --switch /Applications/Xcode_26.6.app
+      - run: sudo xcode-select --switch /Applications/Xcode_27.0.app
+        if: matrix.tfm != 'net10.0-android'
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x

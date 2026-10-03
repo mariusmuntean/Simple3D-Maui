@@ -21,7 +21,7 @@ public sealed class Scene
     public IReadOnlyList<Shape> Shapes { get; }
     /// <summary>World anchored overlay labels.</summary>
     public IReadOnlyList<WorldLabel> Labels { get; }
-    /// <summary>Raised once after each successful mutation; no-op changes do not notify.</summary>
+    /// <summary>Raised once after each successful mutation; replacements provide <see cref="ShapeReplacementEventArgs"/>.</summary>
     public event EventHandler? Changed;
 
     /// <summary>Appends a node and notifies observers.</summary>
@@ -47,7 +47,7 @@ public sealed class Scene
         var index = _shapes.IndexOf(oldShape);
         if (index < 0 || ReferenceEquals(oldShape, newShape)) return false;
         _shapes[index] = newShape;
-        Notify();
+        Changed?.Invoke(this, new ShapeReplacementEventArgs(oldShape, newShape));
         return true;
     }
 
@@ -133,6 +133,16 @@ public sealed class Scene
             any = true;
         }
     }
+}
+
+/// <summary>A replaced scene node. Corresponding child positions represent the same parts in the replacement tree.</summary>
+public sealed class ShapeReplacementEventArgs : EventArgs
+{
+    /// <summary>The previous immutable node.</summary>
+    public Shape OldShape { get; }
+    /// <summary>The replacement immutable node.</summary>
+    public Shape NewShape { get; }
+    internal ShapeReplacementEventArgs(Shape oldShape, Shape newShape) => (OldShape, NewShape) = (oldShape, newShape);
 }
 
 /// <summary>World-space axis-aligned bounds.</summary>

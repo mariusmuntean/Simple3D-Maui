@@ -207,19 +207,19 @@ public static class DemoScenes
         var scene = new Scene();
         scene.Add(Shape.Box(0xFF526B9A).Named("Workcell").Scaled(2.8f, .1f, 1.8f).At(0, -1.06f, 0));
         scene.Add(Shape.Cylinder(0xFF7894C8).Named("Base").Scaled(.72f, .28f, .72f).At(-.35f, -.86f, 0));
+        var shoulder = Shape.Sphere(0xFFFFBE79).Named("Shoulder").Scaled(.24f);
+        var upperLink = Shape.Box(0xFF7894C8).Named("Upper link").Scaled(.32f, 1.08f, .32f).At(0, .54f, 0);
+        var elbowBase = Shape.Group(
+            Shape.Sphere(0xFFFFBE79).Named("Elbow").Scaled(.22f),
+            Shape.Box(0xFF8DA9FF).Named("Forearm").Scaled(.26f, .9f, .26f).At(0, .45f, 0),
+            Shape.Box(0xFF76DBC7).Named("Gripper").Scaled(.46f, .14f, .28f).At(0, .96f, 0))
+            .At(0, 1.08f, 0);
         Shape ArmAt(float time)
         {
             var shoulderAngle = .24f + .3f * MathF.Sin(time * 1.5f);
             var elbowAngle = -.48f - .42f * MathF.Sin(time * 2.2f);
-            var elbow = Shape.Group(
-                Shape.Sphere(0xFFFFBE79).Named("Elbow").Scaled(.22f),
-                Shape.Box(0xFF8DA9FF).Named("Forearm").Scaled(.26f, .9f, .26f).At(0, .45f, 0),
-                Shape.Box(0xFF76DBC7).Named("Gripper").Scaled(.46f, .14f, .28f).At(0, .96f, 0))
-                .At(0, 1.08f, 0).Rotated(0, 0, elbowAngle);
-            return Shape.Group(
-                Shape.Sphere(0xFFFFBE79).Named("Shoulder").Scaled(.24f),
-                Shape.Box(0xFF7894C8).Named("Upper link").Scaled(.32f, 1.08f, .32f).At(0, .54f, 0),
-                elbow).Named("Armature").At(-.35f, -.65f, 0).Rotated(0, 0, shoulderAngle);
+            return Shape.Group(shoulder, upperLink, elbowBase.Rotated(0, 0, elbowAngle))
+                .Named("Armature").At(-.35f, -.65f, 0).Rotated(0, 0, shoulderAngle);
         }
         var arm = ArmAt(0);
         scene.Add(arm);
@@ -245,13 +245,13 @@ public static class DemoScenes
                 new(radius * MathF.Cos(b), 0, radius * MathF.Sin(b)), .03f, 0xFF526B9A).Named("Orbit path");
         }
         scene.Add(Shape.Group(path).Named("Orbit path"));
+        var planet = Shape.Sphere(0xFF80B2FF).Named("Planet").Scaled(.42f);
+        var moon = Shape.Sphere(0xFFDDE9FF).Named("Moon").Scaled(.16f);
         Shape BodiesAt(float time)
         {
             var moonAngle = time * 2.1f;
             var planetSystem = Shape.Group(
-                Shape.Sphere(0xFF80B2FF).Named("Planet").Scaled(.42f),
-                Shape.Sphere(0xFFDDE9FF).Named("Moon").Scaled(.16f)
-                    .At(.48f * MathF.Cos(moonAngle), .12f * MathF.Sin(moonAngle), .48f * MathF.Sin(moonAngle)))
+                planet, moon.At(.48f * MathF.Cos(moonAngle), .12f * MathF.Sin(moonAngle), .48f * MathF.Sin(moonAngle)))
                 .Named("Planet system").At(radius, 0, 0);
             return Shape.Group(planetSystem).Named("Orbital bodies").Rotated(0, time * .75f, 0);
         }
@@ -271,16 +271,14 @@ public static class DemoScenes
         scene.Add(Shape.Box(0xFF526B9A).Named("Foundation").Scaled(2.5f, .12f, 1.7f).At(0, -1.05f, 0));
         scene.Add(Shape.Cylinder(0xFF8DA9FF).Named("Tower").Scaled(.18f, 2f, .18f).At(0, 0, 0));
         scene.Add(Shape.Box(0xFF7894C8).Named("Nacelle").Scaled(.5f, .26f, .42f).At(0, 1.12f, 0));
-        Shape RotorAt(float time)
-        {
-            var blades = new Shape[4];
-            blades[0] = Shape.Sphere(0xFFFFBE79).Named("Hub").Scaled(.23f);
-            for (var i = 0; i < 3; i++)
-                blades[i + 1] = Shape.Group(Shape.Box(0xFFDDE9FF).Named($"Blade {i + 1}")
-                    .Scaled(.14f, .92f, .07f).At(0, .55f, 0))
-                    .Rotated(0, 0, i * 2 * MathF.PI / 3);
-            return Shape.Group(blades).Named("Rotor").At(0, 1.12f, .27f).Rotated(0, 0, -time * 2.4f);
-        }
+        var blades = new Shape[4];
+        blades[0] = Shape.Sphere(0xFFFFBE79).Named("Hub").Scaled(.23f);
+        for (var i = 0; i < 3; i++)
+            blades[i + 1] = Shape.Group(Shape.Box(0xFFDDE9FF).Named($"Blade {i + 1}")
+                .Scaled(.14f, .92f, .07f).At(0, .55f, 0))
+                .Rotated(0, 0, i * 2 * MathF.PI / 3);
+        var rotorBase = Shape.Group(blades).Named("Rotor").At(0, 1.12f, .27f);
+        Shape RotorAt(float time) => rotorBase.Rotated(0, 0, -time * 2.4f);
         var rotor = RotorAt(0);
         scene.Add(rotor);
         scene.AddLabel(new("WIND / THREE BLADES", new(-1.1f, 1.65f, 0), 0xFFE4ECFF));

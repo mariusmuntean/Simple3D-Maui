@@ -39,6 +39,8 @@ Core colors are opaque ARGB (`0xFFRRGGBB`). Shape transforms return immutable co
 
 For current branch status, validation evidence and continuation steps, see the [project handoff](docs/HANDOFF.md).
 
+Development checks run locally. The hosted workflow is manually triggered from Actions when runner-specific validation is needed; ordinary commits do not schedule builds.
+
 Open [Simple3D.sln](Simple3D.sln) in a .NET 10 MAUI-capable IDE. Select `Simple3D.Demo` as the startup project and a device or simulator. The solution includes:
 
 - `src/Simple3D.Core`: portable indexed meshes, scenes, cameras, depth rendering, owned frames and picking.
@@ -57,6 +59,8 @@ python3 -m unittest discover -s scripts -p 'test_*.py'
 dotnet run --project samples/Simple3D.Examples -c Release -- --all output
 ```
 
+Compare selected animation and orbit CPU costs with `dotnet run --project tests/Simple3D.Maui.Tests -c Release -- --performance`. It reports median processing times, managed allocations and Core pixel hashes for every scene. Run comparisons under similar machine load; this probe excludes native presentation and does not measure displayed FPS.
+
 The console runner writes binary PPM images. To regenerate the PNG documentation illustrations, install Pillow and run `python3 scripts/render-doc-images.py`.
 
 ## Documentation site
@@ -72,9 +76,17 @@ python3 -m http.server 8000 --directory _site
 
 Open `http://localhost:8000`. API metadata includes both Core and MAUI and therefore needs the MAUI workload. CI builds the site and uploads the static output. Hosting only requires serving `_site` as static files; this repository does not publish it automatically.
 
+DocFX resolves `dotnet` from your shell's `PATH` when restoring projects. If you have multiple SDK installations, put the one with MAUI workloads first in `PATH` and set `DOTNET_ROOT` to that installation before running DocFX. Selecting a different SDK only in Rider does not change DocFX's subprocesses.
+
 ## Local Mac setup
 
 In Rider, open **Settings → Build, Execution, Deployment → Toolset and Build** and select the .NET CLI installation containing the MAUI workloads. Use its automatically detected .NET SDK MSBuild. A different installation without workloads can produce missing MAUI references throughout the editor even when the code builds from the terminal. Save this setting for the current solution.
+
+After terminal builds with an explicit runtime identifier, run `dotnet restore samples/Simple3D.Demo` before building the whole solution in Rider. A targeted restore can replace the shared assets file and leave other platforms' runtime targets missing.
+
+Choose the `Simple3D.Demo` configuration with the Android, iOS or macOS platform icon; the library projects are not runnable demos. Android requires the checked-in `Platforms/Android/AndroidManifest.xml`: a generated build manifest alone does not satisfy Rider's launcher.
+
+If an iOS simulator launch hangs and ends with `HE0042` / `NSPOSIXErrorDomain code 3` (no process handle), stop the Rider run and restart only that simulator in Device Hub, then retry. This recovered the observed iPhone 17 / iOS 26.5 failure without erasing its data. The same simulator subsequently displayed the gallery from both Rider Run and Debug. The working iPhone 16e used the separate iOS 18.6 runtime.
 
 If the default `dotnet` installation has no MAUI workloads, use the installation that has them (`dotnet workload list`), such as `$HOME/.dotnet/dotnet`:
 
@@ -83,7 +95,15 @@ DOTNET_ROOT="$HOME/.dotnet" "$HOME/.dotnet/dotnet" build samples/Simple3D.Demo -
 open "samples/Simple3D.Demo/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/Simple3D.Demo.app"
 ```
 
-The demo's iOS and Mac Catalyst builds skip the Xcode version check so the locally tested Xcode 27 / Apple workload 26.5.10301 combination builds directly from Rider in Debug and Release. This does not make that toolchain combination officially supported. GitHub's macOS jobs select Xcode 26.6 explicitly. The Mac Catalyst bundle uses the project assembly name so Rider's macOS run configuration finds the executable; its visible title remains Simple3D Gallery. The Mac app registers a MAUI scene delegate for the scene lifecycle required when launching this build on macOS 27.
+Use matching Xcode and .NET Apple workload versions. For Xcode 27, use .NET SDK 10.0.401 and workload set 10.0.401.1. The demo validates the selected Xcode version during builds. GitHub's Apple builds use the Xcode 27 runner; Android and documentation jobs remain on macOS 26. The demo targets Mac Catalyst 17 or later. The Mac Catalyst bundle uses the project assembly name so Rider's macOS run configuration finds the executable; its visible title remains Simple3D Gallery. The Mac and iOS apps register MAUI scene delegates for launch on current Apple systems.
+
+### iOS simulator smoke check
+
+After building the signed Debug simulator app, run `bash scripts/ios-simulator-smoke.sh` from the repository root. It selects an idle iPhone 17 Pro, iPhone 18 Pro or iPhone 17, launches three scenes and checks their screenshots. Existing booted simulator sessions are left untouched. On success, failure or interruption, it terminates the gallery and shuts down the selected simulator. A failed shutdown fails the check; an earlier failure keeps its original exit code. Screenshots remain in `artifacts` for inspection.
+
+Use `bash scripts/ios-simulator-smoke.sh --render-probe` to check pixels, picking and retained snapshots inside the native runtime and measure Core rendering for every gallery scene. The probe is included only in Debug builds and exits before opening a gallery window. Its completion marker is required; launcher success alone does not establish that rendering worked. Results remain in `artifacts/ios-render-probe.log`.
+
+The Apple Debug demo interprets its own assembly and compiles the rendering libraries and framework assemblies (`MtouchInterpreter=-all,Simple3D.Demo`). Changes to the rendering libraries need a rebuild. Clean and rebuild when changing interpreter settings or Apple workloads. On Xcode 27, use .NET SDK 10.0.401 with workload set 10.0.401.1 as described in the [Apple workload release instructions](https://github.com/dotnet/macios/releases/tag/dotnet-10.0.1xx-xcode27.0-10722). Interpreter configuration is documented by [Microsoft](https://learn.microsoft.com/en-us/dotnet/maui/macios/interpreter?view=net-maui-10.0).
 
 ## Scope
 
