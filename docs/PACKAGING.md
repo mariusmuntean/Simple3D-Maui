@@ -21,7 +21,7 @@ Source Link points to the exact Git commit. Push that commit before publishing p
 BUILD_PACKAGE_MAUI=true bash scripts/test-package-consumer.sh
 ```
 
-The script creates consumers outside this repository and restores into an isolated package cache through a local feed and NuGet.org. It uses only `PackageReference`. The Core consumer checks pixels, picking and retained snapshots, then inspects metadata, XML docs, symbols and Source Link in both packages. The optional MAUI step builds Release for Mac Catalyst, iOS simulator and Android; it requires macOS and native workloads.
+The script creates consumers outside this repository and restores into an isolated package cache through a local feed and NuGet.org. It uses only `PackageReference`. The Core consumer checks pixels, picking and retained snapshots, then inspects metadata, XML docs, symbols and Source Link in both packages. The Source Link check downloads source and compares its SHA-256 checksum with the PDB, so push the packed source commit before running it. The optional MAUI step builds Release for Mac Catalyst, iOS simulator and Android; it requires macOS and native workloads.
 
 The script prints and retains the consumer path for native inspection. Run its `PackageDemo.app` to check presentation and input. Its loaded view checks native pixels and picking and prints `PACKAGE_MAUI_PASS`. Stop the app afterward and remove the temporary consumer when no longer needed.
 
@@ -29,10 +29,10 @@ The fixture copies gallery platform bootstrap and icon resources. It neither ref
 
 ## Publish a preview
 
-1. Run portable tests, package validation and independent consumers.
+1. Commit the intended source, run portable tests, push the commit, then run package validation and independent consumers.
 2. Launch a packaged native consumer; record device and configuration.
 3. Inspect dependencies and all three MAUI framework assets. Publish matching symbols.
-4. Push the exact source commit; tag the verified preview and write release notes.
+4. Tag the verified source commit and write release notes.
 5. Publish `.nupkg` and `.snupkg` files with the maintainer's NuGet.org credentials.
 6. Restore a fresh consumer from NuGet.org, then update installation instructions and badges.
 
