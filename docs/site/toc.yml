@@ -8,7 +8,7 @@
   href: meshes-and-groups.md
 - name: Interaction and picking
   href: interaction-and-picking.md
-- name: Executable examples
+- name: Showcases
   href: examples.md
 - name: Rendering limits
   href: rendering-limits.md

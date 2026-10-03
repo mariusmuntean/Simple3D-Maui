@@ -1,6 +1,6 @@
-# Executable examples
+# Showcases
 
-The portable console runner renders the same fourteen scene factories used by the MAUI gallery. It writes binary PPM images using only the Core library and .NET. Each scene demonstrates a different use:
+The MAUI gallery uses fifteen shared scene factories. Each demonstrates a different use:
 
 | Scene | Capability | Gallery animation | Image |
 | --- | --- | --- | --- |
@@ -15,15 +15,18 @@ The portable console runner renders the same fourteen scene factories used by th
 | Orbit | Parent-child motion and an orbital path | Planet revolves while its moon follows | [Orbit](images/Orbit.png) |
 | Wind | Three blades sharing a rotating hub | Turbine rotor spins while its tower stays fixed | [Wind](images/Wind.png) |
 | Conveyor Inspection | Visual inspection and status on a production line | Parcels cross a fixed scanner and change color after passing | [Conveyor Inspection](images/Conveyor%20Inspection.png) |
-| Solar Tracker | Energy equipment with a moving light source | A panel tilts to follow the sun above its fixed mount | [Solar Tracker](images/Solar%20Tracker.png) |
+| Solar Tracker | Energy equipment with a moving sun marker | A panel tilts to face the marker above its fixed mount | [Solar Tracker](images/Solar%20Tracker.png) |
 | Packet Routing | Selectable network devices, links and traffic | Packets traverse two links through a router | [Packet Routing](images/Packet%20Routing.png) |
 | Drone Survey | A field survey vehicle with individually pickable parts | The drone hovers as four propellers spin over its pad | [Drone Survey](images/Drone%20Survey.png) |
+| Patterned Surface | Checker cells made from colored meshes with fixed directional lighting | Surface tilts to show shading; each cell stays selectable | [Patterned Surface](images/Patterned%20Surface.png) |
 
-Render one scene or all fourteen:
+Render one scene or all fifteen:
 
 ```bash
-dotnet run --project samples/Simple3D.Examples -c Release -- Equipment equipment.ppm
-dotnet run --project samples/Simple3D.Examples -c Release -- --all output
+dotnet run --project tests/Simple3D.Core.Tests -c Release -- --render-images Equipment equipment.ppm
+dotnet run --project tests/Simple3D.Core.Tests -c Release -- --render-images --all output
 ```
 
-The runner logs node and projected-label counts and exports the initial still frame. Open PPM files in an image viewer or convert them to PNG. The documentation images are generated from that runner with `python3 scripts/render-doc-images.py`. The [scene factories](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/DemoScenes.cs) are concise working examples of groups, meshes, materials, camera fitting and time-based animation. The [gallery app](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Demo/GalleryPage.cs) adds touch interaction and a 60-updates-per-second animation target. Actual displayed frame rate depends on the device and viewport.
+The Core runner exports the initial still frame; `--render-images` skips its tests. Open PPM files in an image viewer or convert them to PNG. Run `python3 scripts/render-doc-images.py` to regenerate the documentation images. The shared factories demonstrate groups, meshes, materials, camera fitting and time-based animation. The gallery adds selection, orbit and zoom with a 60-updates-per-second animation target. Actual displayed frame rate depends on the device and viewport. The Solar Tracker's sun is a visual marker; lighting uses the renderer's fixed direction.
+
+Patterned Surface uses separate colored mesh cells, not image texture mapping. Its parts are built once and reused during animation. The current renderer provides flat directional lighting; it does not provide physically based materials or shadows.
