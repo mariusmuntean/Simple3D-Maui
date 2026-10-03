@@ -1,289 +1,177 @@
 # Project handoff
 
-Updated: 2026-10-02. Validation below was performed on 2026-09-27 unless stated otherwise.
+Updated: 2026-10-03. Fetch remote state before resuming.
 
-## Apple runner repair (2026-10-02)
+## Current integration state
 
-GitHub billing has cleared enough for jobs to run. PR #11's first hosted run,
-[36882715397](https://github.com/mariusmuntean/Simple3D-Maui/actions/runs/36882715397),
-passed Core, documentation, Android build and Android emulator jobs. Its iOS
-and Mac Catalyst jobs failed for a toolchain mismatch: unpinned workload
-installation selected .NET 10 Apple packs requiring Xcode 27, while the
-workflow selected Xcode 26.6. The Mac Catalyst pack also rejects the demo's
-old 15.0 minimum and requires 17.0.
+### Combined workflow showcase integration (2026-10-03)
 
-This branch now routes Apple jobs to the published `xcode-27` runner and selects
-Xcode 27.0 explicitly; Android remains on `macos-26`. The demo's Mac Catalyst
-minimum is 17.0. The iOS smoke script can choose an idle iPhone 17 Pro,
-iPhone 18 Pro or iPhone 17, matching the devices on both local and Xcode 27
-runners. It also contains the simulator cleanup from independent PR #9
-(`2426e0b`) so this stacked branch terminates its app and shuts down the
-device it boots. Merge #9 independently first if its gates pass; then reconcile
-the shared script when updating #11 from `main`.
+PR #8 merged into `main` at `99399c7026c5800e67303d6a0a1e6abba1101098`. PR #11 is retargeted to `main` and includes that integration. The combined gallery has fourteen scenes. All use the existing `DemoScene` contract and time-based `AnimateNode` helper, with fixed anchors and stable child positions. Engineering parts, parcel status templates, routing packets, solar cells and drone parts are constructed once and reused during animation. Core's original rendering loops, `SceneView`, gallery layout and runtime compilation settings remain unchanged from the validated rendering milestone, apart from #8's allocation-saving hierarchy traversal and target invalidation fix.
 
-A new simulator fallback regression failed before the selector change. Local
-script tests now pass **18/18**. Mac Catalyst Release and signed iOS Simulator
-Debug builds passed with zero warnings/errors. The real iPhone 17 Pro / iOS
-26.5 smoke script launched Equipment, Packing and Surface, passed screenshot
-and scene-difference checks, then shut down the simulator; no demo or
-simulator process remained.
+Conveyor and Packet Routing updates each allocate less than 1,200 managed bytes per animation update on this runtime; the new guard failed on the previous Conveyor implementation at 1,904 bytes. Solar Tracker's panel rotation was corrected to face the moving sun. A strengthened regression failed before the fix and now verifies improved alignment on both sides of the sun's path, together with reset behavior. Core 51/51 and MAUI 39/39 pass on the combined source; the latter includes moving selection coverage for all fourteen scenes. Independent review found no remaining code blockers.
 
-The next hosted run,
-[37004136654](https://github.com/mariusmuntean/Simple3D-Maui/actions/runs/37004136654),
-passed Core, documentation, Android build and emulator, and Mac Catalyst
-Release build. Its iOS Simulator build passed with zero warnings/errors, but
-the app crashed on launch under iOS 27: the crash report identified
-`UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`. The iOS demo
-now has a `MauiUISceneDelegate` and `UIApplicationSceneManifest`, matching the
-existing Mac Catalyst scene configuration. The corrected iOS build passed
-locally with zero warnings/errors. On iPhone 17 Pro / iOS 26.5, the real smoke
-script displayed Equipment, Packing and Surface, passed pixel and scene
-difference checks, and shut down its simulator. No demo process remained. A
-third hosted run,
-[37061200749](https://github.com/mariusmuntean/Simple3D-Maui/actions/runs/37061200749),
-verified that repair: the iOS 27 build and simulator launch passed. Core,
-documentation, Android build and Mac Catalyst build passed too. Its Android
-emulator job failed while the runner action downloaded the emulator SDK package
-(`Error on ZipFile unknown archive`), before the gallery smoke script ran. The
-failed job was rerun on 2026-10-03. Attempt 2 passed: Android launched the
-gallery and its screenshot checker found the expected background, panel and
-blue shape. All six jobs are green for the final attempt. The `xcode-27`
-runner is a preview image; inspect its actual selected Xcode and simulator
-devices in future logs.
+Final local checks passed: Core 51/51 and MAUI 39/39 on macOS and Linux ARM64, scripts 20/20, and DocFX metadata/site builds with zero warnings/errors. Android Debug with embedded assemblies built with zero warnings/errors. iOS simulator and Mac Catalyst Debug builds passed with the existing deprecated local Xamarin settings warning. Both Apple native render probes passed all fourteen scenes. The rebuilt Mac gallery opened with fourteen entries and its Drone Survey animation control worked. These checks do not establish displayed FPS or physical-device input latency.
 
-## Workflow gallery milestone (2026-10-01)
+The matched selected-animation-and-pan CPU benchmark retained identical pixel hashes for the original seven scenes. Median CPU time varied by -0.2% to +3.6%, while managed allocations decreased by 16–56%. The rendering and interaction implementation remains unchanged from merged #8. No hosted Actions run was dispatched. The owned Mac test app was stopped, the test iPhone 17 Pro simulator was shut down, and the disposable Linux container removed itself; the owner's existing iPhone 17 session was preserved.
 
-The `showcase-workflows` branch is based on `showcase-engineering-scenes` at
-`8a3dd72`. It adds Conveyor Inspection, Solar Tracker, Packet Routing and Drone
-Survey to the shared gallery and console scene factories, growing the gallery
-from ten to fourteen scenes. Each animates a relevant moving subject while its
-anchor stays fixed. Shapes have useful names for picking. The scene catalogue,
-rendered documentation images, executable example check and benchmark include
-all four. The implementation plan is in
-[2026-09-30-showcase-workflows.md](superpowers/plans/2026-09-30-showcase-workflows.md).
+### Engineering showcase integration (2026-10-03)
 
-The Core tests failed first for each missing scene. Image review exposed a
-packet link floating above its rack; a regression failed before the route was
-aligned with the device tops. The first drone animation allocated 94,720 bytes
-per frame because it rebuilt arm geometry. It now reuses static body, arms and
-rotor blades. Solar panel cells are also reused between frames. Those allocation
-regressions failed before the changes and pass afterward.
+PR #10 was closed without merging at the owner's request. Its `package-readiness` branch was deleted locally and remotely; its clean separate worktree was archived. Package metadata and package-consumer additions were not integrated.
 
-Fresh local verification: Core **49/49**, source-linked MAUI **13/13**, script
-tests **11/11**, and DocFX metadata/site generation with zero warnings or
-errors. Debug demo builds for Mac Catalyst arm64, iOS Simulator arm64 and Android
-succeeded with zero warnings/errors. The four generated PNGs were inspected.
-Core reusable-target benchmarks at 768×576 over 60 animated frames were about
-1.5 ms/frame for Conveyor and Solar, 2.5 ms for Packet Routing, and 3.1 ms for
-Drone Survey on this Mac. Drone allocation fell from 90,716 to 4,122 managed
-bytes/frame; Solar fell from 8,400 to 2,912. These are Core benchmarks, not
-native displayed frame-rate measurements.
+PR #8 has been updated from current `main`. Robot Arm, Orbit and Wind use prebuilt immutable static parts and the same time-based `AnimateNode` helper as the existing showcases. Child order remains stable for animated selection. The MAUI regression now identifies the animated subtree and verifies the corresponding selected leaf without hard-coded scene names or node indices. Its original version failed on Robot Arm. The new allocation guard failed before reuse (3,232 bytes per Robot Arm animation update) and passes afterward, keeping each engineering animation update below 2,000 managed bytes on this runtime.
 
-The Mac Catalyst gallery visibly displayed all four scenes. Drone animation
-moved its body and propellers; a click selected `Propeller 4`. The app was
-closed. The iOS app launched with Drone Survey selected on an iPhone 17 Pro /
-iOS 26.5 simulator; its [captured frame](validation/ios-drone-survey.png) passed
-the gallery pixel check. The app was terminated and the simulator shut down.
-No demo, simulator or emulator process remained after validation. This was an
-iOS static launch check, not a touch or frame-pacing measurement, and this run
-did not validate launching the new branch from Rider.
+Core 44/44, MAUI 39/39 and scripts 20/20 passed. Android Debug with embedded assemblies, iOS simulator Debug and Mac Catalyst Debug builds passed; Apple builds have the existing local deprecated Xamarin settings warning. The Mac native render probe passed all ten scenes and exited. Code review found no blocking defects. The current `SceneView`, gallery layout, interpreter/JIT configuration and manual CI policy are unchanged from `main`. Iterative Core hierarchy traversal preserves node order and transforms while reducing allocation. Invalid render requests invalidate the reusable target before validation.
 
-This branch is [draft PR #11](https://github.com/mariusmuntean/Simple3D-Maui/pull/11),
-based on `showcase-engineering-scenes`. Keep the independent PRs #6, #9 and #10 intact.
-Once #8 merges, retarget this branch to `main` and revalidate the combined
-result. The first hosted run and its Apple failures are described above.
-Remaining physical/native interaction checks are still required before merging.
+For the original seven scenes, a matched selected-animation-and-pan CPU comparison at 410×512 produced identical Core pixel hashes. Median processing times differed by -2.9% to +0.5%, and managed allocations fell for all seven scenes. These measurements exclude native presentation and do not establish displayed FPS. Repeat with `dotnet run --project tests/Simple3D.Maui.Tests -c Release -- --performance`; compare under similar machine load. The owner's running iPhone 17 app was preserved; a diagnostic listener attached to it was stopped without claiming probe results. Use the current `Simple3D.Demo.app` bundle for Mac checks: an obsolete `Simple3D Gallery.app` output contains old code.
 
-## Portable checkpoint (2026-09-30)
+### Rendering integration and branch cleanup (2026-10-03)
 
-This is a historical checkpoint. The planned gallery scenes are implemented
-on PR #11, described above.
+PR #6 merged into `main` at `f11746c8d7f5f6f0c2e149ec70ded672a32d459c`. This checkpoint supersedes its earlier draft-only gates below. The owner reports good performance on a physical iPhone 17 Pro and confirms a full Mac trackpad pinch now zooms continuously and smoothly. Android interaction was previously confirmed by the owner. These are hands-on reports, not measured 60/120 FPS guarantees. The merged `main` was retested: Core 40/40 and MAUI 39/39 passed.
 
-All source changes and handoff context are committed on the branches listed below.
-Both local checkouts were clean at the start of this checkpoint. The local
-`showcase-engineering-scenes` checkout was fast-forwarded to its already pushed
-quality pass. An empty local `showcase-workflows` branch was removed; it had no
-changes, PR or remote branch to preserve. Start future work from a fresh branch
-at the current `origin/showcase-engineering-scenes` or the appropriate integrated
-`main`, and fetch before editing on another computer.
+The final changes add optional native diagonal edge filtering (`IsAntialiasEnabled`, enabled by default), compile Android Debug rendering using JIT, and paint selection directly from the valid shape-ID buffer. Duplicate shape instances retain the same picking/outline semantics. Regression coverage checks filtered pixels, unchanged captures and picks, viewport edges, concurrent animated selection and pan, and detail recovery. Temporary timing logs and an ineffective image-drawing experiment were removed from source. Selection bitmap processing measured about 14.8 to 8.4 ms at 614×768 in matched iOS simulator runs, including edge filtering; this is CPU processing time, not displayed FPS.
 
-The next proposed additive gallery work is **not implemented**: Conveyor
-Inspection (packages travel through a scan gate and change status), Solar
-Tracker (panels follow a moving sun), Packet Routing (packets traverse fixed
-network links), and Drone Survey (a drone moves over a pad with spinning
-propellers). Keep fixed scene anchors and moving subjects named and pickable.
-Add fail-first scene/animation/reset tests, script coverage, rendered DocFX
-images and catalogue text. Inspect the Mac gallery, measure Core render cost,
-build Apple/Android targets, and stop every launched app or simulator. This is
-a design queue, not a verified feature or a reason to merge the existing PRs.
+Fresh local checks: Core 40/40, MAUI 39/39, scripts 13/13, and DocFX metadata/site builds with zero warnings/errors. Fresh iOS simulator and Mac Catalyst Debug builds passed with one existing local deprecated Xamarin settings warning each; Android Debug with embedded assemblies passed with zero warnings/errors. Linux ARM64 Docker checks passed Core 40/40 and MAUI 39/39 after installing fontconfig and DejaVu fonts. A minimal fontless image loaded Skia but failed two label layout checks; manual CI now explicitly installs those text prerequisites. No hosted run was dispatched. Linux ARM64 validation does not claim validation on an x64 GitHub runner. Independent code review found no blocking defects.
 
-Actions run [36635101338](https://github.com/mariusmuntean/Simple3D-Maui/actions/runs/36635101338)
-for PR #8 failed before any job step on 2026-09-29. Its check annotation says
-recent account payments failed or the spending limit must be increased. No
-GitHub runner result, native frame-rate result or physical trackpad-pinch result
-can be inferred from that run.
+The earlier iPhone simulator installation predated the animated-selection fix. A fresh build retained the outlined output arrow during animation. The simulator test app was stopped; the owner's existing simulator session was preserved. The final clean build was installed there without launching it. The disposable Linux validation container removed itself. Unrelated development containers and worktrees were preserved.
 
-## Latest quality pass (2026-09-29)
+Eight completed branches were deleted locally and remotely: `maturity-tests` (#1), `rider-apple-builds` (#2), `visual-identity` (#3), `gallery-scenes` (#4), `showcase-animations` (#5), `reusable-render-target` (#7), `native-smoke-cleanup` (#9), and `render-bitmap-reuse` (#6). Their exact remote heads were checked against the merged PRs before cleanup. Preserve `showcase-engineering-scenes` (#8), `package-readiness` (#10), and `showcase-workflows` (#11): they contain unmerged work. The packaging branch has a separate active worktree. The primary checkout is now on `main`.
 
-The owner requested resuming from the newest branch. Work continues on
-`showcase-engineering-scenes`, whose preceding head was `e4096a9` (2026-09-29
-15:27 UTC). Preserve the independent work in #6, #9 and #10; this pass does not
-merge those PRs or claim their remaining native checks are complete.
+For subsequent work, start from updated `main`, integrate each remaining PR additively, and repeat its scope-specific validation. Earlier checkpoints below are historical evidence, not instructions to keep the completed rendering PR in draft. Package publication and combined showcase validation remain separate work.
 
-- `RenderInto` now clears reusable picking and labels before argument validation.
-  A null scene/camera or invalid background can no longer leave an old object
-  selectable after a failed render. A regression failed before the fix and
-  verifies successful recovery afterward.
-- Scene traversal now uses an ancestor continuation stack instead of recursive
-  iterator objects for every node. Depth-first ordering, hierarchical transforms
-  and the node budget remain unchanged. A regression compares pixels and picks
-  against an equivalent flat scene and limits extra group allocations. It failed
-  before the change with 138,240 extra bytes per frame for 128 wrapped leaves.
-  A separate branching regression hand-derives noncommuting scale/translation
-  transforms and verifies pixels, picking identity and first-leaf equal-depth ties.
-- Android smoke tests stop the gallery on success, failure, INT and TERM. A failed
-  start also triggers cleanup; original failure statuses are preserved, and a
-  failed cleanup turns success into failure. The emulator runner still owns
-  device shutdown. Seven shell-boundary regressions cover these paths; six failed
-  against the previous script.
+### Gallery interaction and animated selection checkpoint (2026-10-03)
 
-Fresh Linux verification with SDK 10.0.401: Core **43/43**, source-linked MAUI
-**13/13**, Python/script checks **11/11**; Core Release build has zero warnings
-and errors. Android shell syntax and whitespace checks pass. These are portable
-checks, not native app launches. Native platform builds and displayed frame
-pacing were not rerun in this environment.
+The gallery scene now occupies a flexible grid row outside all scroll views. Catalogue buttons scroll horizontally, and the footer scrolls within its own bounded area. A regression reproduced the previous scrolling ancestor. The rebuilt Mac gallery visibly rotates on a vertical drag while its header and controls stay fixed.
 
-On the same Linux runner, the reusable Orbit scene at 768x576 fell from 23,960 to
-9,176 managed bytes per frame (about 62% less); Surface fell from 1,552 to 1,296.
-Renderer timings varied between runs, so no displayed-FPS or timing improvement
-is asserted. The existing native paint allocation changes in #6 remain separate.
+`Scene.Replace` supplies `ShapeReplacementEventArgs` through the existing `Changed` event. `SceneView` follows the selected node into its replacement tree by child position, preserving the tint and contour during animation. Keep child order stable for logical parts; missing children and removed shapes clear selection. Selection notifications report the current instance. Regressions cover all seven animated showcases, duplicate names, missing children and visible outline pixels at their new positions. The rebuilt Mac output arrow visibly retained its outline while moving.
 
-The quality-pass Actions run, `36635101338`, failed all six jobs with empty
-step lists. Its Core check annotation identifies account billing/spending limits
-as the startup blocker; no hosted test result can be inferred from these failures.
+Local verification: Core 40/40; the isolated staged MAUI milestone 35/35; the working tree including the two earlier antialiasing tests 37/37. Android Debug build passed with zero warnings/errors. Mac Catalyst Debug build passed with the existing deprecated Xamarin settings warning. DocFX metadata and site builds passed with zero warnings/errors. iOS was not rebuilt or launched for this checkpoint. Antialiasing remains a separate local draft.
 
-## Resume here
+Android deployment caution: Rider fast deployment supplied old assemblies even after a successful build. The deployed MAUI assembly hash differed from both current build outputs, and the running app still logged removed `PAINT_PROFILE` instrumentation. Use an APK with embedded assemblies and remove the test installation before reinstalling when verifying new behavior; do not trust a successful deployment alone.
+
+Rebuilt Android Debug with `-t:Rebuild -p:EmbedAssembliesIntoApk=true` (zero warnings/errors), reinstalled the disposable test app, and visibly verified vertical orbit with fixed page controls and the selected output arrow retaining its contour during animation. The Android test app and emulator were stopped afterward; the Mac test app was also stopped. A later Mac app launched by the owner was preserved. No hosted runs were dispatched. The earlier Android Debug `UseInterpreter=false` performance setting and antialiasing changes remain uncommitted local drafts, separate from this milestone.
+
+### Rider mobile launch checkpoint (2026-10-03)
+
+Android launch failed before deployment because Rider requires the source `samples/Simple3D.Demo/Platforms/Android/AndroidManifest.xml`, which was missing even though terminal builds generated a manifest. Added the minimal application manifest. Rider then built, deployed and launched the gallery using Debug on Pixel 5 / Android 13 (API 33, ARM64); the actual rendered Equipment scene was visibly verified in Running Devices.
+
+The iPhone 17 / iOS 26.5 launch was reproduced: CoreSimulator's bridge stalled before returning an application process handle, then returned `NSPOSIXErrorDomain code 3` / `HE0042`. Restarting only the affected simulator recovered it without erasing data. Both a subsequent Rider Run and a second Rider Debug launch displayed the gallery, with native app processes confirmed. The user's iPhone 16e uses iOS 18.6, a separate runtime. This establishes launch using Debug, not breakpoint or Hot Reload behavior. Test apps and the test simulator/emulator were stopped afterward. No hosted runs were dispatched.
+
+Local antialiasing changes in `SceneView.cs` and its source-linked tests remain unfinished drafts; they are excluded from this launch fix milestone and still need native image-quality and performance verification.
+
+### Native rendering checkpoint (2026-10-03)
+
+The rendering branch now uses a supported local Apple toolchain: .NET SDK 10.0.401, workload set 10.0.401.1, Apple packs 27.0.10722 and Xcode 27.0. Xcode version validation is enabled. The Apple Debug demo interprets its own assembly and compiles the rendering libraries and framework assemblies (`MtouchInterpreter=-all,Simple3D.Demo`). Clean and rebuild when changing workloads or interpreter settings. Rider's local toolset was updated to SDK 10.0.401. Its fresh solution build passed with no reported problems after a default demo restore repaired Android runtime targets overwritten by targeted Apple builds. A fresh Rider launch still needs verification.
+
+A native ARM64 compilation defect produced invalid view coordinates when three `Vector3.Dot` calls appeared directly as constructor arguments. Portable tests did not reproduce it. Assigning the three vector fields separately fixes the observed native failure without changing the public API or camera math. The Debug-only `NativeRenderProbe` checks visible pixels, picking, owned/reusable equivalence and retained snapshots for all seven scenes inside the actual Apple runtime. Run `bash scripts/ios-simulator-smoke.sh --render-probe` after building the iOS bundle; a completion marker is required and the script cleans up its own session.
+
+The final configuration passed all seven native scene probes on Mac Catalyst and the iPhone 17 Pro / iOS 26.5 simulator. At 512×315, native Core rendering measured 2.6–8.2 ms/frame across those scenes. Molecule fell from about 61 ms to 8.2 ms in the same simulator after compiling the rendering path. These are Core render costs, not displayed FPS or input latency. The ordinary iOS smoke check also displayed Equipment, Packing and Surface and stopped its app and simulator afterward. Leave the user's separate booted iPhone 17 session untouched.
+
+Local portable checks passed Core 39/39, MAUI 30/30 and scripts 13/13. DocFX metadata and site builds passed with zero warnings/errors. Apple Debug builds passed with one warning about the deprecated user-level Xamarin Settings.plist. Zoom now uses a bounded preview throughout its gesture; linear bitmap sampling softens enlarged preview edges. Tests cover both touch and cumulative Mac pinch preview completion/cancellation and interpolated pixels. This does not establish full static-scene antialiasing or physically smooth gestures.
+
+The rebuilt Mac gallery was also launched and visually checked after unlocking: clicking selected the motor with a visible contour, mouse orbit retained selection, and Telemetry animation changed bar heights. The app was stopped afterward. Rotation exposed overlapping world labels; the iOS Surface screenshot also exposes a label clipped at the right edge. Improve label layout.
+
+Remaining gates: actual iOS touch/pinch and animation pacing; physical Mac trackpad pinch; fresh Rider launch of this configuration; full-resolution edge quality; Linux execution of the Skia dependency fix. Keep #6 draft until its native interaction gates are verified. No hosted checks were dispatched for this iteration.
+
+### Label layout checkpoint
+
+Native label painting now measures glyph bounds, keeps text inside the viewport, abbreviates oversized text at Unicode character boundaries and searches nearby rows to avoid overlap. It searches at most eight rows in either direction and omits labels that cannot fit. Core projected anchors and picking are unchanged. The placement list is reused between paints and cleared when render resources are released.
+
+Two new regressions failed against the original placement, then passed with the fix: narrow viewport clipping (including insufficient height) and overlapping anchors. Local Core 39/39, MAUI 32/32, scripts 13/13 and DocFX site build passed. Both Apple Debug builds passed with the same single local deprecated-settings warning. The rebuilt Mac gallery visibly separated MOTOR and OUTPUT at the rotation that previously overlapped them and displayed the full Surface annotation; the app was stopped. The iOS three-scene smoke check passed and its Surface screenshot now shows the entire annotation inside the viewport. Its test simulator was shut down and the user's separate session remained untouched. This fixes label layout, not the remaining antialiasing or physical gesture gates.
 
 Repository: `mariusmuntean/Simple3D-Maui` (private).
 
-Four independent draft PRs are open against `main`, with a fifth draft PR stacked on #8. They contain committed, pushed implementation with no unfinished source drafts.
+PR #9 merged into `main` at `2d6f5c97417e4ec928e1a46a0e887e5de75c74a9`. It stops iOS smoke apps and simulators on success, failure and interruption, selects an idle supported iPhone, routes Apple builds to Xcode 27, raises the demo's Mac Catalyst minimum to 17, and adopts the iOS scene lifecycle. Local Core 39/39, MAUI 13/13 and script tests 11/11 passed. Both Apple builds and the real local three-scene iOS smoke check passed. [All six hosted jobs passed](https://github.com/mariusmuntean/Simple3D-Maui/actions/runs/37105153071), including iOS and Android app launches.
 
-| Branch | PR | Purpose |
+The remaining work is committed on these branches:
+
+| Branch | PR | Scope and next gate |
 | --- | --- | --- |
-| `render-bitmap-reuse` | [#6](https://github.com/mariusmuntean/Simple3D-Maui/pull/6) | Reuse native painting buffers and bitmap; bounded raster fallback/recovery |
-| `showcase-engineering-scenes` | [#8](https://github.com/mariusmuntean/Simple3D-Maui/pull/8) | Add Robot Arm, Orbit and Wind; harden render recovery, reduce traversal allocation, clean Android smoke sessions |
-| `native-smoke-cleanup` | [#9](https://github.com/mariusmuntean/Simple3D-Maui/pull/9) | Stop iOS smoke sessions on success, failure and interruption |
-| `package-readiness` | [#10](https://github.com/mariusmuntean/Simple3D-Maui/pull/10) | Real package metadata and isolated package-consumer checks |
-| `showcase-workflows` | [#11](https://github.com/mariusmuntean/Simple3D-Maui/pull/11) | Four workflow scenes, purposeful animation, rendered examples and Apple runner repairs; based on #8 |
+| `render-bitmap-reuse` | [#6](https://github.com/mariusmuntean/Simple3D-Maui/pull/6) | Native bitmap and render-target reuse, raster fallback/recovery. Updated from main at `8ecfb6f`; fix the Linux Skia native dependency failure, then verify physical Mac trackpad pinch and native interaction/frame pacing before merge. |
+| `showcase-engineering-scenes` | [#8](https://github.com/mariusmuntean/Simple3D-Maui/pull/8) | Robot Arm, Orbit, Wind, renderer recovery/traversal improvements and Android smoke cleanup. Update from main and combine with #6 after #6 passes its gates. |
+| `package-readiness` | [#10](https://github.com/mariusmuntean/Simple3D-Maui/pull/10) | Package metadata and isolated package consumers. Updated from main at `37793b3`; check hosted run `37107900337` before merging. |
+| `showcase-workflows` | [#11](https://github.com/mariusmuntean/Simple3D-Maui/pull/11) | Conveyor Inspection, Solar Tracker, Packet Routing, Drone Survey. Stacked on #8; retarget to main after #8 merges and repeat combined validation. |
 
-The handoff commit follows each implementation commit. Start with #6. After its remaining checks pass, merge it, update #8 from the new `main`, verify the combined result, then merge #8. Preserve the existing PRs.
+Preserve the existing PRs. All subsequent work should be additive. Keep each PR draft and unmerged while checks required for its scope remain incomplete.
 
-PR #9 is independent and can be integrated separately after review and runner verification. Its native cleanup check has passed locally.
+## Transfer checkpoint (2026-10-03)
 
-PR #10 is also independent. Package consumers passed locally, including compilation against all three MAUI targets. Its package-test projects intentionally stay outside the regular solution: pack first, then provide a local feed. Recheck all consumers after combining the branches.
+The owner requested committing and pushing all work and context to continue on another computer. Both working trees had no uncommitted source drafts or local-only branch commits before this handoff update. All implementation branches are on GitHub. Generated build outputs, restored packages, local IDE settings and tools remain ignored and reproducible; do not transfer them as source.
 
-On another computer:
+Start from `render-bitmap-reuse` and read this file first. The other current checkout is `package-readiness`. Branch heads before this documentation commit:
+
+- `main`: `2d6f5c97417e4ec928e1a46a0e887e5de75c74a9` (PR #9 merged).
+- `render-bitmap-reuse`: `8ecfb6f6f369edb8236108c8c6d011dbfffc9f0b`.
+- `package-readiness`: `37793b3532dc40c4d30edac9c4d31823b1b8d807`.
+- `showcase-engineering-scenes`: `8a3dd728ded298a8a7341dc399bf898a1ae5e08e`.
+- `showcase-workflows`: `cc6f8cee7701d46300198dbcdfc31ee1f6f88714`.
+
+Fresh local checks on the rendering branch: Core **39/39**, MAUI **23/23**, scripts **11/11**, all exit 0. Rider build session `9757d90f-3a82-467e-bd00-d2b34655bc83` completed successfully with no reported problems. These results do not establish that hosted Linux native dependencies work.
+
+**Next concrete failure:** [rendering run 37107955413](https://github.com/mariusmuntean/Simple3D-Maui/actions/runs/37107955413) has a failed `core` job. Core passed 39/39, but MAUI passed 19/23: four native paint tests failed loading `libSkiaSharp` on Linux (`DllNotFoundException` from `SKImageInfo`). Inspect the test project's native asset references and add the appropriate Linux runtime dependency; preserve the native paint tests. Android build/launch, Mac Catalyst build and documentation jobs passed; iOS was still running at this checkpoint. Recheck the exact head's run after a fix.
+
+[Package run 37107900337](https://github.com/mariusmuntean/Simple3D-Maui/actions/runs/37107900337) had five successful jobs and an iOS job still running at this checkpoint. It is not yet a confirmed all-green run. New documentation pushes create new head runs: inspect those before merging.
+
+The latest Rider iOS run started an iPhone 17 / iOS 26.5 app, but reported an IDE socket refusal and an old lifecycle warning. The auto-generated iOS configuration has no Build-before-launch step; a stale Debug bundle remains a possibility, not a proven diagnosis. There are duplicate `Simple3D.Demo` names across Android, iOS and macOS configurations, so choosing by name is ambiguous. No portable `.run` configurations have been added yet. Next: save distinct repository-relative Apple configurations with a build step, verify Rider recognizes them, build fresh bundles, launch each and verify the actual UI. Do not copy machine-specific ignored workspace settings or assume debugging/Hot Reload works.
+
+The active Rider run was stopped through Rider, its exact simulator was shut down, and process/device inspection found no remaining gallery or mlaunch process and no booted simulator. No testing sessions need to be resumed or cleaned up on this machine.
+
+Suggested order: fix #6 Linux dependencies; complete its native checks; merge verified #10 independently; merge ready #6; update #8 from main and verify/merge; then retarget and verify #11. Fetch first and inspect current PR state, because CI or integration may have changed since this snapshot. Keep the existing PRs and preserve additive work. Publication is still a separate future milestone.
+
+## Package checkpoint
+
+On 2026-10-03, the updated package branch passed 14/14 script tests, including a generated Core package consumed from an isolated feed and cache with no project references. The consumer checks rendered pixels, picking and retained snapshots. Both packages packed successfully. A MAUI host using packages only compiled for iOS, Android and Mac Catalyst with zero warnings/errors; Core and SkiaSharp resolved transitively. This is compilation evidence, not a native launch of that host.
+
+No package has been published. Publication still requires a license decision, package ownership and version checks, and a release validation pass. The README documents package-consumer commands.
+
+## Gallery and performance checkpoint
+
+Main has seven scenes. #8 adds three and #11 adds four, giving fourteen on `showcase-workflows`. Each scene animates a relevant subject and retains fixed anchors. Telemetry bars change height within their scale and shift color near range ends. The console examples and DocFX images use the shared scene factories.
+
+The latest workflow branch passes Core 49/49, source-linked MAUI 13/13 and script tests 18/18. Its [hosted head run passed](https://github.com/mariusmuntean/Simple3D-Maui/actions/runs/37091311778). The Mac gallery displayed all four workflow scenes and animated Drone Survey; picking selected a propeller. A local iOS 26.5 simulator displayed Drone Survey and the three-scene smoke check passed. Every tested app and simulator was stopped.
+
+Core reusable rendering at 768×576 was measured at about 1.5 ms/frame for Conveyor and Solar, 2.6 ms for Packet Routing and 3.1 ms for Drone Survey on one local run. Drone managed allocation fell to about 4,122 bytes/frame after static geometry reuse; Solar fell to 2,912. Timings vary with machine load. These are Core measurements; native displayed FPS has not been measured.
+
+PR #6 previously passed Core 39/39 and MAUI 23/23 and launched macOS/iOS from Rider. Its later traversal-budget regression also passed. This branch contains additional native paint tests that are not yet in #8 or #11. Do not treat their lower MAUI test counts as equivalent coverage.
+
+## Remaining native validation
+
+1. Physically verify continuous Mac trackpad pinch. Logical incremental-pinch tests pass, but automated mouse drag/click does not prove trackpad event delivery.
+2. Verify iOS touch orbit, pinch, picking and animation pacing through a simulator GUI or device. A static screenshot does not prove these interactions.
+3. Launch the combined gallery branch from Rider on macOS and iOS. Earlier #6 Rider launches do not validate the combined result; an IDE socket refusal means debugging/Hot Reload remains unproven.
+4. After integration, run the portable suites, package consumers, relevant native builds and smoke checks again. Inspect the exact hosted run for the head being merged.
+
+## Interaction checkpoint (2026-10-03)
+
+Local rendering branch work now includes native Mac mouse pan handling, a 512-pixel drag preview, and visible selection feedback (mint tint plus an inner gold contour using depth picking). Materials and owned captures stay unchanged. Native Mac clicks, background deselection and camera orbit with a selected motor were visibly verified. Short drags preserve translation at the beginning and release. Local MAUI checks passed 28/28 and Mac Catalyst Debug built with zero warnings/errors. Temporary pan diagnostics were removed. The comparison benchmark reduced typical drag raster samples by about 75%; Molecule render/bitmap cost fell from 5.56 to around 1.6 ms/frame on this Mac, not displayed FPS.
+
+The test project now references matching Skia Linux native assets; local output contains the Linux libraries. Linux execution has not been repeated, so do not claim its prior hosted failure is resolved. The user reports Mac rotation is much smoother, but iOS remains laggy, trackpad zoom still lags, and diagonal edges need antialiasing. Those are the active next tasks: bound zoom work throughout the gesture, investigate iOS input/render pacing, and improve presentation sampling/edge quality while measuring its cost locally. An iPhone 17 was booted again by the user after our cleanup; do not shut down that user session as if it were an abandoned test session.
+
+## Hosted testing policy
+
+The owner requested local development feedback and conserving Actions minutes (the supplied alert reported 1,827 of 2,000 included minutes used). Run local tests, native builds and Rider checks first. CI now uses only `workflow_dispatch` on the active rendering and package branches. Dispatch hosted checks later when the project is mature or a check specifically requires a GitHub runner. Do not rerun or dispatch checks on routine commits. Until this workflow policy reaches main and other branches, use `[skip ci]` on transfer-only pushes that would otherwise trigger hosted jobs. The two new checkpoint runs (`37108474550`, `37108476653`) were cancelled to avoid further resource use. Prior runs may already have completed; inspect their results only when needed.
+
+## User requirements
+
+- Work autonomously, make routine decisions, verify milestones, commit and push context, and merge verified work.
+- Keep the library fast, clear and pleasant to use, supporting display-only and interactive scenes with meshes and lighting.
+- Keep mouse orbit and trackpad zoom responsive. Aim for useful animation on mid-range devices without claiming unmeasured 60/120 FPS.
+- Keep docs and executable examples current and grow the gallery with relevant scenes.
+- Stop tested apps, simulators and emulators after use; leave unrelated sessions alone.
+- Maintain simple, elegant, recognizable branding suitable for publication and LinkedIn promotion.
+- Use neutral task-oriented branch, commit, PR, code and document names; do not add provenance markers.
+
+## Resume on another computer
 
 ```bash
 git clone git@github.com:mariusmuntean/Simple3D-Maui.git
 cd Simple3D-Maui
 git fetch origin
-git switch --track origin/render-bitmap-reuse
+git switch main
 ```
 
-To inspect #8 or #11 separately, use another checkout or worktree for
-`origin/showcase-engineering-scenes` or `origin/showcase-workflows`. Do not
-overwrite another branch's work. PR #11 is stacked on #8, so compare it with
-#8's branch until #8 has merged.
+Use a separate checkout or worktree for another branch. Read the live PR and branch state before editing. The original maturity branch and old handoff are historical.
 
-## User requirements and decisions
-
-- Work autonomously; make routine implementation decisions.
-- Verify milestones, commit and push them, then merge when ready. Keep PRs draft and unmerged while native validation is incomplete.
-- Subsequent changes should be additive. Do not discard these PRs or replace the library unnecessarily.
-- The demos must build and run from Rider on macOS and iOS, and work on GitHub runners.
-- Support both displaying a scene without interaction and interactive scenes, including meshes and lighting.
-- Keep mouse orbit and trackpad pinch responsive. A previous Mac pinch handled only one step; continuous zoom still needs a physical gesture check.
-- Aim for useful animation on mid-range devices. The demo uses a 60 Hz timer; no native 60/120 FPS guarantee has been established.
-- Each showcase should animate its own subject. Telemetry bars change height within their scale and shift color near the range ends.
-- Stop tested apps, simulators and emulators after use. Do not leave accumulated instances running. Do not stop unrelated user processes.
-- Branding should be simple, elegant and recognizable, suitable for a published library and LinkedIn promotion.
-- Never include AI provenance names or identifiers in branch names, commits, PR text, code, documentation or generated artifacts.
-
-## Already integrated into main
-
-The latest observed remote `main` is `42fdbe09a8ecad61019f27818f2a39278f47354c`.
-
-Earlier merged work includes the depth renderer, indexed meshes, hierarchy, lighting, picking, MAUI control, gallery, executable examples, hostable documentation, native build configuration, display-only interaction mode, purposeful animations, branding and reusable Core rendering targets (#7). The original maturity branch and its older handoff are no longer the starting point.
-
-Important source locations:
-
-- `src/Simple3D.Core/DepthRenderer.cs`: depth rasterization, picking and reusable target.
-- `src/Simple3D.Maui/SceneView.cs`: cached/native painting, gestures, selection, render resolution policy.
-- `samples/Simple3D.Shared/DemoScenes.cs`: shared scenes and scene-specific animation.
-- `samples/Simple3D.Demo/GalleryPage.cs`: gallery controls and elapsed-time animation loop.
-- `tests/Simple3D.Core.Tests` and `tests/Simple3D.Maui.Tests`: executable regression runners.
-- `samples/Simple3D.Examples`: executable console image examples.
-- `docs/site`: DocFX documentation and source images.
-- `assets/brand`, demo `Resources/AppIcon` and `Resources/Splash`: committed visual identity.
-- `.github/workflows/ci.yml`: builds, tests, documentation and native smoke checks.
-
-## Verification evidence and limits
-
-### PR #6
-
-- Most recent local regression run (2026-09-28): Core **39/39**, MAUI **23/23**, exit code 0.
-- Earlier script tests: **4/4**; DocFX metadata/site build had zero warnings/errors.
-- Earlier Debug demo builds: Mac Catalyst, iOS Simulator arm64 and Android, zero warnings/errors.
-- Rider solution build succeeded.
-- Mac Catalyst launched from Rider. Equipment, Telemetry and Surface rendered. Telemetry bars changed height/color during Animate; the Surface sample marker moved. Mouse orbit, object selection, Reset and + zoom responded.
-- iOS built and launched from Rider on iPhone 17 / iOS 26.5. A simulator capture showed Equipment rendered: [captured frame](validation/ios-rider-pr6.png).
-- Native paint test measured **1,552 managed bytes/frame** for animated Surface at 768×576. This is an allocation benchmark, not displayed FPS.
-- Regression coverage includes reusable bitmap/target pixels and picking, owned snapshots, disconnect cleanup, resolution fallback/recovery, and suppression of repeated failed full-resolution probes.
-- The 2026-09-28 audit found that MAUI fallback geometry counting could traverse more than Core's node budget before rendering. It now rejects after 100,000 node visits, including repeated empty groups. A new regression failed before the fix and passed afterward. The Mac Catalyst Debug build was repeated with zero warnings/errors.
-
-### PR #8
-
-- Most recent local regression run: Core **40/40**, MAUI **13/13**, exit code 0. The lower MAUI count is expected: #8 does not yet contain #6's additional tests.
-- Earlier script tests: **4/4**; DocFX metadata/site build had zero warnings/errors.
-- Earlier Debug demo builds: Mac Catalyst, iOS Simulator arm64 and Android, zero warnings/errors.
-- Orbit visibly rendered in an iPhone 17 Pro simulator.
-- Mac app launched from its built bundle. Robot Arm, Orbit and Wind rendered and changed during Animate. Picking returned Forearm, Planet and Blade 1.
-- Latest Core reusable-target benchmark for the three new scenes was about **1.2–1.6 ms/frame** at 768×576 over 60 frames on this Mac. This is not native displayed FPS.
-- A review found a picking-label issue on orbit segments; it was fixed and covered by a regression test.
-
-All app processes used in the final native pass exited; all simulators were shut down.
-
-### PR #9 (2026-09-28)
-
-- Six executable shell regressions cover cleanup on success, boot/install failure and termination, avoiding an already running user simulator, and reporting shutdown failure. Tests failed against the previous behavior before the fixes.
-- All **10/10** script tests passed. Bash syntax and whitespace checks passed.
-- A fresh iOS Simulator Debug build succeeded with zero warnings/errors.
-- The real iPhone 17 Pro / iOS 26.5 smoke pass rendered Equipment, Packing and Surface and passed screenshot/scene-difference checks. The new exit cleanup stopped the gallery and shut down the device; no simulator was booted and no gallery process remained.
-- GitHub billing blockage was rechecked on 2026-09-28; jobs still fail before starting.
-
-### Remaining checks before merge
-
-1. Physically verify continuous Mac trackpad pinch. The available automation generated mouse drag/click, not a pinch gesture. The logical incremental-pinch regression passes, but that alone does not verify native delivery.
-2. Observe iOS touch interaction and animation pacing on a simulator with a GUI or a device. The previous installation had simulator runtimes and command-line tools but no Simulator application window.
-3. GitHub jobs started again on 2026-10-01. Recheck #6, #8, #9 and #10 after carrying the Apple toolchain repair from #11 into their integration base; their older billing-blocked runs provide no evidence about source correctness. PR #11's first real run exposed the Apple mismatch described above.
-4. After merging #6 and updating #8 from main, repeat portable tests and relevant builds for the combined code.
-
-### PR #10 (2026-09-29)
-
-- Both packages previously contained the placeholder description "Package Description" and lacked a repository URL. Descriptions, author, repository/project URLs and tags are now configured. A package-metadata test failed before the fix and passed afterward.
-- All **7/7** script tests on this branch passed, including three package checks; Core **39/39** and MAUI **13/13** source tests passed. This branch is based on main and lacks #6's additional regression tests.
-- Core's public API ran from a generated package in a fresh cache with a local-only feed. Rendering, picking and owned snapshot retention were checked without project references. XML docs and icon inclusion were also checked.
-- Both libraries packed successfully. A MAUI host fixture using packages only compiled for iOS, Android and Mac Catalyst with zero warnings/errors. This was compilation, not a native app launch.
-- The initial minimal MAUI host had an MA002 warning about a missing direct Controls reference. The committed fixture retains that normal host reference and builds without warnings; Core and SkiaSharp still resolve transitively from the MAUI package.
-- DocFX metadata/site generation passed with zero warnings/errors. CI includes package-consumer checks, but runner execution is still an external gate.
-- No package was published. Publication still needs a license decision, version/package ownership checks, successful runner validation and remaining native interaction checks.
-
-Rider iOS Run launched and rendered, but its console reported an IDE socket connection refusal. Do not claim debugging/Hot Reload was validated.
-
-## Reproduce verification
-
-Use a .NET 10 installation with appropriate MAUI workloads. There is no committed `global.json`; recheck installed SDK and workload versions on the new machine.
+Use a .NET 10 SDK with appropriate MAUI workloads. There is no committed `global.json`; check installed SDK/workload and Xcode versions. On the original Mac the workload-enabled SDK is under `$HOME/.dotnet`, while the Homebrew SDK lacks MAUI workloads. Use SDK 10.0.401 and workload set 10.0.401.1 with Xcode 27; the demo validates Xcode during builds. Hosted Apple jobs use the Xcode 27 image.
 
 ```bash
 dotnet run --project tests/Simple3D.Core.Tests -c Release
@@ -293,25 +181,7 @@ dotnet run --project samples/Simple3D.Examples -c Release -- --all output
 dotnet build samples/Simple3D.Demo -f net10.0-maccatalyst -r maccatalyst-arm64 -c Debug
 dotnet build samples/Simple3D.Demo -f net10.0-ios -r iossimulator-arm64 -c Debug
 dotnet build samples/Simple3D.Demo -f net10.0-android -c Debug
-dotnet tool install docfx --tool-path .tools --version 2.81.0
-.tools/docfx metadata docs/site/docfx.json --warningsAsErrors
-.tools/docfx build docs/site/docfx.json --warningsAsErrors
+bash scripts/ios-simulator-smoke.sh
 ```
 
-The regression projects are executable runners, so use `dotnet run`, not merely `dotnet test`.
-
-For Rider, select the .NET CLI containing the workloads under Settings → Build, Execution, Deployment → Toolset and Build, with its .NET SDK MSBuild. On the previous Mac this was `/Users/marius/.dotnet/dotnet`, SDK 10.0.301; do not assume the same path on another machine.
-
-DocFX also launches `dotnet restore` from the shell's `PATH`. Ensure the workload-equipped SDK is first in `PATH` and set `DOTNET_ROOT` to its installation; Rider's SDK selection alone does not configure DocFX. The 2026-09-28 default-shell metadata attempt selected the Homebrew SDK without workloads and failed; metadata and site generation then passed with zero warnings/errors using the user-local SDK.
-
-The previous Mac had Xcode 27.0 and Apple workload 26.5.10301, which expects Xcode 26.6. The demo currently sets `ValidateXcodeVersion=false` for Apple targets. That permitted local development, but does not establish official toolchain compatibility. The original CI selected Xcode 26.6, but later unpinned workload installation selected packs requiring Xcode 27. PR #11 now selects the Xcode 27 runner for Apple jobs; verify its hosted result rather than generalizing local results.
-
-For native tests, track the precise app/device you launch. Terminate the app, stop the Rider Run session, and shut down that simulator/emulator in a cleanup block even on failure. PR #9 adds that cleanup to the iOS smoke script, including INT/TERM handling. Until it is merged, use its script or provide equivalent cleanup locally. Android smoke app/device cleanup remains to be audited separately.
-
-`SIMPLE3D_GALLERY_SCENE` chooses the initial gallery scene. For simulator launch use `SIMCTL_CHILD_SIMPLE3D_GALLERY_SCENE`.
-
-## Repository state and portability
-
-Both implementation branches were clean before this handoff. Generated `bin`, `obj`, `_site`, API metadata, local tools, artifacts and IDE user settings are ignored and reproducible. The selected iOS screenshot was copied into tracked documentation for portable evidence. No credentials or machine-specific IDE configuration are needed in source control.
-
-The documentation site builds to `_site`; it has not been publicly deployed. CI uploads it as an artifact. Package publishing and public promotion have not been performed.
+Run .NET builds sequentially when they share a checkout's outputs. Native smoke scripts require an already built, correctly signed bundle. DocFX commands and package validation are in the README.

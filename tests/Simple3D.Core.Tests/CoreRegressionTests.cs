@@ -31,7 +31,8 @@ internal static class CoreRegressionTests
         ("network packets traverse fixed links between named racks", PacketRoutingAnimation),
         ("survey drone moves and spins propellers above a fixed pad", DroneSurveyAnimation),
         ("survey animation reuses its static geometry", DroneSurveyAllocation),
-        ("solar animation reuses its panel cells", SolarTrackerAllocation)
+        ("solar animation reuses its panel cells", SolarTrackerAllocation),
+        ("workflow movers reuse static parcel and packet parts", WorkflowMovingPartsAllocation)
     ];
 
     private static void CameraNotifications()
@@ -234,12 +235,15 @@ internal static class CoreRegressionTests
             var renderer = new DepthRenderer();
             var target = new RenderTarget(1024, 1024);
             renderer.RenderInto(new Scene().Add(Shape.Box()), new Camera(5, 0, 0), target);
+            Check(target.RasterSamples > 0, "target omitted successful raster work");
             try { renderer.RenderInto(scene, new Camera(5, 0, 0), target); }
             catch (RasterBudgetExceededException)
             {
                 Check(target.Pick(512, 512) is null, "failed target render kept stale picking");
+                Check(target.RasterSamples == 0, "failed target kept stale raster work");
                 renderer.RenderInto(new Scene(), new Camera(), target);
                 Check(target.Pick(512, 512) is null, "target did not recover after failure");
+                Check(target.RasterSamples == 0, "empty scene reported raster work");
                 return;
             }
         }
@@ -493,7 +497,10 @@ internal static class CoreRegressionTests
                     .All(segment => segment.Name == "Orbit path"), "picked orbit segment has no useful name");
             var anchorBefore = Position(anchor);
             var movingBefore = Position(moving);
+            var geometryBefore = sample.Scene.Flatten().Select(node => node.Shape.Mesh).ToArray();
             sample.Animate(.85f);
+            Check(sample.Scene.Flatten().Select(node => node.Shape.Mesh).Zip(geometryBefore)
+                .All(pair => ReferenceEquals(pair.First, pair.Second)), $"{name} rebuilt geometry during animation");
             Check(Vector3.Distance(Position(anchor), anchorBefore) < .0001f,
                 $"{name} animation moved its fixed anchor");
             Check(Vector3.Distance(Position(moving), movingBefore) > .05f,
@@ -501,6 +508,12 @@ internal static class CoreRegressionTests
             sample.Animate(0);
             Check(Vector3.Distance(Position(moving), movingBefore) < .0001f,
                 $"{name} animation did not reset {moving}");
+
+            for (var i = 0; i < 10; i++) sample.Animate(i / 60f);
+            var allocated = GC.GetAllocatedBytesForCurrentThread();
+            for (var i = 0; i < 120; i++) sample.Animate(i / 60f);
+            var perFrame = (GC.GetAllocatedBytesForCurrentThread() - allocated) / 120;
+            Check(perFrame < 2_000, $"{name} rebuilt static parts: {perFrame} bytes/frame");
 
             Vector3 Position(string shapeName)
             {
@@ -548,6 +561,17 @@ internal static class CoreRegressionTests
             "sun did not move along its path");
         Check(sample.Scene.Flatten().Single(node => node.Shape.Name == "Tracker mount").Transform == mountBefore,
             "solar tracker moved its fixed mount");
+        foreach (var time in new[] { .85f, 4.35f })
+        {
+            sample.Animate(time);
+            var tilted = sample.Scene.Flatten().Single(node => node.Shape.Name == "Solar panel");
+            var currentSun = sample.Scene.Flatten().Single(node => node.Shape.Name == "Sun");
+            var normal = Vector3.Normalize(Vector3.TransformNormal(Vector3.UnitY, tilted.Transform));
+            var direction = Vector3.Normalize(Vector3.Transform(Vector3.Zero, currentSun.Transform) -
+                Vector3.Transform(Vector3.Zero, tilted.Transform));
+            Check(Vector3.Dot(normal, direction) > Vector3.Dot(panelUp, direction) + .05f,
+                "solar panel tilts away from the sun instead of improving alignment");
+        }
         sample.Animate(0);
         var restored = sample.Scene.Flatten().Single(node => node.Shape.Name == "Solar panel");
         Check(Vector3.Distance(Vector3.Normalize(Vector3.TransformNormal(Vector3.UnitY, restored.Transform)), panelUp) < .0001f,
@@ -622,6 +646,18 @@ internal static class CoreRegressionTests
         for (var i = 0; i < 60; i++) sample.Animate(i / 60f);
         var perFrame = (GC.GetAllocatedBytesForCurrentThread() - before) / 60;
         Check(perFrame < 4_000, $"solar animation rebuilt panel cells: {perFrame} bytes/frame");
+    }
+
+    private static void WorkflowMovingPartsAllocation()
+    {
+        foreach (var sample in new[] { DemoScenes.ConveyorInspection(), DemoScenes.PacketRouting() })
+        {
+            for (var i = 0; i < 10; i++) sample.Animate(i / 60f);
+            var allocated = GC.GetAllocatedBytesForCurrentThread();
+            for (var i = 0; i < 120; i++) sample.Animate(i / 60f);
+            var perFrame = (GC.GetAllocatedBytesForCurrentThread() - allocated) / 120;
+            Check(perFrame < 1_200, $"{sample.Name} rebuilt static moving parts: {perFrame} bytes/frame");
+        }
     }
 
     private static void Unsupported(Action action)

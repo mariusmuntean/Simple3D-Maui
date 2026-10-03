@@ -18,6 +18,20 @@ var tests = new (string Name, Action Run)[]
         Assert(scene.Replace(group, child), "replace"); Assert(scene.Remove(child), "remove");
         scene.Clear(); Assert(changes == 3, "event count");
     }),
+    ("replacement notifications identify old and new nodes once", () => {
+        var previous = Shape.Box(); var next = previous.At(1, 0, 0);
+        var scene = new Scene().Add(previous); var count = 0;
+        scene.Changed += (_, args) => {
+            var replacement = args as ShapeReplacementEventArgs;
+            Assert(replacement is not null && ReferenceEquals(replacement.OldShape, previous) &&
+                ReferenceEquals(replacement.NewShape, next), "replacement notification lost node identities");
+            Assert(ReferenceEquals(scene.Shapes[0], next), "notification happened before replacement");
+            count++;
+        };
+        Assert(scene.Replace(previous, next), "replacement failed");
+        Assert(!scene.Replace(previous, next) && !scene.Replace(next, next), "no-op replacement succeeded");
+        Assert(count == 1, "replacement notified more than once");
+    }),
     ("depth visibility picking and retained frames", () => {
         var near = Shape.Box(0xFFFF0000).Named("near").At(0,0,1);
         var far = Shape.Box(0xFF0000FF).Named("far");
