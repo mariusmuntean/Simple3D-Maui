@@ -20,6 +20,7 @@ internal static class CoreRegressionTests
         ("failed render validation clears reusable picking and labels", ReusableValidationFailure),
         ("group traversal avoids per-node iterator allocation", GroupTraversalAllocation),
         ("repeated small meshes stay within reusable render allocation budget", SmallMeshRenderAllocation),
+        ("reusable traversal keeps many small instances within allocation budget", ManyInstancesRenderAllocation),
         ("branching groups preserve transform and equal-depth order", BranchingGroupTraversal),
         ("legacy renderer rejects unsupported scene features", LegacyFeatureGuard),
         ("sample scenes use depth rendering and fit the camera", SampleScenes),
@@ -321,6 +322,38 @@ internal static class CoreRegressionTests
             for (var i = 0; i < 20; i++) renderer.RenderInto(scene, camera, target);
             return (GC.GetAllocatedBytesForCurrentThread() - before) / 20;
         }
+    }
+
+    private static void ManyInstancesRenderAllocation()
+    {
+        var mesh = new Mesh([new(-.1f, -.1f, 0), new(.1f, -.1f, 0), new(0, .1f, 0)], [0, 1, 2]);
+        var scene = new Scene();
+        for (var i = 0; i < 128; i++)
+            scene.Add(Shape.FromMesh(mesh).At((i % 16 - 8) * .2f, (i / 16 - 4) * .2f, 0));
+        var camera = new Camera(5, 0, 0);
+        var renderer = new DepthRenderer();
+        var target = new RenderTarget(32, 32);
+        for (var i = 0; i < 20; i++) renderer.RenderInto(scene, camera, target);
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var i = 0; i < 80; i++) renderer.RenderInto(scene, camera, target);
+        var bytes = (GC.GetAllocatedBytesForCurrentThread() - before) / 80;
+        Check(bytes <= 4096, $"128 small instances allocated {bytes} bytes per reusable render; budget is 4096");
+        Console.WriteLine($"128 small instances: {bytes:N0} managed bytes per reusable render on this runner");
+        var retainedPick = target.Pick(16, 16);
+        Check(retainedPick is not null, "fixture has no center pick");
+        var snapshot = renderer.Render(scene, camera, 32, 32);
+        var pixels = snapshot.Pixels.ToArray();
+        renderer.RenderInto(new Scene().Add(Shape.Box()), camera, new RenderTarget(16, 16));
+        Check(ReferenceEquals(target.Pick(16, 16), retainedPick), "another target changed retained picking");
+        Check(ReferenceEquals(snapshot.Pick(16, 16), retainedPick) && snapshot.Pixels.Span.SequenceEqual(pixels),
+            "scratch traversal changed owned snapshot");
+        var emptyGroup = Shape.Group();
+        var excessive = new Scene().Add(Shape.Box()).Add(Shape.Group(Enumerable.Repeat(emptyGroup, Scene.MaximumNodes).ToArray()));
+        Throws(() => renderer.RenderInto(excessive, camera, target));
+        Check(target.Pick(16, 16) is null, "failed preparation retained picking");
+        renderer.RenderInto(scene, camera, target);
+        Check(target.Pixels.Span.SequenceEqual(pixels) && ReferenceEquals(target.Pick(16, 16), retainedPick),
+            "failed preparation left stale nodes in the next render");
     }
 
     private static void SmallMeshRenderAllocation()

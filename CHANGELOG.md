@@ -10,6 +10,7 @@
 - Seventeen gallery scenes with subject-specific animations, including colored checker cells, battery charge gauges and a gantry crane.
 - Bounded raster work, reduced gesture preview resolution and optional diagonal-edge filtering.
 - Indexed triangle traversal reduces allocation when rendering many small mesh instances.
+- Reusable node preparation reduces per-frame allocation without sharing picking snapshots.
 - MIT licensing, public API documentation, architecture diagrams and independent package consumers.
 - Portable symbols, Source Link and SDK package validation for preview packages.
 
