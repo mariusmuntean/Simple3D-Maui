@@ -2,7 +2,14 @@
 
 ## Requirements
 
-Use .NET 10 with the MAUI workload and an iOS, Android, or Mac Catalyst target. Add references to both library projects, or install the packages produced by `dotnet pack`. Register the SkiaSharp handler in the host app:
+Use .NET 10 with MAUI workloads and an iOS, Android, or Mac Catalyst target. Preview packages are not yet on NuGet.org. [Build the packages](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/docs/PACKAGING.md), then install from the local feed:
+
+```bash
+dotnet add YourApp.csproj package Simple3D.Maui --version 0.1.0-preview.1 --no-restore
+dotnet restore YourApp.csproj --source /absolute/path/to/artifacts/packages --source https://api.nuget.org/v3/index.json
+```
+
+Core is a transitive dependency. For a source checkout, reference `src/Simple3D.Maui` instead. Core-only applications can install `Simple3D.Core` without MAUI workloads. Register the SkiaSharp handler in the host app:
 
 ```csharp
 using SkiaSharp.Views.Maui.Controls.Hosting;

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net10.0-android;net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <RootNamespace>Simple3D.Demo</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <ApplicationTitle>Simple3D Package Check</ApplicationTitle>
+    <ApplicationId>dev.simple3d.packagecheck</ApplicationId>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+    <SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net10.0-android'">24.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net10.0-ios'">15.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net10.0-maccatalyst'">17.0</SupportedOSPlatformVersion>
+    <_AppBundleName Condition="'$(TargetFramework)' == 'net10.0-maccatalyst'">$(AssemblyName)</_AppBundleName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Simple3D.Maui" Version="0.1.0-preview.1" />
+    <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+    <MauiIcon Include="Resources/AppIcon/appicon.svg" ForegroundFile="Resources/AppIcon/appiconfg.svg" Color="#101A2D" />
+    <MauiSplashScreen Include="Resources/Splash/splash.svg" Color="#101A2D" BaseSize="128,128" />
+  </ItemGroup>
+</Project>
