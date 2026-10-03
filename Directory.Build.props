@@ -8,6 +8,14 @@
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://mariusmuntean.github.io/Simple3D-Maui/</PackageProjectUrl>
     <PackageTags>maui;3d;graphics;skia;visualization</PackageTags>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <DebugType>portable</DebugType>
+    <Deterministic>true</Deterministic>
+    <EnablePackageValidation>true</EnablePackageValidation>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
     <Description Condition="'$(MSBuildProjectName)' == 'Simple3D.Core'">Portable opaque 3D scenes, meshes, cameras, software depth rendering and picking.</Description>
     <Description Condition="'$(MSBuildProjectName)' == 'Simple3D.Maui'">Interactive SkiaSharp 3D scene control for .NET MAUI on iOS, Android and Mac Catalyst.</Description>
   </PropertyGroup>
