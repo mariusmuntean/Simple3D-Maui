@@ -144,8 +144,8 @@
 </tr>
 </tbody>
 </table>
-<p>Reuse a target at the same size and share immutable meshes between shape replacements. Core reads triangles by index, avoiding a separate triangle enumerator for each leaf. The renderer still allocates small per-frame collections for flattened nodes, shapes and labels; reuse does not mean zero allocation.</p>
-<p>A failed <code>RenderInto</code> invalidates picking and may leave partial pixels. Render successfully before reading that target again. A renderer instance is not thread safe because it shares depth scratch storage. Mutate and render a scene on the same thread; use the UI thread with <code>SceneView</code>.</p>
+<p>Reuse a target at the same size and share immutable meshes between shape replacements. Core reads triangles by index, avoiding a separate triangle enumerator for each leaf. Each renderer reuses its flattened-node storage; capacity follows the largest prepared scene, while shape references are cleared after success or failure. Picking snapshots retain their own shape arrays. Traversal, shape arrays and labels still allocate; reuse does not mean zero allocation.</p>
+<p>A failed <code>RenderInto</code> invalidates picking and may leave partial pixels. Render successfully before reading that target again. A renderer instance is not thread safe because it shares depth and traversal scratch storage. Mutate and render a scene on the same thread; use the UI thread with <code>SceneView</code>.</p>
 <p>On native handler disconnect, the view releases subscriptions and rendering resources. Snapshots held by your application remain valid.</p>
 <h2 id="responsiveness-and-bounded-work">Responsiveness and bounded work</h2>
 <p>Core caps dimensions at 2,048 pixels, traversal at 100,000 node visits, aggregate triangles at 1,000,000, and raster bounding-box samples at 16,000,000 per frame. These are resource bounds, not recommended animation workloads. See <a href="rendering-limits.html">Rendering limits</a>.</p>

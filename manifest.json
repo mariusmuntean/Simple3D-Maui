@@ -65,7 +65,7 @@
       "Uid": null,
       "IsMRef": true,
       "Title": "Simple3D.Core.DepthRenderer",
-      "Summary": "<p sourcefile=\"api/Simple3D.Core.DepthRenderer.yml\" sourcestartlinenumber=\"1\">Opaque software triangle rasterizer with per-pixel depth and picking. Instances reuse depth scratch storage and are not thread safe.</p>\n"
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.DepthRenderer.yml\" sourcestartlinenumber=\"1\">Opaque software triangle rasterizer with per-pixel depth and picking. Instances reuse depth and traversal scratch storage and are not thread safe.</p>\n"
     },
     {
       "type": "ManagedReference",
