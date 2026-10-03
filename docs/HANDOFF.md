@@ -39,7 +39,15 @@ existing Mac Catalyst scene configuration. The corrected iOS build passed
 locally with zero warnings/errors. On iPhone 17 Pro / iOS 26.5, the real smoke
 script displayed Equipment, Packing and Surface, passed pixel and scene
 difference checks, and shut down its simulator. No demo process remained. A
-fresh hosted iOS 27 launch is required to verify this repair. The `xcode-27`
+third hosted run,
+[37061200749](https://github.com/mariusmuntean/Simple3D-Maui/actions/runs/37061200749),
+verified that repair: the iOS 27 build and simulator launch passed. Core,
+documentation, Android build and Mac Catalyst build passed too. Its Android
+emulator job failed while the runner action downloaded the emulator SDK package
+(`Error on ZipFile unknown archive`), before the gallery smoke script ran. The
+failed job was rerun on 2026-10-03. Attempt 2 passed: Android launched the
+gallery and its screenshot checker found the expected background, panel and
+blue shape. All six jobs are green for the final attempt. The `xcode-27`
 runner is a preview image; inspect its actual selected Xcode and simulator
 devices in future logs.
 
