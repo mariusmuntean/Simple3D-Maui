@@ -32,6 +32,9 @@ internal static class CoreRegressionTests
         ("network packets traverse fixed links between named racks", PacketRoutingAnimation),
         ("survey drone moves and spins propellers above a fixed pad", DroneSurveyAnimation),
         ("survey animation reuses its static geometry", DroneSurveyAllocation),
+        ("battery charge remains inside its gauges while status colors change", BatteryStorageAnimation),
+        ("gantry cable remains attached to its moving load", GantryCraneAnimation),
+        ("energy and handling animations reuse geometry within their allocation budget", EnergyHandlingAllocation),
         ("solar animation reuses its panel cells", SolarTrackerAllocation),
         ("workflow movers reuse static parcel and packet parts", WorkflowMovingPartsAllocation)
     ];
@@ -410,7 +413,7 @@ internal static class CoreRegressionTests
     private static void SampleScenes()
     {
         var names = DemoScenes.All.Select(sample => sample.Name).ToArray();
-        foreach (var name in new[] { "Equipment", "Packing", "Surface", "Assembly", "Molecule", "Telemetry", "City", "Robot Arm", "Orbit", "Wind", "Conveyor Inspection", "Solar Tracker", "Packet Routing", "Drone Survey", "Patterned Surface" })
+        foreach (var name in new[] { "Equipment", "Packing", "Surface", "Assembly", "Molecule", "Telemetry", "City", "Robot Arm", "Orbit", "Wind", "Conveyor Inspection", "Solar Tracker", "Packet Routing", "Drone Survey", "Patterned Surface", "Battery Storage", "Gantry Crane" })
             Check(names.Count(candidate => candidate == name) == 1, $"missing or duplicate {name} example");
         foreach (var sample in DemoScenes.All)
         {
@@ -649,6 +652,84 @@ internal static class CoreRegressionTests
         for (var i = 0; i < 60; i++) sample.Animate(i / 60f);
         var perFrame = (GC.GetAllocatedBytesForCurrentThread() - before) / 60;
         Check(perFrame < 12_000, $"survey animation rebuilt static geometry: {perFrame} bytes/frame");
+    }
+
+    private static void BatteryStorageAnimation()
+    {
+        var sample = DemoScenes.All.SingleOrDefault(scene => scene.Name == "Battery Storage")
+            ?? throw new InvalidOperationException("Battery Storage showcase is missing");
+        var cabinets = sample.Scene.Shapes.Single(shape => shape.Name == "Battery cabinets");
+        var colors = new HashSet<uint>();
+        var heights = new List<float>();
+        for (var step = 0; step <= 100; step++)
+        {
+            sample.Animate(step / 10f);
+            var charges = sample.Scene.Flatten().Where(node => node.Shape.Name?.StartsWith("Charge ") == true).ToArray();
+            Check(charges.Length == 6, "battery animation lost a charge gauge");
+            foreach (var (charge, _) in charges)
+            {
+                Check(charge.Size.Y >= .1f && charge.Size.Y <= 1.1f, "charge escaped its gauge");
+                var scale = sample.Scene.Flatten().Single(node => node.Shape.Name == $"Module {charge.Name![7..]} gauge scale").Shape;
+                Check(MathF.Abs(charge.Position.Y - charge.Size.Y / 2 - (scale.Position.Y - scale.Size.Y / 2)) < .0001f,
+                    "charge gauge lost its bottom anchor");
+                Check(charge.Position.Y + charge.Size.Y / 2 <= scale.Position.Y + scale.Size.Y / 2,
+                    "charge exceeds the gauge scale");
+                colors.Add(charge.Color);
+                heights.Add(charge.Size.Y);
+            }
+            Check(ReferenceEquals(cabinets, sample.Scene.Shapes.Single(shape => shape.Name == "Battery cabinets")),
+                "battery animation rebuilt static cabinets");
+        }
+        Check(heights.Max() - heights.Min() > .7f && colors.Count > 20, "charge state barely changes");
+    }
+
+    private static void GantryCraneAnimation()
+    {
+        var sample = DemoScenes.All.SingleOrDefault(scene => scene.Name == "Gantry Crane")
+            ?? throw new InvalidOperationException("Gantry Crane showcase is missing");
+        var structure = sample.Scene.Shapes.Single(shape => shape.Name == "Gantry structure");
+        var positions = new List<Vector3>();
+        for (var step = 0; step <= 100; step++)
+        {
+            sample.Animate(step / 10f);
+            var load = sample.Scene.Flatten().Single(node => node.Shape.Name == "Carried load");
+            var cable = sample.Scene.Flatten().Single(node => node.Shape.Name == "Hoist cable");
+            var trolley = sample.Scene.Flatten().Single(node => node.Shape.Name == "Hoist trolley");
+            var bridge = sample.Scene.Flatten().Single(node => node.Shape.Name == "Moving bridge");
+            var center = Vector3.Transform(Vector3.Zero, load.Transform);
+            var loadTop = Vector3.Transform(Vector3.UnitY / 2, load.Transform);
+            var cableBottom = Vector3.Transform(-Vector3.UnitY / 2, cable.Transform);
+            var cableTop = Vector3.Transform(Vector3.UnitY / 2, cable.Transform);
+            Check(Vector3.Distance(loadTop, cableBottom) < .0001f, "hoist cable detached from load");
+            Check(Vector3.Distance(cableTop, Vector3.Transform(-Vector3.UnitY / 2, trolley.Transform)) < .0001f,
+                "hoist cable detached from trolley");
+            Check(Vector3.Distance(Vector3.Transform(Vector3.UnitY / 2, trolley.Transform),
+                Vector3.Transform(-Vector3.UnitY / 2, bridge.Transform)) < .0001f, "trolley detached from bridge");
+            Check(MathF.Abs(center.X) < 1.3f && center.Y is >= -.5f and <= .3f, "load left its working envelope");
+            Check(ReferenceEquals(structure, sample.Scene.Shapes.Single(shape => shape.Name == "Gantry structure")),
+                "gantry animation rebuilt its stationary structure");
+            positions.Add(center);
+        }
+        Check(positions.Max(p => p.X) - positions.Min(p => p.X) > 1.5f, "trolley barely traverses");
+        Check(positions.Max(p => p.Y) - positions.Min(p => p.Y) > .5f, "hoist barely lifts");
+    }
+
+    private static void EnergyHandlingAllocation()
+    {
+        foreach (var name in new[] { "Battery Storage", "Gantry Crane" })
+        {
+            var sample = DemoScenes.All.Single(scene => scene.Name == name);
+            var meshes = sample.Scene.Flatten().Select(node => (node.Shape.Mesh, node.Shape.Name)).ToArray();
+            for (var i = 0; i < 20; i++) sample.Animate(i / 60f);
+            var before = GC.GetAllocatedBytesForCurrentThread();
+            for (var i = 0; i < 120; i++) sample.Animate(i / 60f);
+            var bytes = (GC.GetAllocatedBytesForCurrentThread() - before) / 120;
+            Check(bytes < 4096, $"{name} animation allocated {bytes} bytes/frame; budget is 4096");
+            var after = sample.Scene.Flatten().Select(node => (node.Shape.Mesh, node.Shape.Name)).ToArray();
+            Check(meshes.Length == after.Length && meshes.Zip(after).All(pair =>
+                ReferenceEquals(pair.First.Mesh, pair.Second.Mesh) && pair.First.Name == pair.Second.Name),
+                $"{name} animation rebuilt geometry or changed logical child order");
+        }
     }
 
     private static void SolarTrackerAllocation()

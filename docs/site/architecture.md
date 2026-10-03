@@ -11,7 +11,7 @@ Simple3D is a small CPU renderer for opaque 3D diagrams inside ordinary .NET MAU
 | `Simple3D.Core` | Shapes, immutable meshes, hierarchy, camera, projection, depth rasterization and picking | .NET 10 / System.Numerics |
 | `Simple3D.Maui` | `SceneView`, gestures, caching, bitmap presentation, selection and label layout | Core, MAUI, SkiaSharp |
 | Your application | Scene content, animation timing, selected-part details and layout | MAUI control, or Core alone for exports |
-| Gallery | Fifteen examples using shared scene factories | Both libraries through the demo project |
+| Gallery | Seventeen examples using shared scene factories | Both libraries through the demo project |
 
 Core has no MAUI or SkiaSharp dependency. You can render and query pixels in a console app without a native UI. `SceneView` uses `SKCanvasView`; SkiaSharp presents the raster image rather than executing the scene's triangles on a GPU.
 
