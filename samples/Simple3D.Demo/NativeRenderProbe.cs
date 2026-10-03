@@ -1,4 +1,4 @@
-#if DEBUG
+#if DEBUG || NATIVE_RENDER_PROBE
 using System.Diagnostics;
 using Simple3D.Core;
 using Simple3D.Shared;

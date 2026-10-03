@@ -16,6 +16,9 @@
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">17.0</SupportedOSPlatformVersion>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(EnableNativeRenderProbe)' == 'true'">
+    <DefineConstants>$(DefineConstants);NATIVE_RENDER_PROBE</DefineConstants>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug' and '$(TargetFramework)' == 'net10.0-android'">
     <!-- Android supports JIT compilation; avoid interpreting the per-pixel rendering loops. -->
     <UseInterpreter>false</UseInterpreter>

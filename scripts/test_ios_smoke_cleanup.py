@@ -37,7 +37,7 @@ if name == "xcrun" and args[1:2] == ["bootstatus"] and os.environ.get("SMOKE_BLO
 
 
 class IosSmokeCleanupTests(unittest.TestCase):
-    def run_smoke(self, terminate=False, render_probe=False, **settings):
+    def run_smoke(self, terminate=False, render_probe=False, configuration="Debug", **settings):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             tools = root / "tools"
@@ -46,11 +46,11 @@ class IosSmokeCleanupTests(unittest.TestCase):
                 tool = tools / name
                 tool.write_text(TOOL)
                 tool.chmod(0o755)
-            app = root / "samples/Simple3D.Demo/bin/Debug/net10.0-ios/iossimulator-arm64/Simple3D.Demo.app"
+            app = root / f"samples/Simple3D.Demo/bin/{configuration}/net10.0-ios/iossimulator-arm64/Simple3D.Demo.app"
             app.mkdir(parents=True)
             log = root / "commands.jsonl"
             env = dict(os.environ, PATH=f"{tools}{os.pathsep}{os.environ['PATH']}",
-                       SMOKE_LOG=str(log), **settings)
+                       SMOKE_LOG=str(log), BUILD_CONFIGURATION=configuration, **settings)
             command = ["bash", str(SCRIPT), *(["--render-probe"] if render_probe else [])]
             if terminate:
                 env["SMOKE_BLOCK"] = "1"
@@ -81,6 +81,11 @@ class IosSmokeCleanupTests(unittest.TestCase):
             ["xcrun", "simctl", "terminate", device, "dev.simple3d.gallery"],
             ["xcrun", "simctl", "shutdown", device],
         ])
+
+    def test_release_native_probe_releases_device(self):
+        result, commands = self.run_smoke(render_probe=True, configuration="Release")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(["xcrun", "simctl", "shutdown", "test-device"], commands)
 
     def test_success_releases_test_device(self):
         result, commands = self.run_smoke()

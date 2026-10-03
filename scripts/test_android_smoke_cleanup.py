@@ -38,7 +38,7 @@ sys.exit(1 if os.environ["TEST_SCENARIO"] == "screenshot-failure" else 0)
 
 
 class AndroidCleanupTests(unittest.TestCase):
-    def run_smoke(self, scenario):
+    def run_smoke(self, scenario, configuration="Debug"):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             tools = root / "tools"
@@ -47,17 +47,23 @@ class AndroidCleanupTests(unittest.TestCase):
                 tool = tools / name
                 tool.write_text(content)
                 tool.chmod(0o755)
-            apk = root / "samples/Simple3D.Demo/bin/Debug/net10.0-android/android-x64/gallery-Signed.apk"
+            apk = root / f"samples/Simple3D.Demo/bin/{configuration}/net10.0-android/android-x64/gallery-Signed.apk"
             apk.parent.mkdir(parents=True)
             apk.touch()
             (root / "scripts").mkdir()
             (root / "scripts/check-gallery-screenshot.py").write_text(CHECK)
             log, running = root / "adb.log", root / "running"
             env = dict(os.environ, PATH=str(tools) + os.pathsep + os.environ["PATH"],
-                       TEST_SCENARIO=scenario, TEST_ADB_LOG=str(log), TEST_RUNNING=str(running))
+                       TEST_SCENARIO=scenario, TEST_ADB_LOG=str(log), TEST_RUNNING=str(running), BUILD_CONFIGURATION=configuration)
             result = subprocess.run(["bash", str(SCRIPT)], cwd=root, env=env,
                                     capture_output=True, text=True, timeout=10)
             return result, log.read_text().splitlines(), running.exists()
+
+    def test_release_launch_stops_gallery(self):
+        result, commands, running = self.run_smoke("success", configuration="Release")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(running)
+        self.assertEqual(commands[-1], "shell am force-stop dev.simple3d.gallery")
 
     def test_success_stops_only_the_gallery(self):
         result, commands, running = self.run_smoke("success")
