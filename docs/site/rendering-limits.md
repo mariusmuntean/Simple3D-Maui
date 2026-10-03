@@ -34,6 +34,8 @@ In the checked-in animated Surface benchmark at 768×576 on one Mac, the owned p
 
 The Apple demo's Debug configuration compiles the rendering libraries and framework assemblies, while retaining interpreter support for the demo assembly. Changes to compiled rendering code require a rebuild. Interpreter overhead can make Debug rendering substantially slower than the same renderer running compiled; measure the configuration you intend to use.
 
+Android Debug uses JIT compilation rather than the interpreter for the demo, including its per-pixel rendering loops. This setting is specific to the demo project. Rebuild and deploy fresh assemblies when comparing runtime performance.
+
 After building the Debug iOS simulator app, run:
 
 ```bash

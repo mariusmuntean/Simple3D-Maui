@@ -17,6 +17,8 @@ Keep an interactive scene outside a parent `ScrollView` when drags should belong
 
 While dragging or pinching, native rendering uses a preview capped at 512 pixels on its longest side, keeping the aspect ratio and depth picking. Scaled previews use linear sampling to soften magnified pixel steps. This filters the rendered bitmap; it is not multisample triangle rasterization. On release or cancellation the view restores its configured `MaximumRenderDimension`. Animation may independently use a lower configured limit.
 
+Native bitmap painting also softens high-contrast diagonal stair steps by blending perpendicular edge transitions. `IsAntialiasEnabled` defaults to `true`; set it to `false` to preserve unfiltered pixels or avoid the additional pixel scan on a constrained device. Straight edges and flat interiors are preserved. This filter does not change Core pixels, exported frames or picking, and it is not multisample antialiasing. Selection tint and contour are applied after the filter.
+
 For custom pointers, `view.PickAt(x, y, viewWidth, viewHeight)` maps layout coordinates to the last rendered frame. `CaptureFrame(width, height)` produces or retrieves an owned physical-pixel frame; `frame.Pick(x, y)` accepts physical pixels. `CaptureFrame` is useful for tests and exports. The renderer is not thread safe: use it and mutate its scene or camera on the same thread.
 
 The view subscribes to its current scene and camera and releases those subscriptions when its handler disconnects. Replacing either bindable property stops observing the old object. When a tap follows a scene change before the next paint, picking refreshes the frame first.

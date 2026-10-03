@@ -15,6 +15,7 @@ namespace Simple3D.Maui;
 /// <summary>A depth-rendered, touch-enabled surface for small opaque scenes. Mutate its scene and camera on the UI thread.</summary>
 public sealed class SceneView : SKCanvasView
 {
+    private bool[] _selectionIds = [];
     private const int DragPreviewMaximumDimension = 512;
     /// <summary>The scene displayed by this view.</summary>
     public static readonly BindableProperty SceneProperty = BindableProperty.Create(nameof(Scene), typeof(Scene), typeof(SceneView),
@@ -30,6 +31,14 @@ public sealed class SceneView : SKCanvasView
     /// <summary>Whether the view installs orbit, zoom and picking gestures.</summary>
     public static readonly BindableProperty IsInteractiveProperty = BindableProperty.Create(nameof(IsInteractive), typeof(bool), typeof(SceneView),
         true, propertyChanged: (bindable, _, _) => ((SceneView)bindable).UpdateInteraction());
+    /// <summary>Whether native painting softens high-contrast diagonal pixel steps.</summary>
+    public static readonly BindableProperty IsAntialiasEnabledProperty = BindableProperty.Create(nameof(IsAntialiasEnabled), typeof(bool), typeof(SceneView),
+        true, propertyChanged: (bindable, _, _) =>
+        {
+            var view = (SceneView)bindable;
+            view._bitmapVersion = -1;
+            view.InvalidateSurface();
+        });
     /// <summary>Maximum physical width or height used for native painting.</summary>
     public static readonly BindableProperty MaximumRenderDimensionProperty = BindableProperty.Create(nameof(MaximumRenderDimension), typeof(int), typeof(SceneView),
         DepthRenderer.MaximumDimension, validateValue: (_, value) => value is int size && size >= 1 && size <= DepthRenderer.MaximumDimension,
@@ -124,6 +133,12 @@ public sealed class SceneView : SKCanvasView
     {
         get => (bool)GetValue(IsInteractiveProperty);
         set => SetValue(IsInteractiveProperty, value);
+    }
+    /// <summary>Soften diagonal edges during native painting. Core captures and picking remain unchanged.</summary>
+    public bool IsAntialiasEnabled
+    {
+        get => (bool)GetValue(IsAntialiasEnabledProperty);
+        set => SetValue(IsAntialiasEnabledProperty, value);
     }
     /// <summary>Maximum physical render dimension for native paints. Lower values reduce per-frame work during animation.</summary>
     public int MaximumRenderDimension
@@ -494,27 +509,38 @@ public sealed class SceneView : SKCanvasView
 
     internal SKBitmap PaintBitmap(RenderTarget target)
     {
+        var selected = SelectedShape;
         if (_paintBitmap is null || _paintBitmap.Width != target.Width || _paintBitmap.Height != target.Height)
         {
             ReleasePaintBitmap();
             _paintBitmap = new SKBitmap(new SKImageInfo(target.Width, target.Height, SKColorType.Bgra8888, SKAlphaType.Opaque));
         }
         if (!ReferenceEquals(_paintBitmapTarget, target) || _bitmapVersion != _paintVersion ||
-            !ReferenceEquals(_bitmapSelection, SelectedShape))
+            !ReferenceEquals(_bitmapSelection, selected))
         {
             MemoryMarshal.AsBytes(target.Pixels.Span).CopyTo(_paintBitmap.GetPixelSpan());
-            if (SelectedShape is not null)
+            if (IsAntialiasEnabled)
+                SmoothDiagonalEdges(target.Pixels.Span, MemoryMarshal.Cast<byte, uint>(_paintBitmap.GetPixelSpan()), target.Width, target.Height);
+            if (selected is not null)
             {
                 var pixels = MemoryMarshal.Cast<byte, uint>(_paintBitmap.GetPixelSpan());
-                for (var y = 0; y < target.Height; y++)
-                    for (var x = 0; x < target.Width; x++)
-                        if (ReferenceEquals(target.Pick(x, y), SelectedShape))
+                var ids = target.VisibleIds;
+                var shapes = target.VisibleShapes;
+                if (_selectionIds.Length < shapes.Length) _selectionIds = new bool[shapes.Length];
+                for (var i = 0; i < shapes.Length; i++) _selectionIds[i] = ReferenceEquals(shapes[i], selected);
+                var width = target.Width;
+                var height = target.Height;
+                for (var y = 0; y < height; y++)
+                    for (var x = 0; x < width; x++)
+                    {
+                        var index = y * width + x;
+                        if (index < ids.Length && ids[index] >= 0 && _selectionIds[ids[index]])
                         {
-                            var index = y * target.Width + x;
-                            if (!ReferenceEquals(target.Pick(x - 2, y), SelectedShape) ||
-                                !ReferenceEquals(target.Pick(x + 2, y), SelectedShape) ||
-                                !ReferenceEquals(target.Pick(x, y - 2), SelectedShape) ||
-                                !ReferenceEquals(target.Pick(x, y + 2), SelectedShape))
+                            if (x < 2 || x + 2 >= width || y < 2 || y + 2 >= height ||
+                                ids[index - 2] < 0 || !_selectionIds[ids[index - 2]] ||
+                                ids[index + 2] < 0 || !_selectionIds[ids[index + 2]] ||
+                                ids[index - 2 * width] < 0 || !_selectionIds[ids[index - 2 * width]] ||
+                                ids[index + 2 * width] < 0 || !_selectionIds[ids[index + 2 * width]])
                             {
                                 pixels[index] = 0xFFFFD27Au;
                                 continue;
@@ -526,13 +552,51 @@ public sealed class SceneView : SKCanvasView
                             var blue = ((pixel & 255) * 2 + 205) / 3;
                             pixels[index] = 0xFF000000u | (red << 16) | (green << 8) | blue;
                         }
+                    }
             }
-            _bitmapSelection = SelectedShape;
+            _bitmapSelection = selected;
             _paintBitmap.NotifyPixelsChanged();
             _paintBitmapTarget = target;
             _bitmapVersion = _paintVersion;
         }
         return _paintBitmap;
+    }
+
+    internal static void SmoothDiagonalEdges(ReadOnlySpan<uint> source, Span<uint> destination, int width, int height)
+    {
+        for (var y = 1; y < height - 1; y++)
+            for (var x = 1; x < width - 1; x++)
+            {
+                var index = y * width + x;
+                var center = source[index];
+                var north = source[index - width];
+                var south = source[index + width];
+                var west = source[index - 1];
+                var east = source[index + 1];
+                if ((north == center && south == center) || (west == center && east == center)) continue;
+                var c = Luma(center);
+                var n = Luma(north);
+                var s = Luma(south);
+                var w = Luma(west);
+                var e = Luma(east);
+                var range = Math.Max(c, Math.Max(Math.Max(n, s), Math.Max(w, e))) -
+                    Math.Min(c, Math.Min(Math.Min(n, s), Math.Min(w, e)));
+                if (range < 24) continue;
+                var threshold = Math.Max(24, range / 4);
+                var northEdge = Math.Abs(n - c) >= threshold;
+                var southEdge = Math.Abs(s - c) >= threshold;
+                var westEdge = Math.Abs(w - c) >= threshold;
+                var eastEdge = Math.Abs(e - c) >= threshold;
+                // Two perpendicular transitions describe a staircase corner, unlike a straight edge or thin line.
+                if (northEdge == southEdge || westEdge == eastEdge) continue;
+                var a = northEdge ? north : south;
+                var b = westEdge ? west : east;
+                var redBlue = (((center & 0x00FF00FFu) * 6 + (a & 0x00FF00FFu) + (b & 0x00FF00FFu)) >> 3) & 0x00FF00FFu;
+                var green = (((center & 0x0000FF00u) * 6 + (a & 0x0000FF00u) + (b & 0x0000FF00u)) >> 3) & 0x0000FF00u;
+                destination[index] = 0xFF000000u | redBlue | green;
+            }
+
+        static int Luma(uint pixel) => (int)((((pixel >> 16) & 255) * 54 + ((pixel >> 8) & 255) * 183 + (pixel & 255) * 19) >> 8);
     }
 
     internal void ReleasePaintBitmap()
@@ -550,6 +614,7 @@ public sealed class SceneView : SKCanvasView
         _frame = null;
         _paintTarget = null;
         _paintLabels.Clear();
+        _selectionIds = [];
         _renderer = new DepthRenderer();
         _dirty = true;
         _paintTargetDirty = true;

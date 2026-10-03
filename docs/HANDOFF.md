@@ -4,6 +4,20 @@ Updated: 2026-10-03. Fetch remote state before resuming.
 
 ## Current integration state
 
+### Rendering integration and branch cleanup (2026-10-03)
+
+PR #6 is ready for integration into `main`. This checkpoint supersedes its earlier draft-only gates below. The owner reports good performance on a physical iPhone 17 Pro and confirms a full Mac trackpad pinch now zooms continuously and smoothly. Android interaction was previously confirmed by the owner. These are hands-on reports, not measured 60/120 FPS guarantees.
+
+The final changes add optional native diagonal edge filtering (`IsAntialiasEnabled`, enabled by default), compile Android Debug rendering using JIT, and paint selection directly from the valid shape-ID buffer. Duplicate shape instances retain the same picking/outline semantics. Regression coverage checks filtered pixels, unchanged captures and picks, viewport edges, concurrent animated selection and pan, and detail recovery. Temporary timing logs and an ineffective image-drawing experiment were removed from source. Selection bitmap processing measured about 14.8 to 8.4 ms at 614×768 in matched iOS simulator runs, including edge filtering; this is CPU processing time, not displayed FPS.
+
+Fresh local checks: Core 40/40, MAUI 39/39, scripts 13/13, and DocFX metadata/site builds with zero warnings/errors. Fresh iOS simulator and Mac Catalyst Debug builds passed with one existing local deprecated Xamarin settings warning each; Android Debug with embedded assemblies passed with zero warnings/errors. Linux ARM64 Docker checks passed Core 40/40 and MAUI 39/39 after installing fontconfig and DejaVu fonts. A minimal fontless image loaded Skia but failed two label layout checks; manual CI now explicitly installs those text prerequisites. No hosted run was dispatched. Linux ARM64 validation does not claim validation on an x64 GitHub runner. Independent code review found no blocking defects.
+
+The earlier iPhone simulator installation predated the animated-selection fix. A fresh build retained the outlined output arrow during animation. The simulator test app was stopped; the owner's existing simulator session was preserved. The disposable Linux validation container removed itself. Unrelated development containers and worktrees were preserved.
+
+Branches with merged PRs and no subsequent commits are obsolete: `maturity-tests` (#1), `rider-apple-builds` (#2), `visual-identity` (#3), `gallery-scenes` (#4), `showcase-animations` (#5), `reusable-render-target` (#7), and `native-smoke-cleanup` (#9). Their exact remote heads were checked against the merged PRs before cleanup. Retire `render-bitmap-reuse` after #6 merges. Preserve `showcase-engineering-scenes` (#8), `package-readiness` (#10), and `showcase-workflows` (#11): they contain unmerged work. The packaging branch has a separate active worktree.
+
+For subsequent work, start from updated `main`, integrate each remaining PR additively, and repeat its scope-specific validation. Earlier checkpoints below are historical evidence, not instructions to keep the completed rendering PR in draft. Package publication and combined showcase validation remain separate work.
+
 ### Gallery interaction and animated selection checkpoint (2026-10-03)
 
 The gallery scene now occupies a flexible grid row outside all scroll views. Catalogue buttons scroll horizontally, and the footer scrolls within its own bounded area. A regression reproduced the previous scrolling ancestor. The rebuilt Mac gallery visibly rotates on a vertical drag while its header and controls stay fixed.
@@ -132,7 +146,7 @@ The owner requested local development feedback and conserving Actions minutes (t
 git clone git@github.com:mariusmuntean/Simple3D-Maui.git
 cd Simple3D-Maui
 git fetch origin
-git switch --track origin/render-bitmap-reuse
+git switch main
 ```
 
 Use a separate checkout or worktree for another branch. Read the live PR and branch state before editing. The original maturity branch and old handoff are historical.

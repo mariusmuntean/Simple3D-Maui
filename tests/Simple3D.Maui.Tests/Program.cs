@@ -8,6 +8,39 @@ using SkiaSharp;
 
 var tests = new (string Name, Action Run)[]
 {
+    ("diagonal antialiasing blends stair steps and preserves straight edges", () =>
+    {
+        var diagonal = Enumerable.Range(0, 64).Select(i => i % 8 > i / 8 ? 0xFFFFFFFFu : 0xFF000000u).ToArray();
+        var result = diagonal.ToArray();
+        SceneView.SmoothDiagonalEdges(diagonal, result, 8, 8);
+        Assert(result.Any(pixel => pixel != 0xFFFFFFFFu && pixel != 0xFF000000u), "diagonal still has only hard pixel steps");
+        Assert(result[1 * 8 + 6] == 0xFFFFFFFFu && result[6 * 8 + 1] == 0xFF000000u,
+            "filter blurred flat interiors");
+        var straight = Enumerable.Range(0, 64).Select(i => i % 8 >= 4 ? 0xFFFFFFFFu : 0xFF000000u).ToArray();
+        result = straight.ToArray();
+        SceneView.SmoothDiagonalEdges(straight, result, 8, 8);
+        Assert(result.SequenceEqual(straight), "filter blurred a straight edge");
+        Assert(diagonal.All(pixel => pixel == 0xFFFFFFFFu || pixel == 0xFF000000u), "filter mutated the source frame");
+    }),
+    ("native antialiasing can be toggled without rerendering or changing picks", () =>
+    {
+        var scene = new Scene().Add(Shape.Box());
+        var view = new SceneView { Scene = scene };
+        var target = view.CapturePaintTarget(96, 80);
+        var original = target.Pixels.ToArray();
+        var bitmap = view.PaintBitmap(target);
+        var smooth = bitmap.GetPixelSpan().ToArray();
+        Assert(!smooth.AsSpan().SequenceEqual(MemoryMarshal.AsBytes(target.Pixels.Span)), "native edges were not filtered");
+        view.IsAntialiasEnabled = false;
+        Assert(ReferenceEquals(target, view.CapturePaintTarget(96, 80)), "changing edge quality rerendered Core geometry");
+        Assert(ReferenceEquals(bitmap, view.PaintBitmap(target)), "changing edge quality replaced the bitmap");
+        Assert(bitmap.GetPixelSpan().SequenceEqual(MemoryMarshal.AsBytes(target.Pixels.Span)), "disabling did not restore original pixels");
+        view.IsAntialiasEnabled = true;
+        Assert(view.PaintBitmap(target).GetPixelSpan().SequenceEqual(smooth), "reenabling left stale pixels");
+        Assert(target.Pixels.Span.SequenceEqual(original), "native antialiasing mutated the target");
+        Assert(ReferenceEquals(target.Pick(48, 40), scene.Shapes[0]), "native antialiasing changed picking");
+        view.ReleaseRenderResources();
+    }),
     ("frame caching follows scene and camera mutations", () =>
     {
         var scene = new Scene().Add(Shape.Box());
@@ -97,6 +130,65 @@ var tests = new (string Name, Action Run)[]
             view.ReleaseRenderResources();
         }
     }),
+    ("selection bitmap matches picking for duplicate nodes and viewport edges", () =>
+    {
+        var shape = Shape.Box().Scaled(3);
+        var view = new SceneView { Scene = new Scene().Add(shape).Add(shape), Camera = new Camera(3, 0, 0) };
+        var target = view.CapturePaintTarget(80, 64);
+        var original = MemoryMarshal.Cast<byte, uint>(view.PaintBitmap(target).GetPixelSpan()).ToArray();
+        var point = Enumerable.Range(0, original.Length).First(i => ReferenceEquals(target.Pick(i % 80, i / 80), shape));
+        view.SelectAt(point % 80, point / 80, 80, 64);
+        var actual = MemoryMarshal.Cast<byte, uint>(view.PaintBitmap(target).GetPixelSpan());
+        for (var y = 0; y < 64; y++)
+            for (var x = 0; x < 80; x++)
+            {
+                var index = y * 80 + x;
+                var expected = original[index];
+                if (ReferenceEquals(target.Pick(x, y), shape))
+                {
+                    if (!ReferenceEquals(target.Pick(x - 2, y), shape) || !ReferenceEquals(target.Pick(x + 2, y), shape) ||
+                        !ReferenceEquals(target.Pick(x, y - 2), shape) || !ReferenceEquals(target.Pick(x, y + 2), shape))
+                        expected = 0xFFFFD27Au;
+                    else
+                    {
+                        var red = (((expected >> 16) & 255) * 2 + 142) / 3;
+                        var green = (((expected >> 8) & 255) * 2 + 225) / 3;
+                        var blue = ((expected & 255) * 2 + 205) / 3;
+                        expected = 0xFF000000u | (red << 16) | (green << 8) | blue;
+                    }
+                }
+                Assert(actual[index] == expected, $"highlight differs from picking at {x},{y}");
+            }
+        view.ReleaseRenderResources();
+    }),
+    ("animated selection survives concurrent pan and detail recovery", () =>
+    {
+        var sample = DemoScenes.All.First(s => s.Name == "Equipment");
+        sample.Animate(0);
+        var view = new SceneView { Scene = sample.Scene, Camera = sample.Camera, MaximumRenderDimension = 768 };
+        var target = view.CapturePaintTarget(614, 768);
+        var arrow = sample.Scene.Shapes[1];
+        var point = Enumerable.Range(0, target.Width * target.Height)
+            .First(i => ReferenceEquals(target.Pick(i % target.Width, i / target.Width), arrow));
+        view.SelectAt(point % target.Width, point / target.Width, target.Width, target.Height);
+        view.ApplyPan(GestureStatus.Started, 0, 0);
+        for (var tick = 1; tick <= 4; tick++)
+        {
+            sample.Animate(tick * .1f);
+            view.ApplyPan(GestureStatus.Running, tick * 2, tick);
+            target = view.CapturePaintTarget(614, 768);
+            Assert(target.Height == 512, "animation bypassed the active pan preview");
+            Assert(ReferenceEquals(view.SelectedShape, sample.Scene.Shapes[1]), "pan lost the animated selection");
+            Assert(MemoryMarshal.Cast<byte, uint>(view.PaintBitmap(target).GetPixelSpan()).Contains(0xFFFFD27Au),
+                "concurrent animation and pan lost the contour");
+        }
+        view.ApplyPan(GestureStatus.Completed, 8, 4);
+        target = view.CapturePaintTarget(614, 768);
+        Assert(target.Height == 768, "pan completion did not restore detail");
+        Assert(MemoryMarshal.Cast<byte, uint>(view.PaintBitmap(target).GetPixelSpan()).Contains(0xFFFFD27Au),
+            "detail recovery lost the contour");
+        view.ReleaseRenderResources();
+    }),
     ("selection follows child positions despite duplicate names and clears missing children", () =>
     {
         var left = Shape.Box().At(-1, 0, 0).Named("duplicate");
@@ -136,7 +228,7 @@ var tests = new (string Name, Action Run)[]
     ("native paint bitmap is reused and tracks rendered pixels", () =>
     {
         var scene = new Scene().Add(Shape.Box());
-        var view = new SceneView { Scene = scene };
+        var view = new SceneView { Scene = scene, IsAntialiasEnabled = false };
         var first = view.CapturePaintTarget(96, 80);
         var bitmap = view.PaintBitmap(first);
         Assert(ReferenceEquals(bitmap, view.PaintBitmap(first)), "unchanged paint allocated a new bitmap");

@@ -86,6 +86,8 @@ public sealed class RenderTarget
 
     internal uint[] PixelBuffer => _pixels;
     internal int[] IdBuffer => _ids;
+    internal ReadOnlySpan<int> VisibleIds => _valid ? _ids : ReadOnlySpan<int>.Empty;
+    internal ReadOnlySpan<Shape> VisibleShapes => _valid ? _shapes : ReadOnlySpan<Shape>.Empty;
     internal void BeginRender()
     {
         _valid = false;
