@@ -10,8 +10,10 @@
 - [x] Add the iOS scene delegate and manifest, and extend the smoke selector to idle iPhone 17 Pro, 18 Pro or 17 devices.
 - [x] Update README requirements and smoke instructions.
 - [x] Run script regressions, Core and MAUI regressions, Apple builds, and the real iOS simulator smoke check; verify the simulator is shut down.
-- [ ] Commit and push; inspect the hosted run and update the PR with observed results.
+- [x] Commit and push; inspect the hosted run and update the PR with observed results.
 
 Local verification on 2026-10-03: Core 39/39, MAUI 13/13, script tests 11/11. Mac Catalyst Release and signed iOS Simulator Debug builds had zero warnings/errors. The iPhone 17 Pro / iOS 26.5 smoke check rendered Equipment, Packing and Surface with distinct screenshot content; no demo process or booted simulator remained afterward.
+
+All six hosted jobs passed in run 37105153071. PR #9 merged into main at `2d6f5c9` on 2026-10-03.
 
 The branch remains focused on native demo reliability. Keep unrelated renderer and gallery changes in their existing PRs.
