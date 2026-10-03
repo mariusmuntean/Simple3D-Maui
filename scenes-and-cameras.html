@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<!--[if IE]><![endif]-->
+<html>
+
+  <head>
+    <meta charset="utf-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+      <title>Scenes and cameras | Simple3D </title>
+      <meta name="viewport" content="width=device-width">
+      <meta name="title" content="Scenes and cameras | Simple3D ">
+    
+    
+      <link rel="shortcut icon" href="favicon.ico">
+      <link rel="stylesheet" href="styles/docfx.vendor.min.css">
+      <link rel="stylesheet" href="styles/docfx.css">
+      <link rel="stylesheet" href="styles/main.css">
+      <meta property="docfx:navrel" content="toc.html">
+      <meta property="docfx:tocrel" content="toc.html">
+    
+    <meta property="docfx:rel" content="">
+    
+  </head>
+  <body data-spy="scroll" data-target="#affix" data-offset="120">
+    <div id="wrapper">
+      <header>
+
+        <nav id="autocollapse" class="navbar navbar-inverse ng-scope" role="navigation">
+          <div class="container">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+
+              <a class="navbar-brand" href="index.html">
+                <img id="logo" class="svg" src="logo.svg" alt="Simple3D">
+              </a>
+            </div>
+            <div class="collapse navbar-collapse" id="navbar">
+              <form class="navbar-form navbar-right" role="search" id="search">
+                <div class="form-group">
+                  <input type="text" class="form-control" id="search-query" placeholder="Search" autocomplete="off">
+                </div>
+              </form>
+            </div>
+          </div>
+        </nav>
+
+        <div class="subnav navbar navbar-default">
+          <div class="container hide-when-search" id="breadcrumb">
+            <ul class="breadcrumb">
+              <li></li>
+            </ul>
+          </div>
+        </div>
+      </header>
+      <div class="container body-content">
+
+        <div id="search-results">
+          <div class="search-list">Search Results for <span></span></div>
+          <div class="sr-items">
+            <p><i class="glyphicon glyphicon-refresh index-loading"></i></p>
+          </div>
+          <ul id="pagination" data-first=First data-prev=Previous data-next=Next data-last=Last></ul>
+        </div>
+      </div>
+      <div role="main" class="container body-content hide-when-search">
+        <div class="article row grid">
+          <div class="col-md-10">
+            <article class="content wrap" id="_content" data-uid="">
+<h1 id="scenes-and-cameras">Scenes and cameras</h1>
+
+<p>A <code>Scene</code> owns top-level immutable shapes and world labels. <code>Add</code>, <code>Remove</code>, <code>Replace</code>, <code>AddLabel</code>, <code>RemoveLabel</code>, and <code>Clear</code> raise a synchronous change notification after a successful mutation. A <code>SceneView</code> bound to the scene invalidates its cached frame. A <code>Camera</code> has independent yaw, pitch, distance, target, field of view, near plane, projection mode, and orthographic height; its changes invalidate the same view.</p>
+<pre><code class="lang-csharp">var scene = new Scene().Add(Shape.Box().Named(&quot;Housing&quot;));
+var camera = new Camera(5, yaw: .55f, pitch: .35f);
+camera.Projection = CameraProjection.Orthographic;
+camera.FitToScene(scene, aspectRatio: 16f / 9);
+view.Scene = scene;
+view.Camera = camera;
+</code></pre>
+<p><code>FitToScene</code> encloses world bounds conservatively and updates the camera atomically. Empty scenes leave the camera unchanged. <code>Scene.GetBounds</code> excludes labels and enforces the same aggregate triangle limit as rendering. In orthographic mode, zoom changes the visible height; in perspective mode it changes distance. <code>Camera.Target</code> moves the orbit center.</p>
+<p><img src="images/Packing.png" alt="Orthographic packing arrangement"></p>
+<p><code>WorldLabel</code> positions are projected to frame pixels. Labels are overlays: they are clipped by the viewport and near plane, but they do not participate in depth testing or picking. Use them for callouts, not occluded geometry annotations.</p>
+
+</article>
+          </div>
+
+          <div class="hidden-sm col-md-2" role="complementary">
+            <div class="sideaffix">
+              <div class="contribution">
+                <ul class="nav">
+                  <li>
+                    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/release-demo-preparation/docs/site/scenes-and-cameras.md/#L1" class="contribution-link">Edit this page</a>
+                  </li>
+                </ul>
+              </div>
+              <nav class="bs-docs-sidebar hidden-print hidden-xs hidden-sm affix" id="affix">
+                <h5>In this article</h5>
+                <div></div>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <div class="grad-bottom"></div>
+        <div class="footer">
+          <div class="container">
+            <span class="pull-right">
+              <a href="#top">Back to top</a>
+            </span>
+      
+      <span>Generated by <strong>DocFX</strong></span>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <script type="text/javascript" src="styles/docfx.vendor.min.js"></script>
+    <script type="text/javascript" src="styles/docfx.js"></script>
+    <script type="text/javascript" src="styles/main.js"></script>
+  </body>
+</html>

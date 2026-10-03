@@ -1,0 +1,556 @@
+{
+  "docfx_version": "2.81.0+ba844df625370a6bd7c1ecab0d0ec4d1d9128ac4",
+  "source_base_path": "/Users/marius/Projects/Simple3D-Maui/docs/site",
+  "xrefmap": "xrefmap.yml",
+  "files": [
+    {
+      "type": "Resource",
+      "output": {
+        "resource": {
+          "relative_path": "index.json"
+        }
+      }
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.Bounds3.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.Bounds3.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.Bounds3",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.Bounds3.yml\" sourcestartlinenumber=\"1\">World-space axis-aligned bounds.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.Camera.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.Camera.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.Camera",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.Camera.yml\" sourcestartlinenumber=\"1\">Mutable orbit camera; angles are radians. Mutate and render on the same thread.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.CameraProjection.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.CameraProjection.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.CameraProjection",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.CameraProjection.yml\" sourcestartlinenumber=\"1\">Camera projection model.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.DepthRenderer.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.DepthRenderer.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.DepthRenderer",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.DepthRenderer.yml\" sourcestartlinenumber=\"1\">Opaque software triangle rasterizer with per-pixel depth and picking. Instances reuse depth scratch storage and are not thread safe.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.DrawTriangle.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.DrawTriangle.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.DrawTriangle",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.DrawTriangle.yml\" sourcestartlinenumber=\"1\">A projected triangle for the legacy painter renderer.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.Material.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.Material.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.Material",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.Material.yml\" sourcestartlinenumber=\"1\">Immutable opaque flat material using packed 0xAARRGGBB color.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.Mesh.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.Mesh.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.Mesh",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.Mesh.yml\" sourcestartlinenumber=\"1\">Immutable indexed triangle geometry. Counterclockwise vertices face outward; both sides render by default.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.ProjectedLabel.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.ProjectedLabel.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.ProjectedLabel",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.ProjectedLabel.yml\" sourcestartlinenumber=\"1\">A projected overlay label. Coordinates use the same pixel space as the frame.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.RasterBudgetExceededException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.RasterBudgetExceededException.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.RasterBudgetExceededException",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.RasterBudgetExceededException.yml\" sourcestartlinenumber=\"1\">Indicates that clipped triangle coverage exceeded the per-frame raster work budget.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.RenderFrame.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.RenderFrame.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.RenderFrame",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.RenderFrame.yml\" sourcestartlinenumber=\"1\">Owned rendering snapshot. Pixel and picking storage remains valid across subsequent renders.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.RenderTarget.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.RenderTarget.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.RenderTarget",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.RenderTarget.yml\" sourcestartlinenumber=\"1\">A fixed-size render target whose pixel and picking storage is reused on each render.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.Scene.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.Scene.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.Scene",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.Scene.yml\" sourcestartlinenumber=\"1\">A mutable scene. Mutate and render on the same thread; notifications are synchronous.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.SceneRenderer.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.SceneRenderer.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.SceneRenderer",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.SceneRenderer.yml\" sourcestartlinenumber=\"1\">Projects small opaque scenes into ordered, flat-shaded screen triangles.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.Shape.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.Shape.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.Shape",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.Shape.yml\" sourcestartlinenumber=\"1\">An immutable primitive, indexed mesh instance, or transform group.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.ShapeReplacementEventArgs.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.ShapeReplacementEventArgs.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.ShapeReplacementEventArgs",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.ShapeReplacementEventArgs.yml\" sourcestartlinenumber=\"1\">A replaced scene node. Corresponding child positions represent the same parts in the replacement tree.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.WorldLabel.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.WorldLabel.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.WorldLabel",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.WorldLabel.yml\" sourcestartlinenumber=\"1\">Immutable world anchor for an overlay label; labels do not affect picking or depth.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Maui.Resource.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Maui.Resource.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Maui.Resource",
+      "Summary": "<p sourcefile=\"api/Simple3D.Maui.Resource.yml\" sourcestartlinenumber=\"1\">Android Resource Designer class.\nExposes the Android Resource designer assembly into the project Namespace.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Maui.SceneView.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Maui.SceneView.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Maui.SceneView",
+      "Summary": "<p sourcefile=\"api/Simple3D.Maui.SceneView.yml\" sourcestartlinenumber=\"1\">A depth-rendered, touch-enabled surface for small opaque scenes. Mutate its scene and camera on the UI thread.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Maui.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Maui.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Maui",
+      "Summary": null
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "api/toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/toc.html"
+        },
+        ".json": {
+          "relative_path": "api/toc.json"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "examples.md",
+      "output": {
+        ".html": {
+          "relative_path": "examples.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "getting-started.md",
+      "output": {
+        ".html": {
+          "relative_path": "getting-started.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/Assembly.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/Assembly.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/City.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/City.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/Conveyor Inspection.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/Conveyor Inspection.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/Drone Survey.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/Drone Survey.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/Equipment.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/Equipment.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/Molecule.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/Molecule.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/Orbit.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/Orbit.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/Packet Routing.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/Packet Routing.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/Packing.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/Packing.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/Patterned Surface.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/Patterned Surface.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/Robot Arm.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/Robot Arm.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/Solar Tracker.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/Solar Tracker.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/Surface.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/Surface.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/Telemetry.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/Telemetry.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/Wind.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/Wind.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/brand-banner.svg",
+      "output": {
+        "resource": {
+          "relative_path": "images/brand-banner.svg"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "index.md",
+      "output": {
+        ".html": {
+          "relative_path": "index.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "interaction-and-picking.md",
+      "output": {
+        ".html": {
+          "relative_path": "interaction-and-picking.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "meshes-and-groups.md",
+      "output": {
+        ".html": {
+          "relative_path": "meshes-and-groups.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "rendering-limits.md",
+      "output": {
+        ".html": {
+          "relative_path": "rendering-limits.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "scenes-and-cameras.md",
+      "output": {
+        ".html": {
+          "relative_path": "scenes-and-cameras.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "toc.html"
+        },
+        ".json": {
+          "relative_path": "toc.json"
+        }
+      },
+      "version": ""
+    }
+  ],
+  "groups": [
+    {
+      "xrefmap": "xrefmap.yml"
+    }
+  ]
+}

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<!--[if IE]><![endif]-->
+<html>
+
+  <head>
+    <meta charset="utf-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+      <title>Interaction and picking | Simple3D </title>
+      <meta name="viewport" content="width=device-width">
+      <meta name="title" content="Interaction and picking | Simple3D ">
+    
+    
+      <link rel="shortcut icon" href="favicon.ico">
+      <link rel="stylesheet" href="styles/docfx.vendor.min.css">
+      <link rel="stylesheet" href="styles/docfx.css">
+      <link rel="stylesheet" href="styles/main.css">
+      <meta property="docfx:navrel" content="toc.html">
+      <meta property="docfx:tocrel" content="toc.html">
+    
+    <meta property="docfx:rel" content="">
+    
+  </head>
+  <body data-spy="scroll" data-target="#affix" data-offset="120">
+    <div id="wrapper">
+      <header>
+
+        <nav id="autocollapse" class="navbar navbar-inverse ng-scope" role="navigation">
+          <div class="container">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+
+              <a class="navbar-brand" href="index.html">
+                <img id="logo" class="svg" src="logo.svg" alt="Simple3D">
+              </a>
+            </div>
+            <div class="collapse navbar-collapse" id="navbar">
+              <form class="navbar-form navbar-right" role="search" id="search">
+                <div class="form-group">
+                  <input type="text" class="form-control" id="search-query" placeholder="Search" autocomplete="off">
+                </div>
+              </form>
+            </div>
+          </div>
+        </nav>
+
+        <div class="subnav navbar navbar-default">
+          <div class="container hide-when-search" id="breadcrumb">
+            <ul class="breadcrumb">
+              <li></li>
+            </ul>
+          </div>
+        </div>
+      </header>
+      <div class="container body-content">
+
+        <div id="search-results">
+          <div class="search-list">Search Results for <span></span></div>
+          <div class="sr-items">
+            <p><i class="glyphicon glyphicon-refresh index-loading"></i></p>
+          </div>
+          <ul id="pagination" data-first=First data-prev=Previous data-next=Next data-last=Last></ul>
+        </div>
+      </div>
+      <div role="main" class="container body-content hide-when-search">
+        <div class="article row grid">
+          <div class="col-md-10">
+            <article class="content wrap" id="_content" data-uid="">
+<h1 id="interaction-and-picking">Interaction and picking</h1>
+
+<p><code>SceneView</code> is an <code>SKCanvasView</code> backed by the CPU <code>DepthRenderer</code>. Native painting and picking reuse a <code>RenderTarget</code> and Skia bitmap until their dimensions change. The target is rendered again when the bound scene, camera, background, or viewport changes. It contains packed opaque ARGB pixels, projected labels, and shape IDs for depth-aware picking. Explicit captures return owned <code>RenderFrame</code> snapshots.</p>
+<p>The control installs drag, pinch, and tap gestures. On Mac Catalyst, native UIKit pan and pinch recognizers handle mouse and trackpad updates without MAUI touch-count gating. Drag orbits, each pinch event applies its incremental zoom factor, and tap selects the visible leaf shape. Projected label text scales with display density. The selected leaf gets a mint tint and a gold contour inside its visible boundary. Hidden pixels remain hidden; scene materials and exported frames are unchanged. Tap the background to clear the highlight. Handle the event to show details:</p>
+<pre><code class="lang-csharp">view.SelectionChanged += (_, shape) =&gt;
+    details.Text = shape?.Name ?? &quot;Nothing selected&quot;;
+</code></pre>
+<p>Native label painting keeps glyphs inside the viewport and abbreviates text with an ellipsis when it cannot fit the available width. Overlapping labels move to a free nearby row, searching up to eight rows in either direction; labels without space are omitted. Earlier scene labels take priority. These adjustments affect the overlay only; Core projected anchors and picking remain unchanged. Labels still overlay geometry without depth testing.</p>
+<p><code>SelectAt(x, y, viewWidth, viewHeight)</code> performs the same selection and feedback for a custom pointer. <code>PickAt</code> only queries; it does not change selection. <code>Scene.Replace</code> transfers selection to the replacement node, so animated parts keep their highlight. For groups, corresponding child positions represent the same parts: preserve child order during animation. Missing children and removed shapes clear selection. <code>SelectionChanged</code> also reports the replacement instance, allowing details to follow changing names and values. <code>Scene.Changed</code> supplies <code>ShapeReplacementEventArgs</code> for replacements.</p>
+<p>Keep an interactive scene outside a parent <code>ScrollView</code> when drags should belong exclusively to the scene. The gallery places it in a flexible grid row, with scrolling confined to the scene catalogue and controls.</p>
+<p>While dragging or pinching, native rendering uses a preview capped at 512 pixels on its longest side, keeping the aspect ratio and depth picking. Scaled previews use linear sampling to soften magnified pixel steps. This filters the rendered bitmap; it is not multisample triangle rasterization. On release or cancellation the view restores its configured <code>MaximumRenderDimension</code>. Animation may independently use a lower configured limit.</p>
+<p>Native bitmap painting also softens high-contrast diagonal stair steps by blending perpendicular edge transitions. <code>IsAntialiasEnabled</code> defaults to <code>true</code>; set it to <code>false</code> to preserve unfiltered pixels or avoid the additional pixel scan on a constrained device. Straight edges and flat interiors are preserved. This filter does not change Core pixels, exported frames or picking, and it is not multisample antialiasing. Selection tint and contour are applied after the filter.</p>
+<p>For custom pointers, <code>view.PickAt(x, y, viewWidth, viewHeight)</code> maps layout coordinates to the last rendered frame. <code>CaptureFrame(width, height)</code> produces or retrieves an owned physical-pixel frame; <code>frame.Pick(x, y)</code> accepts physical pixels. <code>CaptureFrame</code> is useful for tests and exports. The renderer is not thread safe: use it and mutate its scene or camera on the same thread.</p>
+<p>The view subscribes to its current scene and camera and releases those subscriptions when its handler disconnects. Replacing either bindable property stops observing the old object. When a tap follows a scene change before the next paint, picking refreshes the frame first.</p>
+
+</article>
+          </div>
+
+          <div class="hidden-sm col-md-2" role="complementary">
+            <div class="sideaffix">
+              <div class="contribution">
+                <ul class="nav">
+                  <li>
+                    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/release-demo-preparation/docs/site/interaction-and-picking.md/#L1" class="contribution-link">Edit this page</a>
+                  </li>
+                </ul>
+              </div>
+              <nav class="bs-docs-sidebar hidden-print hidden-xs hidden-sm affix" id="affix">
+                <h5>In this article</h5>
+                <div></div>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <div class="grad-bottom"></div>
+        <div class="footer">
+          <div class="container">
+            <span class="pull-right">
+              <a href="#top">Back to top</a>
+            </span>
+      
+      <span>Generated by <strong>DocFX</strong></span>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <script type="text/javascript" src="styles/docfx.vendor.min.js"></script>
+    <script type="text/javascript" src="styles/docfx.js"></script>
+    <script type="text/javascript" src="styles/main.js"></script>
+  </body>
+</html>

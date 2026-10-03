@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<!--[if IE]><![endif]-->
+<html>
+
+  <head>
+    <meta charset="utf-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+      <title>Rendering model and limits | Simple3D </title>
+      <meta name="viewport" content="width=device-width">
+      <meta name="title" content="Rendering model and limits | Simple3D ">
+    
+    
+      <link rel="shortcut icon" href="favicon.ico">
+      <link rel="stylesheet" href="styles/docfx.vendor.min.css">
+      <link rel="stylesheet" href="styles/docfx.css">
+      <link rel="stylesheet" href="styles/main.css">
+      <meta property="docfx:navrel" content="toc.html">
+      <meta property="docfx:tocrel" content="toc.html">
+    
+    <meta property="docfx:rel" content="">
+    
+  </head>
+  <body data-spy="scroll" data-target="#affix" data-offset="120">
+    <div id="wrapper">
+      <header>
+
+        <nav id="autocollapse" class="navbar navbar-inverse ng-scope" role="navigation">
+          <div class="container">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+
+              <a class="navbar-brand" href="index.html">
+                <img id="logo" class="svg" src="logo.svg" alt="Simple3D">
+              </a>
+            </div>
+            <div class="collapse navbar-collapse" id="navbar">
+              <form class="navbar-form navbar-right" role="search" id="search">
+                <div class="form-group">
+                  <input type="text" class="form-control" id="search-query" placeholder="Search" autocomplete="off">
+                </div>
+              </form>
+            </div>
+          </div>
+        </nav>
+
+        <div class="subnav navbar navbar-default">
+          <div class="container hide-when-search" id="breadcrumb">
+            <ul class="breadcrumb">
+              <li></li>
+            </ul>
+          </div>
+        </div>
+      </header>
+      <div class="container body-content">
+
+        <div id="search-results">
+          <div class="search-list">Search Results for <span></span></div>
+          <div class="sr-items">
+            <p><i class="glyphicon glyphicon-refresh index-loading"></i></p>
+          </div>
+          <ul id="pagination" data-first=First data-prev=Previous data-next=Next data-last=Last></ul>
+        </div>
+      </div>
+      <div role="main" class="container body-content hide-when-search">
+        <div class="article row grid">
+          <div class="col-md-10">
+            <article class="content wrap" id="_content" data-uid="">
+<h1 id="rendering-model-and-limits">Rendering model and limits</h1>
+
+<p><code>DepthRenderer</code> transforms opaque triangles, clips them at the camera near plane, shades them with a fixed light, rasterizes with per-pixel depth, and stores the visible leaf shape for picking. This resolves intersecting opaque geometry that a sorted-triangle painter cannot. <code>SceneRenderer</code> remains for older primitive/default-camera code and throws a diagnostic for newer features it cannot represent.</p>
+<table>
+<thead>
+<tr>
+<th>Limit</th>
+<th style="text-align: right;">Value</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Width or height</td>
+<td style="text-align: right;">2,048 physical pixels</td>
+<td>Bounds frame storage</td>
+</tr>
+<tr>
+<td>Scene node visits</td>
+<td style="text-align: right;">100,000</td>
+<td>Bounds grouping traversal</td>
+</tr>
+<tr>
+<td>Aggregate triangles</td>
+<td style="text-align: right;">1,000,000</td>
+<td>Bounds and render traversal</td>
+</tr>
+<tr>
+<td>Raster bounding-box samples</td>
+<td style="text-align: right;">16,000,000 per frame</td>
+<td>Bounds overlapping screen-filling work</td>
+</tr>
+<tr>
+<td>Group hierarchy</td>
+<td style="text-align: right;">64 levels</td>
+<td>Bounds recursion</td>
+</tr>
+</tbody>
+</table>
+<p>The sample-work budget counts clipped triangle bounding boxes, including pixels outside the triangle but inside its box. Dense overlapping scenes can reach it before the triangle limit. Direct <code>DepthRenderer.Render</code> calls then throw <code>RasterBudgetExceededException</code>; reduce scene complexity, viewport size, or visible overlap. <code>SceneView</code> retries the native paint at half resolution when this happens, keeping interactive zoom usable at the cost of image sharpness. <code>Camera.FitToScene</code> calculates bounds before mutation and leaves the camera unchanged if a budget or overflow check fails.</p>
+<p>Repeated group instances count separately toward the node budget, including groups with no geometry. The view's resolution-recovery checks enforce this same limit, so a large replacement hierarchy cannot bypass the bound before rendering begins. Excessive node visits throw an <code>ArgumentException</code>; lowering render resolution does not reduce hierarchy traversal.</p>
+<p>Only opaque surfaces are supported. Labels overlay the scene and are not depth tested. There is no far clipping plane, transparency, shadowing, texture sampling, or GPU scene engine. The CPU renderer is deterministic for the tested inputs and uses a bounded scratch depth buffer. Device frame rate depends on scene, viewport, and native presentation, so profile the target device for animation.</p>
+<p><code>DepthRenderer.Render</code> returns an owned <code>RenderFrame</code>; its pixels and picks remain valid after later renders. For repeated frames when snapshots are unnecessary, create a fixed-size <code>RenderTarget</code> and call <code>RenderInto</code>. The target reuses its pixel and picking arrays, and the next render overwrites their content. Create a new target when the viewport size changes. If rendering throws, render successfully again before reading the target.</p>
+<pre><code class="lang-csharp">var renderer = new DepthRenderer();
+var target = new RenderTarget(768, 576);
+renderer.RenderInto(scene, camera, target);
+ReadOnlyMemory&lt;uint&gt; pixels = target.Pixels; // Changes on the next RenderInto call.
+Shape? visible = target.Pick(384, 288);
+</code></pre>
+<p>In the checked-in animated Surface benchmark at 768×576 on one Mac, the owned path allocated about 3.54 MB per frame and the reusable target about 1.55 KB per frame. These are managed allocations in the Core renderer, not native presentation costs or a guaranteed device frame rate.</p>
+<p><code>SceneView.MaximumRenderDimension</code> controls the largest physical render dimension used during native painting. Its default is 2,048. Lower it while animating or while a scene is being manipulated, then restore it for still images. The view keeps the aspect ratio and upscales the rendered image to its layout size. Because both pixel and picking buffers scale with pixel count, changing the maximum dimension from 2,048 to 768 can substantially reduce allocation and raster work. This control does not change explicit <code>CaptureFrame(width, height)</code> requests. A display-only <code>SceneView</code> can set <code>IsInteractive = false</code> to release its built-in gestures.</p>
+<h2 id="native-diagnostics">Native diagnostics</h2>
+<p>The Apple demo's Debug configuration compiles the rendering libraries and framework assemblies, while retaining interpreter support for the demo assembly. Changes to compiled rendering code require a rebuild. Interpreter overhead can make Debug rendering substantially slower than the same renderer running compiled; measure the configuration you intend to use.</p>
+<p>Android Debug uses JIT compilation rather than the interpreter for the demo, including its per-pixel rendering loops. This setting is specific to the demo project. Rebuild and deploy fresh assemblies when comparing runtime performance.</p>
+<p>After building the Debug iOS simulator app, run:</p>
+<pre><code class="lang-bash">bash scripts/ios-simulator-smoke.sh --render-probe
+</code></pre>
+<p>This runs a Debug-only check inside the native app runtime. It verifies a visible, pickable box and every gallery scene, compares owned and reusable pixels, checks retained snapshots, and measures ten camera-orbit renders per scene at 512×315. It exits before opening the gallery and shuts down its test simulator. A missing completion marker fails the script even if the launcher reports success. Timings cover Core rendering, not displayed frame rate or input latency. Run the ordinary smoke check separately to verify the actual gallery UI.</p>
+<p>Clean and rebuild native outputs after changing interpreter settings or Apple workloads so cached native assemblies do not mix configurations. Use a matching SDK, workload and Xcode combination; the <a href="https://github.com/dotnet/macios/releases/tag/dotnet-10.0.1xx-xcode27.0-10722">Xcode 27 release instructions</a> specify .NET SDK 10.0.401 and workload set 10.0.401.1.</p>
+<p><code>SceneView</code> uses a reusable <code>RenderTarget</code> for native painting and picking. It reuses its Skia bitmap at the same render dimensions, copies pixels only when the target changes, and allocates a new target and bitmap when dimensions change. Explicit <code>CaptureFrame</code> calls still return owned snapshots. On native handler disconnect, the view releases its bitmap, reusable target, cached owned frame, and depth scratch buffer; snapshots held by callers remain valid.</p>
+<p>If a zoomed scene exceeds the raster work budget at the requested paint size, the view halves its internal render size until it can draw a frame. It keeps that size during ongoing interaction, then probes full resolution when camera or scene complexity falls or painting becomes idle. A failed probe has a short cooldown so animation does not repeat the expensive attempt every frame. <code>RenderTarget.RasterSamples</code> reports the bounding-box work of its last successful render; it resets to zero when a render starts or fails.</p>
+
+</article>
+          </div>
+
+          <div class="hidden-sm col-md-2" role="complementary">
+            <div class="sideaffix">
+              <div class="contribution">
+                <ul class="nav">
+                  <li>
+                    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/release-demo-preparation/docs/site/rendering-limits.md/#L1" class="contribution-link">Edit this page</a>
+                  </li>
+                </ul>
+              </div>
+              <nav class="bs-docs-sidebar hidden-print hidden-xs hidden-sm affix" id="affix">
+                <h5>In this article</h5>
+                <div></div>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <div class="grad-bottom"></div>
+        <div class="footer">
+          <div class="container">
+            <span class="pull-right">
+              <a href="#top">Back to top</a>
+            </span>
+      
+      <span>Generated by <strong>DocFX</strong></span>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <script type="text/javascript" src="styles/docfx.vendor.min.js"></script>
+    <script type="text/javascript" src="styles/docfx.js"></script>
+    <script type="text/javascript" src="styles/main.js"></script>
+  </body>
+</html>
