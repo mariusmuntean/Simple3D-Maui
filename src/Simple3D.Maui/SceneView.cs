@@ -226,8 +226,13 @@ public sealed class SceneView : SKCanvasView
 
     /// <summary>Select a visible shape at layout coordinates, or clear selection on the background.</summary>
     public Shape? SelectAt(double x, double y, double viewWidth, double viewHeight)
+        => ChangeSelection(PickAt(x, y, viewWidth, viewHeight));
+
+    /// <summary>Clear selection and its highlight. Raises SelectionChanged only when a shape was selected.</summary>
+    public void ClearSelection() => ChangeSelection(null);
+
+    private Shape? ChangeSelection(Shape? selected)
     {
-        var selected = PickAt(x, y, viewWidth, viewHeight);
         if (ReferenceEquals(selected, SelectedShape)) return selected;
         SelectedShape = selected;
         InvalidateSurface();
