@@ -6,6 +6,8 @@ Updated: 2026-10-03. Fetch remote state before resuming.
 
 ### Public preview preparation (2026-10-03)
 
+PR #12 merged into `main` at `8f40776b63f43ee0e8c2e3a3b78cc3a49de7d8db`. The preparation branch is complete and deleted; retain `main` and the generated `gh-pages` deployment branch. Start subsequent work additively from updated `main`.
+
 The owner authorized making the repository public and adding MIT. GitHub reports public visibility, and the built documentation is live at https://mariusmuntean.github.io/Simple3D-Maui/. Pages serves the root of `gh-pages`; retain that deployment branch. Build DocFX locally and run `bash scripts/publish-docs.sh` to update it. Only the Pages deployment runs remotely; the MAUI validation workflow remains manual. The docs use the existing brand mark and favicon, and contribution links target `main`.
 
 The gallery now has fifteen scenes. Patterned Surface demonstrates a curved checker mesh with fixed directional lighting and selectable cells. It reuses 64 immutable cell meshes during tilt animation. The renderer still has no image texture mapping, physically based materials or shadows; do not advertise those features. The original fourteen factories and rendering/interaction implementation are unchanged. Core 51/51, MAUI 39/39 and scripts 22/22 pass; moving selection and reset checks include the new scene. Its catalogue regression failed before adding the factory. `Simple3D.Examples` was removed from the solution and source; image export now uses `tests/Simple3D.Core.Tests -- --render-images`, sharing the same scene factories. Image regeneration and exporter tests pass.
