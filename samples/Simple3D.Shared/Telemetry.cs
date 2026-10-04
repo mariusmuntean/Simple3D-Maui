@@ -22,7 +22,7 @@ public static partial class DemoScenes
                 bars[i] = Shape.Box(color).Named($"Sample {i + 1}: {height:0.00}")
                     .Scaled(.56f, height, .56f).At((i - 2) * .78f, height / 2, 0);
             }
-            return Shape.Group(bars).Named("Live samples");
+            return Shape.Group(bars).Named("Synthetic samples");
         }
         var barGroup = BarsAt(0);
         scene.Add(barGroup);
@@ -30,7 +30,7 @@ public static partial class DemoScenes
         scene.AddLabel(new("5 SAMPLES / 0–2.5", new(-1.7f, 2.75f, 0), 0xFFE4ECFF));
         var camera = new Camera(6, .45f, .32f) { Projection = CameraProjection.Orthographic };
         camera.FitToScene(scene, 4f / 3);
-        return new("Telemetry", "Watch five live bars change height and color within their scale.", scene, camera,
+        return new("Telemetry", "Five synthetic samples mapped to bar height and color in an orthographic chart.", scene, camera,
             AnimateNode(scene, barGroup, BarsAt));
     }
 

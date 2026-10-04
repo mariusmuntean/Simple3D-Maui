@@ -1,6 +1,6 @@
-# Visual identity
+# Presentation assets
 
-The cube shows three visible faces; the amber point suggests a light source and the point a user can pick in a scene. The mark uses solid planes so it stays legible at app-icon size.
+Shared icons, documentation banner and social preview image. The banner and social card describe Simple3D as a 3D software renderer.
 
 | Asset | Use |
 | --- | --- |

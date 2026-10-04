@@ -31,7 +31,7 @@ public static partial class DemoScenes
         scene.AddLabel(new("INDEXED MESH · 512 TRIANGLES", new(0, .8f, 0), 0xFFE4ECFF));
         var camera = new Camera(5, .55f, .65f);
         camera.FitToScene(scene, 4f / 3);
-        return new("Surface", "Follow a sample point across a procedural wave mesh.", scene, camera,
+        return new("Surface", "An indexed surface mesh with a moving sample marker.", scene, camera,
             AnimateNode(scene, samplePoint, time =>
             {
                 var x = 1.15f * MathF.Sin(time * 1.25f);

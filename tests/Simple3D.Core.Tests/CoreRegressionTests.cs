@@ -690,7 +690,7 @@ internal static class CoreRegressionTests
     private static void BatteryStorageAnimation()
     {
         var sample = DemoScenes.RegressionScenes.SingleOrDefault(scene => scene.Name == "Battery Storage")
-            ?? throw new InvalidOperationException("Battery Storage showcase is missing");
+            ?? throw new InvalidOperationException("Battery Storage regression scene is missing");
         var cabinets = sample.Scene.Shapes.Single(shape => shape.Name == "Battery cabinets");
         var colors = new HashSet<uint>();
         var heights = new List<float>();
@@ -719,7 +719,7 @@ internal static class CoreRegressionTests
     private static void GantryCraneAnimation()
     {
         var sample = DemoScenes.RegressionScenes.SingleOrDefault(scene => scene.Name == "Gantry Crane")
-            ?? throw new InvalidOperationException("Gantry Crane showcase is missing");
+            ?? throw new InvalidOperationException("Gantry Crane regression scene is missing");
         var structure = sample.Scene.Shapes.Single(shape => shape.Name == "Gantry structure");
         var positions = new List<Vector3>();
         for (var step = 0; step <= 100; step++)

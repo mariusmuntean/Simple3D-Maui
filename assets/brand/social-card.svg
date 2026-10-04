@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Simple3D scene library for .NET MAUI">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Simple3D: 3D software renderer for .NET MAUI">
   <defs>
     <linearGradient id="sky" x2="1" y2="1">
       <stop stop-color="#1B2D4E"/>
@@ -19,7 +19,7 @@
     <circle cx="95" cy="27" r="6" fill="#FFC47A"/>
   </g>
   <text x="435" y="280" fill="#F7F9FF" font-family="Inter, Avenir Next, Arial, sans-serif" font-size="100" font-weight="720" letter-spacing="-5">Simple3D</text>
-  <text x="444" y="352" fill="#BDD0EC" font-family="Inter, Avenir Next, Arial, sans-serif" font-size="38">Little worlds. Real depth.</text>
+  <text x="444" y="352" fill="#BDD0EC" font-family="Inter, Avenir Next, Arial, sans-serif" font-size="38">3D software renderer</text>
   <rect x="444" y="405" width="318" height="2" fill="#77DDCE"/>
   <text x="444" y="463" fill="#77DDCE" font-family="Inter, Avenir Next, Arial, sans-serif" font-size="23" font-weight="600" letter-spacing="1">3D SCENES FOR .NET MAUI</text>
   <g fill="none" stroke="#8FA4D0" stroke-width="2" opacity=".18" stroke-linejoin="round">

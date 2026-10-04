@@ -23,7 +23,7 @@ public sealed class GalleryPage : ContentPage
         BackgroundColor = Color.FromArgb("#0D1322");
         var title = new Label { Text = "Simple3D", FontSize = 34, FontAttributes = FontAttributes.Bold,
             TextColor = Colors.White };
-        var subtitle = new Label { Text = "Little worlds, a few lines of C#.", FontSize = 16,
+        var subtitle = new Label { Text = "3D software renderer for .NET MAUI", FontSize = 16,
             TextColor = Color.FromArgb("#B7C6E2") };
         var scenes = new HorizontalStackLayout { Spacing = 8 };
         foreach (var sample in _scenes)

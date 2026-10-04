@@ -20,7 +20,7 @@ public static partial class DemoScenes
         scene.AddLabel(new("OUTPUT", new(1.2f, .9f, 0), 0xFFE4ECFF));
         var camera = new Camera(5.5f, .55f, .32f);
         camera.FitToScene(scene, 4f / 3);
-        return new("Equipment", "Inspect the motor and animate its output vector.", scene, camera,
+        return new("Equipment", "Grouped primitives, labels and an animated output vector.", scene, camera,
             AnimateNode(scene, axis, time => axis.Rotated(0, .42f * MathF.Sin(time * 1.7f), 0)));
     }
 
