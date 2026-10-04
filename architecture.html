@@ -101,7 +101,7 @@
 </tr>
 <tr>
 <td>Gallery</td>
-<td>Seventeen examples using shared scene factories</td>
+<td>Five examples using shared scene factories</td>
 <td>Both libraries through the demo project</td>
 </tr>
 </tbody>
@@ -152,7 +152,7 @@
 <p>During pan or pinch, the view caps the longest render dimension at 512 pixels and restores configured detail after the gesture. If raster work exceeds the budget, native painting retries at half resolution and avoids probing an expensive full-size frame on every animation update. <code>MaximumRenderDimension</code> lets the application set an animation budget.</p>
 <p>Your application owns animation timing. Replace shapes from a UI timer and stop it when the page disappears. Cost grows with covered pixels and overlap as well as triangle count. Profile the native target and distinguish CPU render time from displayed frame rate.</p>
 <h2 id="deliberate-scope">Deliberate scope</h2>
-<p>The software path keeps rendering, visibility and picking in one inspectable pipeline. Its tradeoff is CPU work per covered pixel. Simple3D supports opaque triangles and fixed directional flat lighting; it has no image textures, transparency, PBR or shadows. Patterned Surface uses colored mesh cells.</p>
+<p>The software path keeps rendering, visibility and picking in one inspectable pipeline. Its tradeoff is CPU work per covered pixel. Simple3D supports opaque triangles and fixed directional flat lighting; it has no image textures, transparency, PBR or shadows.</p>
 <p><code>SceneRenderer</code> is the older projected-triangle API, retained for compatible primitive/default-camera code. <code>SceneView</code> uses <code>DepthRenderer</code>. Use the depth path for custom meshes, newer camera features and intersecting geometry.</p>
 <h2 id="read-the-implementation">Read the implementation</h2>
 <ul>

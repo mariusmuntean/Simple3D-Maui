@@ -81,7 +81,7 @@ view.Scene = scene;
 view.Camera = camera;
 </code></pre>
 <p><code>FitToScene</code> encloses world bounds conservatively and updates the camera atomically. Empty scenes leave the camera unchanged. <code>Scene.GetBounds</code> excludes labels and enforces the same aggregate triangle limit as rendering. In orthographic mode, zoom changes the visible height; in perspective mode it changes distance. <code>Camera.Target</code> moves the orbit center.</p>
-<p><img src="images/Packing.png" alt="Orthographic packing arrangement"></p>
+<p><img src="images/Telemetry.png" alt="Orthographic telemetry chart"></p>
 <p><code>WorldLabel</code> positions are projected to frame pixels. Labels are overlays: they are clipped by the viewport and near plane, but they do not participate in depth testing or picking. Use them for callouts, not occluded geometry annotations.</p>
 
 </article>

@@ -84,7 +84,7 @@ var scene = new Scene().Add(face).Add(face.At(0, 0, -1));
 </code></pre>
 <p><code>Shape.Group(children)</code> applies its transform to every child. <code>At</code>, <code>Rotated</code>, and <code>Scaled</code> set absolute local values and return a new shape. The order is local scale, local rotation, local translation, then parent transforms. A leaf name survives picking through groups. Lines and arrows are triangle meshes, so they obey the same depth and picking rules.</p>
 <p><img src="images/Surface.png" alt="Procedural indexed wave surface"></p>
-<p>The <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/DemoScenes.cs">surface factory</a> builds a 16 × 16 grid from shared indexed vertices. The <a href="examples.html">executable examples</a> render it without MAUI, and the <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Demo/GalleryPage.cs">demo</a> adds orbit and selection.</p>
+<p>The <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Surface.cs">surface factory</a> builds a 16 × 16 grid from shared indexed vertices. The <a href="examples.html">executable examples</a> render it without MAUI, and the <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Demo/GalleryPage.cs">demo</a> adds orbit and selection.</p>
 
 </article>
           </div>

@@ -73,10 +73,8 @@
 <h1 id="getting-started">Getting started</h1>
 
 <h2 id="requirements">Requirements</h2>
-<p>Use .NET 10 with MAUI workloads and an iOS, Android, or Mac Catalyst target. Preview packages are not yet on NuGet.org. <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/docs/PACKAGING.md">Build the packages</a>, then install from the local feed:</p>
-<pre><code class="lang-bash">dotnet add YourApp.csproj package Simple3D.Maui --version 0.1.0-preview.1 --no-restore
-dotnet restore YourApp.csproj --source /absolute/path/to/artifacts/packages --source https://api.nuget.org/v3/index.json
-</code></pre>
+<p>Use .NET 10 with the target's MAUI workload and an iOS, Android or Mac Catalyst app. Windows is not supported; remove a Windows target from a default MAUI project before restoring. Apple builds require macOS and a workload-compatible Xcode.</p>
+<p>Preview packages are not yet on NuGet.org. Follow <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/docs/PACKAGING.md">Build packages and install from a local feed</a>, including the persistent <code>NuGet.Config</code>, then return here to create a scene.</p>
 <p>Core is a transitive dependency. For a source checkout, reference <code>src/Simple3D.Maui</code> instead. Core-only applications can install <code>Simple3D.Core</code> without MAUI workloads. Register the SkiaSharp handler in the host app:</p>
 <pre><code class="lang-csharp">using SkiaSharp.Views.Maui.Controls.Hosting;
 
@@ -96,7 +94,7 @@ view.Camera.FitToScene(scene, aspectRatio: 4f / 3);
 Content = view;
 </code></pre>
 <p>For a display-only scene, set <code>IsInteractive = false</code>. This removes the view's orbit, pinch and tap gestures. The default is interactive; you can switch the property at runtime. The camera can still be changed in code.</p>
-<p>For simple animation, replace immutable shapes on the UI thread. Each replacement invalidates the frame. Set <code>MaximumRenderDimension</code> to a smaller physical size while animating to bound the software rasterizer's per-frame work, then restore it when the animation stops. The <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Demo/GalleryPage.cs">gallery demo</a> gives each scene its own time-based motion. Its timer targets 60 updates per second and stops when the page disappears; actual rendered frame rate depends on the device, viewport and scene.</p>
+<p>For simple animation, replace immutable shapes on the UI thread. Each replacement invalidates the frame. Set <code>MaximumRenderDimension</code> to a smaller physical size while animating to bound the software rasterizer's per-frame work, then restore it when the animation stops. The <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Demo/GalleryPage.cs">gallery demo</a> gives each scene its own time-based motion. Its timer targets 60 updates per second and stops when the page disappears or its window enters the background (<code>Window.Stopped</code>). Returning to the app leaves it paused until Animate is pressed. Ignore already queued ticks after stopping a timer. Actual rendered frame rate depends on the device, viewport and scene.</p>
 <p>Colors passed to Core use opaque <code>0xAARRGGBB</code> values. <code>SceneView.SceneBackgroundColor</code> accepts a MAUI <code>Color</code> and must be opaque. Angles are radians. Shape transforms return copies; adding a changed shape requires <code>Scene.Replace</code> or <code>Scene.Add</code>. <code>Scene.Changed</code> and <code>Camera.Changed</code> trigger a redraw automatically. Keep scene and camera mutations on the UI thread.</p>
 <p>Run the demo app or explore the <a href="examples.html">showcases</a>. On Mac Catalyst, use the .NET installation with MAUI workloads and a compatible Xcode.</p>
 

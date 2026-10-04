@@ -336,56 +336,6 @@
     },
     {
       "type": "Resource",
-      "source_relative_path": "images/Assembly.png",
-      "output": {
-        "resource": {
-          "relative_path": "images/Assembly.png"
-        }
-      },
-      "version": ""
-    },
-    {
-      "type": "Resource",
-      "source_relative_path": "images/Battery Storage.png",
-      "output": {
-        "resource": {
-          "relative_path": "images/Battery Storage.png"
-        }
-      },
-      "version": ""
-    },
-    {
-      "type": "Resource",
-      "source_relative_path": "images/City.png",
-      "output": {
-        "resource": {
-          "relative_path": "images/City.png"
-        }
-      },
-      "version": ""
-    },
-    {
-      "type": "Resource",
-      "source_relative_path": "images/Conveyor Inspection.png",
-      "output": {
-        "resource": {
-          "relative_path": "images/Conveyor Inspection.png"
-        }
-      },
-      "version": ""
-    },
-    {
-      "type": "Resource",
-      "source_relative_path": "images/Drone Survey.png",
-      "output": {
-        "resource": {
-          "relative_path": "images/Drone Survey.png"
-        }
-      },
-      "version": ""
-    },
-    {
-      "type": "Resource",
       "source_relative_path": "images/Equipment.png",
       "output": {
         "resource": {
@@ -406,70 +356,10 @@
     },
     {
       "type": "Resource",
-      "source_relative_path": "images/Molecule.png",
-      "output": {
-        "resource": {
-          "relative_path": "images/Molecule.png"
-        }
-      },
-      "version": ""
-    },
-    {
-      "type": "Resource",
-      "source_relative_path": "images/Orbit.png",
-      "output": {
-        "resource": {
-          "relative_path": "images/Orbit.png"
-        }
-      },
-      "version": ""
-    },
-    {
-      "type": "Resource",
-      "source_relative_path": "images/Packet Routing.png",
-      "output": {
-        "resource": {
-          "relative_path": "images/Packet Routing.png"
-        }
-      },
-      "version": ""
-    },
-    {
-      "type": "Resource",
-      "source_relative_path": "images/Packing.png",
-      "output": {
-        "resource": {
-          "relative_path": "images/Packing.png"
-        }
-      },
-      "version": ""
-    },
-    {
-      "type": "Resource",
-      "source_relative_path": "images/Patterned Surface.png",
-      "output": {
-        "resource": {
-          "relative_path": "images/Patterned Surface.png"
-        }
-      },
-      "version": ""
-    },
-    {
-      "type": "Resource",
       "source_relative_path": "images/Robot Arm.png",
       "output": {
         "resource": {
           "relative_path": "images/Robot Arm.png"
-        }
-      },
-      "version": ""
-    },
-    {
-      "type": "Resource",
-      "source_relative_path": "images/Solar Tracker.png",
-      "output": {
-        "resource": {
-          "relative_path": "images/Solar Tracker.png"
         }
       },
       "version": ""
@@ -490,16 +380,6 @@
       "output": {
         "resource": {
           "relative_path": "images/Telemetry.png"
-        }
-      },
-      "version": ""
-    },
-    {
-      "type": "Resource",
-      "source_relative_path": "images/Wind.png",
-      "output": {
-        "resource": {
-          "relative_path": "images/Wind.png"
         }
       },
       "version": ""
