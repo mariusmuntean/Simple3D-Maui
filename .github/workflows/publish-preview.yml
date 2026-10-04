@@ -1,0 +1,49 @@
+name: Publish verified NuGet preview
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nuget-preview-publication
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: v0.1.0-preview.1
+    steps:
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 10.0.401
+      - name: Download validated release artifacts
+        run: |
+          mkdir packages
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir packages --pattern '*.nupkg' --pattern '*.snupkg'
+      - name: Verify immutable preview artifacts
+        working-directory: packages
+        run: |
+          sha256sum --strict --check <<'CHECKSUMS'
+          3bb355b1ad30b8d2d5668868f2fac3629d92874c26299605e545ad9da93829b3  Simple3D.Core.0.1.0-preview.1.nupkg
+          61db6da42f783e140e70aa39e3abde3cf98f144531eb30e9133a863d6c5e3176  Simple3D.Core.0.1.0-preview.1.snupkg
+          959a88cbe8212e31c8e128cbd3c796f37e4622e530af2fcb5972287d4a68ea00  Simple3D.Maui.0.1.0-preview.1.nupkg
+          9c95c9287db18b2215b706cc54479f10c92d32c3f47b50abb0a1fe7da80a8f46  Simple3D.Maui.0.1.0-preview.1.snupkg
+          CHECKSUMS
+      - name: Authenticate with NuGet trusted publishing
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1
+        id: login
+        with:
+          user: marius.muntean
+      - name: Publish Core and matching symbols
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: dotnet nuget push packages/Simple3D.Core.0.1.0-preview.1.nupkg --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+      - name: Publish MAUI and matching symbols
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: dotnet nuget push packages/Simple3D.Maui.0.1.0-preview.1.nupkg --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
