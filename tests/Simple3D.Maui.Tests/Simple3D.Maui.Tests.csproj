@@ -14,5 +14,7 @@
     <Compile Include="../../src/Simple3D.Maui/SceneView.cs" Link="SceneView.cs" />
     <Compile Include="../../samples/Simple3D.Shared/DemoScenes.cs" Link="DemoScenes.cs" />
     <Compile Include="../../samples/Simple3D.Demo/GalleryPage.cs" Link="GalleryPage.cs" />
+    <Compile Include="../../samples/Simple3D.Demo/App.cs" Link="App.cs" />
+    <Compile Include="../../samples/Simple3D.Demo/NativeRenderProbe.cs" Link="NativeRenderProbe.cs" />
   </ItemGroup>
 </Project>
