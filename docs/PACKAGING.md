@@ -1,6 +1,12 @@
 # Packaging and consumer validation
 
-The preview version is `0.1.0-preview.1`. Packages are not yet published to NuGet.org. The MAUI package depends on Core, so applications install `Simple3D.Maui` alone.
+The preview version is `0.1.0-preview.1` on NuGet.org. The MAUI package depends on Core, so applications install `Simple3D.Maui` alone.
+
+```bash
+dotnet add YourApp.csproj package Simple3D.Maui --version 0.1.0-preview.1
+```
+
+Core-only applications install `Simple3D.Core` instead. See [Getting started](site/getting-started.md) for platform requirements, SkiaSharp registration and the first scene. The local-feed instructions below support development builds.
 
 ## Build packages
 
@@ -58,7 +64,7 @@ Configure a NuGet.org trusted publishing policy for owner `marius.muntean`, GitH
 1. Commit the intended source, run portable tests, push the commit, then run package validation and independent consumers.
 2. Launch a packaged native consumer; record device and configuration.
 3. Inspect dependencies and all three MAUI framework assets. Publish matching symbols.
-4. Tag the verified source commit and write release notes.
+4. Tag the verified source commit and publish a GitHub prerelease with the validated package artifacts. Keep its notes clear about NuGet availability pending public restore. The Action's read-only token cannot download a draft release.
 5. Publish `.nupkg` and `.snupkg` files with the maintainer's NuGet.org credentials.
 6. Restore a fresh consumer from NuGet.org, then update installation instructions and badges.
 

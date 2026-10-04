@@ -8,7 +8,13 @@ A 3D software renderer for .NET 10 MAUI on iOS, Android and Mac Catalyst. Build 
 
 ## Start with a scene
 
-Preview packages are not yet on NuGet.org. Build and install them from a local feed using the [package instructions](docs/PACKAGING.md), or reference `src/Simple3D.Maui` from your MAUI app. Core is a transitive dependency. Register SkiaSharp in `MauiProgram`:
+Install the [MAUI preview](https://www.nuget.org/packages/Simple3D.Maui/0.1.0-preview.1) in a .NET 10 MAUI app with Android, iOS or Mac Catalyst targets:
+
+```bash
+dotnet add YourApp.csproj package Simple3D.Maui --version 0.1.0-preview.1
+```
+
+Core is a transitive dependency. Headless applications can install [Simple3D.Core](https://www.nuget.org/packages/Simple3D.Core/0.1.0-preview.1) alone. For source or local-feed builds, see [packaging](docs/PACKAGING.md). Register SkiaSharp in `MauiProgram`:
 
 ```csharp
 using SkiaSharp.Views.Maui.Controls.Hosting;
