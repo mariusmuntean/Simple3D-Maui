@@ -114,6 +114,7 @@ public sealed class GalleryPage : ContentPage
 
     private void AdvanceAnimation(object? sender, EventArgs args)
     {
+        if (_animationTimer?.IsRunning != true) return;
         if (_current is null) { StopAnimation(); return; }
         var now = Stopwatch.GetTimestamp();
         var seconds = Math.Min(Stopwatch.GetElapsedTime(_lastAnimationTick, now).TotalSeconds, .1);
@@ -122,7 +123,7 @@ public sealed class GalleryPage : ContentPage
         _current.Animate((float)_animationSeconds);
     }
 
-    private void StopAnimation()
+    internal void StopAnimation()
     {
         _animationTimer?.Stop();
         _view.MaximumRenderDimension = DepthRenderer.MaximumDimension;

@@ -1,4 +1,5 @@
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Dispatching;
 using System.Runtime.InteropServices;
 using Simple3D.Core;
 using Simple3D.Maui;
@@ -661,6 +662,55 @@ var tests = new (string Name, Action Run)[]
         var recovered = view.CapturePaintTarget(1170, 1320);
         Assert(recovered.Width == 1170 && recovered.Height == 1320,
             "widening the camera view did not restore full resolution");
+    }),
+    ("backgrounding the gallery pauses animation and ignores queued ticks", () =>
+    {
+        var previousProvider = DispatcherProvider.Current;
+        var previousApp = Application.Current;
+        var dispatcher = new TestDispatcher();
+        DispatcherProvider.SetCurrent(dispatcher);
+        SceneView? view = null;
+        try
+        {
+            var app = new App();
+            var window = ((Microsoft.Maui.IApplication)app).CreateWindow(null);
+            var page = (GalleryPage)((Window)window).Page!;
+            var grid = (Grid)page.Content;
+            view = grid.Children.OfType<Border>().Single().Content as SceneView
+                ?? throw new InvalidOperationException("gallery scene view missing");
+            var footer = (VerticalStackLayout)grid.Children.OfType<ScrollView>().Single().Content;
+            var tools = (HorizontalStackLayout)footer.Children.OfType<ScrollView>().Single().Content;
+            var animate = tools.Children.OfType<Button>().Single(button => button.Text == "Animate");
+            window.Created();
+            window.Activated();
+            ((IButtonController)animate).SendClicked();
+            Assert(animate.Text == "Pause" && view.MaximumRenderDimension == 768, "animation did not start");
+            var before = view.Scene.Shapes.ToArray();
+            dispatcher.Timer.DeliverTick();
+            Assert(!view.Scene.Shapes.SequenceEqual(before), "animation did not update its scene");
+            window.Deactivated();
+            window.Stopped();
+            Assert(animate.Text == "Animate" && view.MaximumRenderDimension == DepthRenderer.MaximumDimension,
+                "backgrounded gallery kept animating");
+            var stopped = view.Scene.Shapes.ToArray();
+            dispatcher.Timer.DeliverTick();
+            Assert(view.Scene.Shapes.SequenceEqual(stopped), "queued tick animated the backgrounded scene");
+            window.Resumed();
+            window.Activated();
+            Assert(animate.Text == "Animate", "resuming restarted animation without user input");
+            ((IButtonController)animate).SendClicked();
+            dispatcher.Timer.DeliverTick();
+            Assert(animate.Text == "Pause" && !view.Scene.Shapes.SequenceEqual(stopped), "animation could not resume explicitly");
+            window.Deactivated();
+            window.Stopped();
+            window.Destroying();
+        }
+        finally
+        {
+            view?.ReleaseRenderResources();
+            Application.Current = previousApp;
+            DispatcherProvider.SetCurrent(previousProvider);
+        }
     }),
     ("gallery reset clears highlighting and notifies once even in display only mode", () =>
     {
