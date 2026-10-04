@@ -14,6 +14,10 @@ cat > "$consumer/NuGet.Config" <<EOF
 <?xml version="1.0" encoding="utf-8"?>
 <configuration>
   <packageSources><clear/><add key="preview" value="$packages"/><add key="nuget.org" value="https://api.nuget.org/v3/index.json"/></packageSources>
+  <packageSourceMapping>
+    <packageSource key="preview"><package pattern="Simple3D.*"/></packageSource>
+    <packageSource key="nuget.org"><package pattern="*"/></packageSource>
+  </packageSourceMapping>
   <config><add key="globalPackagesFolder" value="$consumer/packages"/></config>
 </configuration>
 EOF

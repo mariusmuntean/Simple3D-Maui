@@ -37,6 +37,12 @@ foreach (var name in new[] { "Simple3D.Core", "Simple3D.Maui" })
     Require(package.GetEntry("README.md") != null && package.GetEntry("package-icon.png") != null, "Package assets missing");
     var assemblies = package.Entries.Where(e => e.FullName.StartsWith("lib/") && e.FullName.EndsWith(".dll")).ToArray();
     Require(assemblies.Length == (name.EndsWith("Core") ? 1 : 3), "Unexpected framework asset count");
+    var frameworks = assemblies.Select(e => e.FullName.Split('/')[1]).ToArray();
+    Require(name.EndsWith("Core")
+        ? frameworks.SequenceEqual(new[] { "net10.0" })
+        : new[] { "net10.0-android", "net10.0-ios", "net10.0-maccatalyst" }
+            .All(tfm => frameworks.Count(actual => actual.StartsWith(tfm, StringComparison.Ordinal)) == 1),
+        "Package framework identities differ from supported platforms");
     using var symbols = ZipFile.OpenRead(Path.ChangeExtension(path, ".snupkg"));
     foreach (var assembly in assemblies)
     {
@@ -64,7 +70,14 @@ foreach (var name in new[] { "Simple3D.Core", "Simple3D.Maui" })
         Require(SHA256.HashData(sourceBytes).SequenceEqual(reader.GetBlobBytes(document.Hash)), "Source Link bytes differ from the compiled source");
     }
     if (name.EndsWith("Maui"))
-        Require(metadata.Descendants().Any(e => e.Name.LocalName == "dependency" && (string?)e.Attribute("id") == "Simple3D.Core"), "Transitive Core dependency missing");
+    {
+        var groups = metadata.Descendants().Where(e => e.Name.LocalName == "group").ToArray();
+        Require(groups.Length == 3, "MAUI dependency groups missing");
+        foreach (var group in groups)
+            foreach (var dependency in new[] { "Simple3D.Core", "Microsoft.Maui.Controls", "SkiaSharp.Views.Maui.Controls" })
+                Require(group.Elements().Any(e => e.Name.LocalName == "dependency" && (string?)e.Attribute("id") == dependency),
+                    $"Dependency {dependency} missing from {group.Attribute("targetFramework")}");
+    }
     Console.WriteLine($"PACKAGE_METADATA_PASS: {name}, symbols, Source Link, docs and assets");
 }
 

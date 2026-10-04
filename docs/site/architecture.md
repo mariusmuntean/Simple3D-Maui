@@ -11,7 +11,7 @@ Simple3D is a small CPU renderer for opaque 3D diagrams inside ordinary .NET MAU
 | `Simple3D.Core` | Shapes, immutable meshes, hierarchy, camera, projection, depth rasterization and picking | .NET 10 / System.Numerics |
 | `Simple3D.Maui` | `SceneView`, gestures, caching, bitmap presentation, selection and label layout | Core, MAUI, SkiaSharp |
 | Your application | Scene content, animation timing, selected-part details and layout | MAUI control, or Core alone for exports |
-| Gallery | Seventeen examples using shared scene factories | Both libraries through the demo project |
+| Gallery | Five examples using shared scene factories | Both libraries through the demo project |
 
 Core has no MAUI or SkiaSharp dependency. You can render and query pixels in a console app without a native UI. `SceneView` uses `SKCanvasView`; SkiaSharp presents the raster image rather than executing the scene's triangles on a GPU.
 
@@ -59,7 +59,7 @@ Your application owns animation timing. Replace shapes from a UI timer and stop 
 
 ## Deliberate scope
 
-The software path keeps rendering, visibility and picking in one inspectable pipeline. Its tradeoff is CPU work per covered pixel. Simple3D supports opaque triangles and fixed directional flat lighting; it has no image textures, transparency, PBR or shadows. Patterned Surface uses colored mesh cells.
+The software path keeps rendering, visibility and picking in one inspectable pipeline. Its tradeoff is CPU work per covered pixel. Simple3D supports opaque triangles and fixed directional flat lighting; it has no image textures, transparency, PBR or shadows.
 
 `SceneRenderer` is the older projected-triangle API, retained for compatible primitive/default-camera code. `SceneView` uses `DepthRenderer`. Use the depth path for custom meshes, newer camera features and intersecting geometry.
 

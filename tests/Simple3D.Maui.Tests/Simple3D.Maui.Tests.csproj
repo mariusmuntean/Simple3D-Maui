@@ -12,9 +12,10 @@
     <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.2" />
     <ProjectReference Include="../../src/Simple3D.Core/Simple3D.Core.csproj" />
     <Compile Include="../../src/Simple3D.Maui/SceneView.cs" Link="SceneView.cs" />
-    <Compile Include="../../samples/Simple3D.Shared/DemoScenes.cs" Link="DemoScenes.cs" />
+    <Compile Include="../../samples/Simple3D.Shared/*.cs" Link="Samples/%(Filename)%(Extension)" />
     <Compile Include="../../samples/Simple3D.Demo/GalleryPage.cs" Link="GalleryPage.cs" />
     <Compile Include="../../samples/Simple3D.Demo/App.cs" Link="App.cs" />
     <Compile Include="../../samples/Simple3D.Demo/NativeRenderProbe.cs" Link="NativeRenderProbe.cs" />
+    <Compile Include="../Shared/RegressionScenes.cs" Link="RegressionScenes.cs" />
   </ItemGroup>
 </Project>

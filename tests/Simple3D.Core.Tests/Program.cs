@@ -224,7 +224,7 @@ if (failed == 0)
     Console.WriteLine($"Reusable target (same animated mesh scene, 768x576, 60 frames): {timer.Elapsed.TotalMilliseconds / 60:F2} ms/frame, {(GC.GetAllocatedBytesForCurrentThread() - allocated) / 60:N0} bytes/frame on this runner");
     foreach (var name in new[] { "Robot Arm", "Orbit", "Wind", "Conveyor Inspection", "Solar Tracker", "Packet Routing", "Drone Survey", "Battery Storage", "Gantry Crane" })
     {
-        var sample = DemoScenes.All.Single(scene => scene.Name == name);
+        var sample = DemoScenes.RegressionScenes.Single(scene => scene.Name == name);
         var sceneTarget = new RenderTarget(768, 576);
         for (var i = 0; i < 10; i++) { sample.Animate(i / 60f); depthRenderer.RenderInto(sample.Scene, sample.Camera, sceneTarget); }
         allocated = GC.GetAllocatedBytesForCurrentThread();

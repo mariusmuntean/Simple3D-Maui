@@ -445,10 +445,10 @@ internal static class CoreRegressionTests
 
     private static void SampleScenes()
     {
-        var names = DemoScenes.All.Select(sample => sample.Name).ToArray();
+        var names = DemoScenes.RegressionScenes.Select(sample => sample.Name).ToArray();
         foreach (var name in new[] { "Equipment", "Packing", "Surface", "Assembly", "Molecule", "Telemetry", "City", "Robot Arm", "Orbit", "Wind", "Conveyor Inspection", "Solar Tracker", "Packet Routing", "Drone Survey", "Patterned Surface", "Battery Storage", "Gantry Crane" })
             Check(names.Count(candidate => candidate == name) == 1, $"missing or duplicate {name} example");
-        foreach (var sample in DemoScenes.All)
+        foreach (var sample in DemoScenes.RegressionScenes)
         {
             Check(sample.Scene.GetBounds() is not null, "sample has no geometry");
             Check(sample.Scene.Labels.Count > 0, "sample has no labels");
@@ -465,7 +465,7 @@ internal static class CoreRegressionTests
     private static void SampleAnimations()
     {
         var renderer = new DepthRenderer();
-        foreach (var sample in DemoScenes.All)
+        foreach (var sample in DemoScenes.RegressionScenes)
         {
             var initial = renderer.Render(sample.Scene, sample.Camera, 320, 240).Pixels.ToArray();
             sample.Animate(.75f);
@@ -540,7 +540,7 @@ internal static class CoreRegressionTests
             ("Wind", "Tower", "Blade 1")
         })
         {
-            var sample = DemoScenes.All.Single(scene => scene.Name == name);
+            var sample = DemoScenes.RegressionScenes.Single(scene => scene.Name == name);
             if (name == "Orbit")
                 Check(sample.Scene.Shapes.Single(shape => shape.Name == "Orbit path").Children
                     .All(segment => segment.Name == "Orbit path"), "picked orbit segment has no useful name");
@@ -574,7 +574,7 @@ internal static class CoreRegressionTests
 
     private static void ConveyorInspectionAnimation()
     {
-        var sample = DemoScenes.All.Single(scene => scene.Name == "Conveyor Inspection");
+        var sample = DemoScenes.RegressionScenes.Single(scene => scene.Name == "Conveyor Inspection");
         var gate = sample.Scene.Flatten().Single(node => node.Shape.Name == "Scanner head");
         var gateBefore = gate.Transform;
         var parcelBefore = sample.Scene.Flatten().Single(node => node.Shape.Name == "Parcel 1: pending");
@@ -594,7 +594,7 @@ internal static class CoreRegressionTests
 
     private static void SolarTrackerAnimation()
     {
-        var sample = DemoScenes.All.Single(scene => scene.Name == "Solar Tracker");
+        var sample = DemoScenes.RegressionScenes.Single(scene => scene.Name == "Solar Tracker");
         var mount = sample.Scene.Flatten().Single(node => node.Shape.Name == "Tracker mount");
         var panel = sample.Scene.Flatten().Single(node => node.Shape.Name == "Solar panel");
         var sun = sample.Scene.Flatten().Single(node => node.Shape.Name == "Sun");
@@ -629,7 +629,7 @@ internal static class CoreRegressionTests
 
     private static void PacketRoutingAnimation()
     {
-        var sample = DemoScenes.All.Single(scene => scene.Name == "Packet Routing");
+        var sample = DemoScenes.RegressionScenes.Single(scene => scene.Name == "Packet Routing");
         var sourceLink = sample.Scene.Flatten().Single(node => node.Shape.Name == "Source link");
         var destinationLink = sample.Scene.Flatten().Single(node => node.Shape.Name == "Destination link");
         var packet = sample.Scene.Flatten().Single(node => node.Shape.Name == "Packet 1");
@@ -655,7 +655,7 @@ internal static class CoreRegressionTests
 
     private static void DroneSurveyAnimation()
     {
-        var sample = DemoScenes.All.Single(scene => scene.Name == "Drone Survey");
+        var sample = DemoScenes.RegressionScenes.Single(scene => scene.Name == "Drone Survey");
         var pad = sample.Scene.Flatten().Single(node => node.Shape.Name == "Landing pad");
         var body = sample.Scene.Flatten().Single(node => node.Shape.Name == "Drone body");
         var blade = sample.Scene.Flatten().Single(node => node.Shape.Name == "Propeller 1");
@@ -689,7 +689,7 @@ internal static class CoreRegressionTests
 
     private static void BatteryStorageAnimation()
     {
-        var sample = DemoScenes.All.SingleOrDefault(scene => scene.Name == "Battery Storage")
+        var sample = DemoScenes.RegressionScenes.SingleOrDefault(scene => scene.Name == "Battery Storage")
             ?? throw new InvalidOperationException("Battery Storage showcase is missing");
         var cabinets = sample.Scene.Shapes.Single(shape => shape.Name == "Battery cabinets");
         var colors = new HashSet<uint>();
@@ -718,7 +718,7 @@ internal static class CoreRegressionTests
 
     private static void GantryCraneAnimation()
     {
-        var sample = DemoScenes.All.SingleOrDefault(scene => scene.Name == "Gantry Crane")
+        var sample = DemoScenes.RegressionScenes.SingleOrDefault(scene => scene.Name == "Gantry Crane")
             ?? throw new InvalidOperationException("Gantry Crane showcase is missing");
         var structure = sample.Scene.Shapes.Single(shape => shape.Name == "Gantry structure");
         var positions = new List<Vector3>();
@@ -751,7 +751,7 @@ internal static class CoreRegressionTests
     {
         foreach (var name in new[] { "Battery Storage", "Gantry Crane" })
         {
-            var sample = DemoScenes.All.Single(scene => scene.Name == name);
+            var sample = DemoScenes.RegressionScenes.Single(scene => scene.Name == name);
             var meshes = sample.Scene.Flatten().Select(node => (node.Shape.Mesh, node.Shape.Name)).ToArray();
             for (var i = 0; i < 20; i++) sample.Animate(i / 60f);
             var before = GC.GetAllocatedBytesForCurrentThread();
