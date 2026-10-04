@@ -7,7 +7,7 @@
 - MAUI control for Android, iOS and Mac Catalyst with orbit, zoom, selection feedback and labels.
 - `SceneView.ClearSelection()` clears feedback from application commands; gallery Reset also clears the selected part.
 - Toggling `IsInteractive` preserves gestures supplied by the host application.
-- Seventeen gallery scenes with subject-specific animations, including colored checker cells, battery charge gauges and a gantry crane.
+- Five focused gallery examples: equipment, robot arm, telemetry, indexed surface and gantry crane. Each has its own source file; tests retain the broader regression corpus.
 - Gallery animation pauses when its window enters the background and ignores queued ticks after stopping.
 - Bounded raster work, reduced gesture preview resolution and optional diagonal-edge filtering.
 - Indexed triangle traversal reduces allocation when rendering many small mesh instances.

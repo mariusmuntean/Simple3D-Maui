@@ -14,7 +14,9 @@ class ExampleTests(unittest.TestCase):
                 ["dotnet", "run", "--project", "tests/Simple3D.Core.Tests", "-c", "Release", "--", "--render-images", "--all", directory],
                 cwd=ROOT, check=True, capture_output=True, text=True,
             )
-            for name in ("Equipment", "Packing", "Surface", "Assembly", "Molecule", "Telemetry", "City", "Robot Arm", "Orbit", "Wind", "Conveyor Inspection", "Solar Tracker", "Packet Routing", "Drone Survey", "Patterned Surface"):
+            names = ("Equipment", "Robot Arm", "Telemetry", "Surface", "Gantry Crane")
+            self.assertEqual({p.stem for p in pathlib.Path(directory).glob("*.ppm")}, set(names))
+            for name in names:
                 data = (pathlib.Path(directory) / f"{name}.ppm").read_bytes()
                 self.assertTrue(data.startswith(b"P6\n800 600\n255\n"), name)
                 pixels = data.split(b"\n", 3)[3]

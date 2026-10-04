@@ -1,6 +1,6 @@
 # Contributor handoff
 
-Simple3D is a public MIT-licensed .NET 10 library with portable Core and a MAUI control for Android, iOS and Mac Catalyst. The gallery has seventeen scenes. Start changes from updated `main`; `gh-pages` contains generated documentation and is not a development branch.
+Simple3D is a public MIT-licensed .NET 10 library with portable Core and a MAUI control for Android, iOS and Mac Catalyst. The gallery has five teaching scenes; tests retain additional regression workloads. Start changes from updated `main`; `gh-pages` contains generated documentation and is not a development branch.
 
 Read [architecture](site/architecture.md), [development](DEVELOPMENT.md) and [package validation](PACKAGING.md) before changing rendering, platform configuration or distribution.
 

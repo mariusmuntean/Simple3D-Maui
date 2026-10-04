@@ -6,7 +6,7 @@ Simple3D draws opaque, depth-aware illustrations on iOS, Android, and Mac Cataly
 
 ![Equipment scene with a motor, base plate and arrow](images/Equipment.png)
 
-Start with [Getting started](getting-started.md), then learn [scenes and cameras](scenes-and-cameras.md), [meshes and groups](meshes-and-groups.md), and [interaction and picking](interaction-and-picking.md). The [showcases](examples.md) use the same seventeen scene factories as the interactive app. The [API reference](xref:Simple3D.Core) covers both library projects.
+Start with [Getting started](getting-started.md), then learn [scenes and cameras](scenes-and-cameras.md), [meshes and groups](meshes-and-groups.md), and [interaction and picking](interaction-and-picking.md). The [five examples](examples.md) share their scene factories with the interactive app. The [API reference](xref:Simple3D.Core) covers both library projects.
 
 Read [Architecture and rendering pipeline](architecture.md) for package boundaries, depth rendering, picking and buffer ownership.
 

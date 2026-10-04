@@ -2,7 +2,15 @@
 
 Simple3D provides a portable scene and depth renderer (`Simple3D.Core`) and a touch-enabled SkiaSharp control for .NET 10 MAUI (`Simple3D.Maui`). The control supports iOS, Android and Mac Catalyst.
 
-Install `Simple3D.Maui` in a .NET 10 MAUI app; it brings in `Simple3D.Core`. For headless rendering, install Core alone. Register `UseSkiaSharp()` on the app builder, then assign a `Scene` to a `SceneView`. Shapes, custom indexed meshes, groups, camera fitting, labels and depth-aware picking are supported.
+Use `Simple3D.Maui` in a .NET 10 MAUI app targeting Android, iOS or Mac Catalyst; it brings in `Simple3D.Core`. Windows is not supported. Install the target's MAUI workload; Apple builds require macOS and a compatible Xcode. For headless rendering, use Core alone with the .NET 10 SDK.
+
+For a published preview, install the version shown on the package page:
+
+```bash
+dotnet add YourApp.csproj package Simple3D.Maui --version 0.1.0-preview.1
+```
+
+Until publication, [build and restore from a local feed](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/docs/PACKAGING.md). A local package does not establish NuGet.org availability. Register `UseSkiaSharp()` on the app builder, then assign a `Scene` to a `SceneView`.
 
 For Core-only rendering:
 

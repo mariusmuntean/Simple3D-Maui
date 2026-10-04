@@ -56,7 +56,7 @@ dotnet run --project tests/Simple3D.Core.Tests -c Release -- --render-images --a
 dotnet run --project tests/Simple3D.Core.Tests -c Release -- --render-images Equipment equipment.ppm
 ```
 
-The output format is binary PPM. Install Pillow and run `python3 scripts/render-doc-images.py` to regenerate documentation PNGs. Both the exporter and app use the factories in `samples/Simple3D.Shared/DemoScenes.cs`.
+The output format is binary PPM. Install Pillow and run `python3 scripts/render-doc-images.py` to regenerate documentation PNGs. Both the exporter and app use the five factories in `samples/Simple3D.Shared/`. Retired gallery scenes remain in `tests/Shared/RegressionScenes.cs` to preserve renderer and allocation coverage; the performance runner includes that larger corpus.
 
 ```bash
 dotnet tool install docfx --tool-path .tools --version 2.81.0

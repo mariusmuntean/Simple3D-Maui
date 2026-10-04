@@ -32,7 +32,7 @@
     <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
     <PackageReference Include="Microsoft.Maui.Essentials" Version="$(MauiVersion)" />
     <ProjectReference Include="../../src/Simple3D.Maui/Simple3D.Maui.csproj" />
-    <Compile Include="../Simple3D.Shared/DemoScenes.cs" Link="DemoScenes.cs" />
+    <Compile Include="../Simple3D.Shared/*.cs" Link="Samples/%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>
     <MauiIcon Include="Resources/AppIcon/appicon.svg" ForegroundFile="Resources/AppIcon/appiconfg.svg" Color="#101A2D" />

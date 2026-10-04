@@ -15,6 +15,28 @@ Each package includes license metadata, repository commit, README, icon and XML 
 
 Source Link points to the exact Git commit. Push that commit before publishing packages. Building changed tracked source against an older commit gives misleading source links.
 
+## Install from the local feed
+
+In an existing .NET 10 MAUI app, keep only supported targets (Android, iOS and Mac Catalyst), then add the package without restoring. Put this `NuGet.Config` beside the app's project or solution, replacing the local path:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="preview" value="/absolute/path/to/Simple3D-Maui/artifacts/packages" />
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+  </packageSources>
+</configuration>
+```
+
+```bash
+dotnet add YourApp.csproj package Simple3D.Maui --version 0.1.0-preview.1 --no-restore
+dotnet restore YourApp.csproj
+```
+
+Keep the feed configured for subsequent builds and IDE restores. Core-only apps use `Simple3D.Core` in the same commands. Continue with [SkiaSharp registration and the first scene](site/getting-started.md). If you rebuild the same preview version, use a fresh package cache for validation; NuGet may otherwise reuse an earlier local build.
+
 ## Verify outside the checkout
 
 ```bash

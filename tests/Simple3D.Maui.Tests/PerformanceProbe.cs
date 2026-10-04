@@ -14,7 +14,7 @@ internal static class PerformanceProbe
     public static int Run()
     {
         var rows = new List<object>();
-        foreach (var sample in DemoScenes.All)
+        foreach (var sample in DemoScenes.RegressionScenes)
         {
             sample.Animate(0);
             var roots = sample.Scene.Shapes.ToArray();

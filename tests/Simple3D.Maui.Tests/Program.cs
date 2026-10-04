@@ -99,7 +99,7 @@ var tests = new (string Name, Action Run)[]
     }),
     ("selection follows animated replacements and their visible outline", () =>
     {
-        foreach (var sample in DemoScenes.All)
+        foreach (var sample in DemoScenes.RegressionScenes)
         {
             var view = new SceneView { Scene = sample.Scene, Camera = sample.Camera };
             sample.Animate(0);
@@ -466,7 +466,7 @@ var tests = new (string Name, Action Run)[]
     }),
     ("gallery drag benchmark", () =>
     {
-        foreach (var sample in DemoScenes.All)
+        foreach (var sample in DemoScenes.RegressionScenes)
         {
             var view = new SceneView { Scene = sample.Scene, Camera = sample.Camera };
             var pan = (IPanGestureController)view.GestureRecognizers.OfType<PanGestureRecognizer>().Single();
@@ -744,7 +744,7 @@ var tests = new (string Name, Action Run)[]
             (VerticalStackLayout)((ScrollView)page.Content).Content;
         var scroller = content.Children.OfType<ScrollView>()
             .Single(view => view.Content is HorizontalStackLayout row &&
-                row.Children.OfType<Button>().Any(button => button.Text == "City"));
+                row.Children.OfType<Button>().Any(button => button.Text == "Gantry Crane"));
         Assert(scroller.Orientation == ScrollOrientation.Horizontal, "scene catalogue cannot scroll horizontally");
         var buttons = ((HorizontalStackLayout)scroller.Content).Children.OfType<Button>().ToArray();
         Assert(buttons.Length == DemoScenes.All.Count, "not every example is in the gallery");
