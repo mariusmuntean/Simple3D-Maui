@@ -51,6 +51,10 @@ The fixture copies gallery platform bootstrap and icon resources. It neither ref
 
 ## Publish a preview
 
+The manual-only [`publish-preview.yml`](../.github/workflows/publish-preview.yml) publishes the validated `0.1.0-preview.1` artifacts attached to the GitHub preview release, including matching symbols. It runs on `main`, checks four committed SHA-256 hashes before authentication, and uses a standard Ubuntu runner. Public repositories do not consume private-repository Actions minutes. It does not rebuild packages or run the native validation matrix.
+
+Configure a NuGet.org trusted publishing policy for owner `marius.muntean`, GitHub owner `mariusmuntean`, repository `Simple3D-Maui`, workflow `publish-preview.yml`, and no environment. Allow pushing new packages and versions for the exact IDs `Simple3D.Core` and `Simple3D.Maui`; do not grant unlist/relist access. The workflow uses a short-lived key from [NuGet trusted publishing](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing), so no long-lived API key belongs in GitHub secrets. Dispatch it only after the release artifacts and their source commit have passed the checks below. For another version, update the filenames, release tag and hashes after validating that version; this workflow deliberately publishes only this preview.
+
 1. Commit the intended source, run portable tests, push the commit, then run package validation and independent consumers.
 2. Launch a packaged native consumer; record device and configuration.
 3. Inspect dependencies and all three MAUI framework assets. Publish matching symbols.
