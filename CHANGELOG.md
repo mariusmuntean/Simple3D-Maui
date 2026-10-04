@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased preview · 0.1.0-preview.1
+## 0.1.0-preview.1 · 2026-10-04
 
 - Portable scene hierarchy, immutable indexed meshes, perspective and orthographic cameras.
 - CPU depth rendering with visible-leaf picking, owned snapshots and reusable targets.
@@ -15,4 +15,4 @@
 - MIT licensing, public API documentation, architecture diagrams and independent package consumers.
 - Portable symbols, Source Link and SDK package validation for preview packages.
 
-Packages are not yet published to NuGet.org. See [packaging](docs/PACKAGING.md) for installation from a local feed. Rendering supports opaque geometry and fixed directional lighting; image textures, transparency and shadows are outside this preview.
+Install [Simple3D.Maui](https://www.nuget.org/packages/Simple3D.Maui/0.1.0-preview.1) for MAUI apps or [Simple3D.Core](https://www.nuget.org/packages/Simple3D.Core/0.1.0-preview.1) for headless use. Rendering supports opaque geometry and fixed directional lighting; image textures, transparency and shadows are outside this preview.

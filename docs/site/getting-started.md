@@ -4,7 +4,13 @@
 
 Use .NET 10 with the target's MAUI workload and an iOS, Android or Mac Catalyst app. Windows is not supported; remove a Windows target from a default MAUI project before restoring. Apple builds require macOS and a workload-compatible Xcode.
 
-Preview packages are not yet on NuGet.org. Follow [Build packages and install from a local feed](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/docs/PACKAGING.md), including the persistent `NuGet.Config`, then return here to create a scene.
+Install the [MAUI preview from NuGet.org](https://www.nuget.org/packages/Simple3D.Maui/0.1.0-preview.1):
+
+```bash
+dotnet add YourApp.csproj package Simple3D.Maui --version 0.1.0-preview.1
+```
+
+For a local-feed build, follow [packaging](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/docs/PACKAGING.md).
 
 Core is a transitive dependency. For a source checkout, reference `src/Simple3D.Maui` instead. Core-only applications can install `Simple3D.Core` without MAUI workloads. Register the SkiaSharp handler in the host app:
 
