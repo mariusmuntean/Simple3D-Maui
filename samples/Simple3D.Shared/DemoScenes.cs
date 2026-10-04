@@ -9,9 +9,9 @@ public sealed record DemoScene(string Name, string Description, Scene Scene, Cam
 /// <summary>Shared scene factories for the app, examples and documentation images.</summary>
 public static partial class DemoScenes
 {
-    /// <summary>Creates independent examples of product, scientific, data and spatial illustrations.</summary>
+    /// <summary>Creates examples progressing from primitives and data updates to meshes, hierarchy and linked motion.</summary>
     public static IReadOnlyList<DemoScene> All =>
-        [Equipment(), RobotArm(), Telemetry(), Surface(), GantryCrane()];
+        [Equipment(), Telemetry(), Surface(), RobotArm(), GantryCrane()];
 
     private static Action<float> AnimateNode(Scene scene, Shape initial, Func<float, Shape> atTime)
     {

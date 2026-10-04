@@ -2,7 +2,7 @@
 
 ![Simple3D](docs/site/images/brand-banner.svg)
 
-Small 3D scenes for .NET 10 MAUI on iOS, Android and Mac Catalyst. Build a scene from shapes or an indexed mesh, display it in a `SceneView`, and let users orbit, zoom and select parts. Use it for equipment diagrams, data displays, scientific models and other small illustrations.
+A 3D software renderer for .NET 10 MAUI on iOS, Android and Mac Catalyst. Build a scene from shapes or an indexed mesh, display it in a `SceneView`, and let users orbit, zoom and select parts. Use it for equipment diagrams, data displays, scientific models and other small illustrations.
 
 ![Equipment scene](docs/site/images/Equipment.png)
 
@@ -38,7 +38,7 @@ Core colors use opaque `0xFFRRGGBB`; angles use radians. Shape transforms return
 
 Open [Simple3D.sln](Simple3D.sln) in Rider or another MAUI IDE with .NET 10 and the target's MAUI workload. Choose **Simple3D.Demo** and an Android device, iOS simulator or Mac Catalyst target. Apple targets require macOS and a workload-compatible Xcode.
 
-Start with [Equipment](samples/Simple3D.Shared/Equipment.cs), then explore [Robot Arm](samples/Simple3D.Shared/RobotArm.cs) for hierarchy, [Telemetry](samples/Simple3D.Shared/Telemetry.cs) for changing data, [Surface](samples/Simple3D.Shared/Surface.cs) for indexed meshes, and [Gantry Crane](samples/Simple3D.Shared/GantryCrane.cs) for linked motion. Each file contains one scene and its animation. The gallery pauses in the background; press Animate to resume.
+The five examples progress from [Equipment](samples/Simple3D.Shared/Equipment.cs) for primitives and labels, through [Telemetry](samples/Simple3D.Shared/Telemetry.cs) for data updates, [Surface](samples/Simple3D.Shared/Surface.cs) for indexed meshes and [Robot Arm](samples/Simple3D.Shared/RobotArm.cs) for hierarchy, to [Gantry Crane](samples/Simple3D.Shared/GantryCrane.cs) for coordinated motion. Each file contains one scene and its animation. The gallery pauses in the background; press Animate to resume.
 
 ## Documentation
 
@@ -49,7 +49,7 @@ Read the [documentation site](https://mariusmuntean.github.io/Simple3D-Maui/), i
 - [Scenes and cameras](docs/site/scenes-and-cameras.md)
 - [Meshes and groups](docs/site/meshes-and-groups.md)
 - [Interaction and selection](docs/site/interaction-and-picking.md)
-- [Showcases](docs/site/examples.md)
+- [Examples](docs/site/examples.md)
 - [Rendering limits](docs/site/rendering-limits.md)
 
 The software renderer supports opaque triangles, depth-aware picking and fixed directional flat lighting. It has no transparency, texture mapping or shadows. Labels overlay geometry. Viewport and work budgets bound rendering costs; frame rate depends on scene complexity, viewport and device. See the limits page before choosing it for your application.

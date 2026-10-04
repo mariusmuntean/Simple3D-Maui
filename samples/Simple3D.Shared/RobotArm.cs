@@ -30,7 +30,7 @@ public static partial class DemoScenes
         scene.AddLabel(new("TWO JOINTS / PICK A LINK", new(-1.3f, 1.65f, 0), 0xFFE4ECFF));
         var camera = new Camera(5, .55f, .25f);
         camera.FitToScene(scene, 4f / 3);
-        return new("Robot Arm", "Inspect linked parts as the shoulder and elbow articulate.", scene, camera,
+        return new("Robot Arm", "Nested groups with articulated shoulder and elbow joints.", scene, camera,
             AnimateNode(scene, arm, ArmAt));
     }
 

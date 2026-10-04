@@ -36,7 +36,7 @@ public static partial class DemoScenes
         scene.AddLabel(new("GANTRY / TRAVERSE + HOIST", new(-1.6f, 2.12f, 0), 0xFFE4ECFF));
         var camera = new Camera(6, .5f, .4f);
         camera.FitToScene(scene, 4f / 3);
-        return new("Gantry Crane", "Inspect a moving bridge and trolley. The hoist raises and lowers a load while its cable stays attached.",
+        return new("Gantry Crane", "A moving carriage and hoist share a transform while the gantry stays fixed.",
             scene, camera, AnimateNode(scene, carriage, TrolleyAt));
     }
 
