@@ -72,7 +72,7 @@
             <article class="content wrap" id="_content" data-uid="">
 <h1 id="five-examples-to-learn-from">Five examples to learn from</h1>
 
-<p>Start with Equipment and read one factory at a time. Each file creates a scene, fits its camera and supplies a time-based animation. The gallery adds orbit, zoom and selection through the same <code>SceneView</code> you use in an app.</p>
+<p>Create the two-shape scene in <a href="getting-started.html">Getting started</a> first, then follow these five examples in order. Each adds a different API concept, progressing from primitives to a mechanism with coordinated moving parts. Each file creates a scene, fits its camera and supplies a time-based animation. The gallery adds orbit, zoom and selection through the same <code>SceneView</code> you use in an app.</p>
 <table>
 <thead>
 <tr>
@@ -88,11 +88,6 @@
 <td>Output vector sweeps</td>
 </tr>
 <tr>
-<td><a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/RobotArm.cs">Robot Arm</a></td>
-<td>Nested transforms and selectable joints</td>
-<td>Shoulder and elbow articulate</td>
-</tr>
-<tr>
 <td><a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Telemetry.cs">Telemetry</a></td>
 <td>Orthographic camera and data-driven height and color</td>
 <td>Bars change within a fixed scale</td>
@@ -103,6 +98,11 @@
 <td>Sample marker follows a wave</td>
 </tr>
 <tr>
+<td><a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/RobotArm.cs">Robot Arm</a></td>
+<td>Nested transforms and selectable joints</td>
+<td>Shoulder and elbow articulate</td>
+</tr>
+<tr>
 <td><a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/GantryCrane.cs">Gantry Crane</a></td>
 <td>Linked motion with fixed structure and reusable geometry</td>
 <td>Carriage traverses while the hoist lifts its load</td>
@@ -110,11 +110,12 @@
 </tbody>
 </table>
 <p><img src="images/Equipment.png" alt="Equipment">
-<img src="images/Robot%20Arm.png" alt="Robot Arm">
 <img src="images/Telemetry.png" alt="Telemetry">
 <img src="images/Surface.png" alt="Surface">
+<img src="images/Robot%20Arm.png" alt="Robot Arm">
 <img src="images/Gantry%20Crane.png" alt="Gantry Crane"></p>
 <p>Telemetry and Gantry Crane use synthetic values, not live sensors or physical simulations. In an application, replace the time functions with measured values. Reuse immutable meshes and keep child order stable so selection follows the same logical part after replacement. The small shared helpers live in <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/DemoScenes.cs">DemoScenes.cs</a>.</p>
+<p>Robot Arm demonstrates child transforms relative to a parent. Gantry Crane combines group translation with state-dependent part dimensions: the cable changes length as the load rises. They teach different uses of the same hierarchy API. The examples share their animation and color helpers rather than repeating them in each file.</p>
 <p>The <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Demo/GalleryPage.cs">gallery page</a> owns the UI timer, lowers render resolution during animation and pauses on backgrounding. It targets 60 updates per second; this is not a displayed-frame-rate guarantee. Press Animate after returning to the app.</p>
 <h2 id="render-without-maui">Render without MAUI</h2>
 <pre><code class="lang-bash">dotnet run --project tests/Simple3D.Core.Tests -c Release -- --render-images Equipment equipment.ppm
