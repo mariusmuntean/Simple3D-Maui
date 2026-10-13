@@ -189,13 +189,13 @@ var tests = new (string Name, Action Run)[]
     })
 };
 var failed = 0;
-tests = tests.Concat(CoreRegressionTests.Cases).ToArray();
+tests = tests.Concat(CoreRegressionTests.Cases).Concat(AppearanceTests.Cases).Concat(AppearanceRenderingTests.Cases).Concat(ObjReaderTests.Cases).ToArray();
 foreach (var (name, run) in tests) {
     try { run(); Console.WriteLine($"PASS {name}"); }
     catch (Exception error) { failed++; Console.Error.WriteLine($"FAIL {name}: {error.Message}"); }
 }
 Console.WriteLine($"{tests.Length - failed}/{tests.Length} passed");
-if (failed == 0)
+if (failed == 0 && !args.Contains("--tests-only"))
 {
     var scene = new Scene();
     for (var i = 0; i < 12; i++) scene.Add(Shape.Sphere().At((i % 4 - 1.5f) * .8f, (i / 4 - 1) * .8f, 0));

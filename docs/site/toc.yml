@@ -4,6 +4,8 @@
   href: getting-started.md
 - name: Architecture
   href: architecture.md
+- name: Materials and import
+  href: materials-and-import.md
 - name: Examples
   href: examples.md
 - name: Rendering limits

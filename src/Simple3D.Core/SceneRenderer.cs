@@ -23,6 +23,7 @@ public static class SceneRenderer
         ArgumentNullException.ThrowIfNull(camera);
         if (camera.Target != Vector3.Zero || camera.Projection != CameraProjection.Perspective ||
             camera.NearPlane != NearPlane || camera.FieldOfView != .76101275f ||
+            !ReferenceEquals(scene.Light, DirectionalLight.Default) || scene.AmbientLight != .38f ||
             scene.Labels.Count != 0 || scene.Shapes.Any(s => s.Children.Count != 0 || s.Geometry is not null ||
                 !s.Material.Lit || !s.Material.DoubleSided))
             throw new NotSupportedException("SceneRenderer supports only legacy primitives and the default perspective camera. Use DepthRenderer for newer scene features.");

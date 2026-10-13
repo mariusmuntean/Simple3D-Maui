@@ -29,4 +29,4 @@ dotnet run --project tests/Simple3D.Core.Tests -c Release -- --render-images Equ
 dotnet run --project tests/Simple3D.Core.Tests -c Release -- --render-images --all output
 ```
 
-This exports initial still frames as binary PPM and skips the test run. Convert them to PNG with `python3 scripts/render-doc-images.py` to regenerate the documentation images. Rendering supports opaque triangles and fixed directional flat lighting; see [limits](rendering-limits.md) before choosing a workload.
+This exports initial still frames as binary PPM and skips the test run. Convert them to PNG with `python3 scripts/render-doc-images.py` to regenerate the documentation images. Rendering supports opaque textured triangles and flat or smooth directional lighting; see [limits](rendering-limits.md) before choosing a workload.

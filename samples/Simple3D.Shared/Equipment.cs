@@ -12,7 +12,28 @@ public static partial class DemoScenes
         var basePlate = Shape.Box(0xFF607AB1).Named("Base plate").Scaled(2.8f, .16f, 1.8f).At(0, -.8f, 0);
         var housing = Shape.Cylinder(0xFF8DA9FF).Named("Motor housing").Scaled(.65f, 1.25f, .65f).At(-.4f, -.1f, 0);
         var cap = Shape.Sphere(0xFFFFBE79).Named("Inspection cap").Scaled(.34f).At(-.4f, .67f, 0);
-        scene.Add(Shape.Group(basePlate, housing, cap).Named("Drive assembly"));
+        // A tiny OBJ panel demonstrates imported UVs without an external asset dependency.
+        var panelMesh = ObjReader.Parse("""
+            v -0.5 -0.5 0
+            v 0.5 -0.5 0
+            v 0.5 0.5 0
+            v -0.5 0.5 0
+            vt 0 0
+            vt 1 0
+            vt 1 1
+            vt 0 1
+            f 1/1 2/2 3/3 4/4
+            """);
+        var panelTexture = new Texture2D(32, 8, Enumerable.Range(0, 32 * 8).Select(i =>
+        {
+            var x = i % 32; var y = i / 32;
+            if (x is >= 2 and <= 5 && y is >= 2 and <= 5) return 0xFF76DBC7u;
+            if (x is >= 10 and <= 28 && (y == 2 || y == 5)) return 0xFFB7CEFFu;
+            return 0xFF18243Bu;
+        }));
+        var panel = Shape.FromMesh(panelMesh, new Material(panelTexture, lit: false))
+            .Named("Status panel").Scaled(1.05f, .12f, 1).At(0, -.8f, .905f);
+        scene.Add(Shape.Group(basePlate, housing, cap, panel).Named("Drive assembly"));
         var axis = Shape.Arrow(Vector3.Zero, new(.9f, .75f, 0), .09f, 0xFF76DBC7)
             .Named("Output axis").At(.55f, -.2f, 0);
         scene.Add(axis);
@@ -20,7 +41,7 @@ public static partial class DemoScenes
         scene.AddLabel(new("OUTPUT", new(1.2f, .9f, 0), 0xFFE4ECFF));
         var camera = new Camera(5.5f, .55f, .32f);
         camera.FitToScene(scene, 4f / 3);
-        return new("Equipment", "Grouped primitives, labels and an animated output vector.", scene, camera,
+        return new("Equipment", "Grouped primitives, an OBJ status panel with a texture, and an animated output vector.", scene, camera,
             AnimateNode(scene, axis, time => axis.Rotated(0, .42f * MathF.Sin(time * 1.7f), 0)));
     }
 

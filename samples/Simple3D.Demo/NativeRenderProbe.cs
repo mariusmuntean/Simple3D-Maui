@@ -1,7 +1,10 @@
 #if DEBUG || NATIVE_RENDER_PROBE
 using System.Diagnostics;
+using System.Numerics;
 using Simple3D.Core;
+using Simple3D.Maui;
 using Simple3D.Shared;
+using SkiaSharp;
 
 namespace Simple3D.Demo;
 
@@ -18,6 +21,7 @@ internal static class NativeRenderProbe
         CheckRendered("Box", target);
         if (!ReferenceEquals(target.Pick(256, 157), boxScene.Shapes[0]))
             throw new InvalidOperationException("Native box picking failed.");
+        CheckAppearance(renderer);
 
         foreach (var sample in DemoScenes.All)
         {
@@ -42,6 +46,52 @@ internal static class NativeRenderProbe
         }
         Console.WriteLine("NATIVE_RENDER_PROBE_PASS");
         Environment.Exit(0);
+    }
+
+    private static void CheckAppearance(DepthRenderer renderer)
+    {
+        // Exercise imported attributes and clipping under the platform runtime, including image codecs.
+        using var bitmap = new SKBitmap(1, 1);
+        bitmap.SetPixel(0, 0, new SKColor(171, 205, 239));
+        using var encoded = bitmap.Encode(SKEncodedImageFormat.Png, 100);
+        using var stream = encoded.AsStream();
+        var texture = TextureLoader.Load(stream);
+        var mesh = ObjReader.Parse("""
+            v -2 -1 4.8
+            v 2 -1 -1
+            v 0 2 0
+            vt 0 0
+            vt 1 0
+            vt 0.3 1
+            vn 0 0 1
+            f 1/1/1 2/2/1 3/3/1
+            """);
+        var shape = Shape.FromMesh(mesh, new Material(texture, lit: false));
+        var scene = new Scene().Add(shape);
+        var camera = new Camera(5, 0, 0) { NearPlane = .5f };
+        var target = new RenderTarget(40, 40);
+        renderer.RenderInto(scene, camera, target);
+        var count = 0;
+        for (var y = 0; y < 40; y++)
+            for (var x = 0; x < 40; x++)
+                if (ReferenceEquals(target.Pick(x, y), shape))
+                {
+                    if (target.Pixels.Span[y * 40 + x] != 0xFFABCDEF)
+                        throw new InvalidOperationException("Native clipped texture changed its constant color.");
+                    count++;
+                }
+        if (count < 100) throw new InvalidOperationException("Native clipped texture has insufficient coverage.");
+        var colored = new Mesh(mesh.Vertices, mesh.Indices, mesh.TextureCoordinates, mesh.Normals,
+            [0xFFFF0000, 0xFF00FF00, 0xFF0000FF]);
+        shape = Shape.FromMesh(colored, new Material(0xFFFFFFFF));
+        scene = new Scene { AmbientLight = 0, Light = new(-Vector3.UnitZ) };
+        scene.Add(shape);
+        renderer.RenderInto(scene, camera, target);
+        CheckRendered("Clipped vertex colors and normals", target);
+        var center = target.Pixels.Span[20 * 40 + 20];
+        if ((center & 255) == 0 || ((center >> 8) & 255) == 0 || ((center >> 16) & 255) == 0)
+            throw new InvalidOperationException("Native vertex colors or directional smooth light were lost.");
+        Console.WriteLine($"APPEARANCE_PROBE_PASS: decoded texture, imported UV/normals, clipped colors; {count} pixels");
     }
 
     private static void CheckRendered(string name, RenderTarget target)

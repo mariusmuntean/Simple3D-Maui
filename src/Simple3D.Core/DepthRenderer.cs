@@ -191,14 +191,28 @@ public sealed class DepthRenderer
         var scale = height / (2 * Math.Tan(camera.FieldOfView * .5));
         var orthoScale = height / (double)camera.OrthographicHeight;
         var perspective = camera.Projection == CameraProjection.Perspective;
-        var light = Vector3.Normalize(new Vector3(-.4f, .8f, 1));
-        Span<Vector3> input = stackalloc Vector3[3];
-        Span<Vector3> clipped = stackalloc Vector3[4];
+        var light = scene.Light;
+        Span<RenderVertex> input = stackalloc RenderVertex[3];
+        Span<RenderVertex> clipped = stackalloc RenderVertex[4];
         for (var id = 0; id < nodes.Count; id++)
         {
             var (shape, transform) = nodes[id];
             var mesh = shape.Mesh;
             var triangleCount = mesh.Count;
+            var material = shape.Material;
+            var geometry = shape.Geometry;
+            var texture = material.Texture;
+            var smooth = material.Lit && geometry?.Normals is not null;
+            var normalTransform = Matrix4x4.Identity;
+            if (smooth)
+            {
+                // A composed transform can collapse one axis while leaving a valid face.
+                // Without an inverse, its surviving world-space face normal defines lighting.
+                smooth = Matrix4x4.Invert(transform, out var inverse);
+                if (smooth) normalTransform = Matrix4x4.Transpose(inverse);
+            }
+            var attributes = texture is not null || smooth || geometry?.Colors is not null;
+            var tint = Rgb(shape.Color);
             for (var triangleIndex = 0; triangleIndex < triangleCount; triangleIndex++)
             {
                 var triangle = mesh[triangleIndex];
@@ -212,31 +226,54 @@ public sealed class DepthRenderer
                 if (!shape.Material.DoubleSided && facing <= 0) continue;
                 normal /= magnitude;
                 if (facing < 0) normal = -normal;
-                var shade = shape.Material.Lit ? .38f + .62f * MathF.Max(0, Vector3.Dot(normal, light)) : 1;
-                var color = Shade(shape.Color, shade);
-                input[0] = View(a);
-                input[1] = View(b);
-                input[2] = View(c);
-                if (!Finite(input[0]) || !Finite(input[1]) || !Finite(input[2])) continue;
+                var flatColor = tint * Illumination(normal, material.Lit);
+                var color = Pack(flatColor);
+                input[0] = new(View(a), default, flatColor);
+                input[1] = new(View(b), default, flatColor);
+                input[2] = new(View(c), default, flatColor);
+                if (!Finite(input[0].Position) || !Finite(input[1].Position) || !Finite(input[2].Position)) continue;
+                if (attributes && geometry is not null)
+                {
+                    for (var vertex = 0; vertex < 3; vertex++)
+                    {
+                        var index = geometry.Indices[triangleIndex * 3 + vertex];
+                        var vertexColor = flatColor;
+                        if (smooth)
+                        {
+                            var transformed = Vector3.TransformNormal(geometry.Normals![index], normalTransform);
+                            var max = MathF.Max(MathF.Abs(transformed.X), MathF.Max(MathF.Abs(transformed.Y), MathF.Abs(transformed.Z)));
+                            var vertexNormal = max > 0 && float.IsFinite(max) ? Vector3.Normalize(transformed / max) : normal;
+                            if (facing < 0 && max > 0 && float.IsFinite(max)) vertexNormal = -vertexNormal;
+                            vertexColor = tint * Illumination(vertexNormal, true);
+                        }
+                        if (geometry.Colors is not null) vertexColor *= Rgb(geometry.Colors[index]) / 255;
+                        input[vertex] = new(input[vertex].Position, geometry.TextureCoordinates?[index] ?? default, vertexColor);
+                    }
+                }
+
+                if (input[0].Position.Z >= camera.NearPlane && input[1].Position.Z >= camera.NearPlane && input[2].Position.Z >= camera.NearPlane)
+                {
+                    Raster(input[0], input[1], input[2], color, id, attributes, texture);
+                    continue;
+                }
+                if (input[0].Position.Z < camera.NearPlane && input[1].Position.Z < camera.NearPlane && input[2].Position.Z < camera.NearPlane) continue;
 
                 // A triangle clipped by one plane has at most four vertices.
                 var n = 0;
                 var previous = input[2];
                 foreach (var current in input)
                 {
-                    var wasInside = previous.Z >= camera.NearPlane;
-                    var inside = current.Z >= camera.NearPlane;
-                    if (wasInside != inside && previous.Z != camera.NearPlane && current.Z != camera.NearPlane)
+                    var wasInside = previous.Position.Z >= camera.NearPlane;
+                    var inside = current.Position.Z >= camera.NearPlane;
+                    if (wasInside != inside && previous.Position.Z != camera.NearPlane && current.Position.Z != camera.NearPlane)
                     {
-                        var fraction = (camera.NearPlane - (double)previous.Z) / ((double)current.Z - previous.Z);
-                        clipped[n++] = new(
-                            (float)(previous.X * (1 - fraction) + current.X * fraction),
-                            (float)(previous.Y * (1 - fraction) + current.Y * fraction), camera.NearPlane);
+                        var fraction = (camera.NearPlane - (double)previous.Position.Z) / ((double)current.Position.Z - previous.Position.Z);
+                        clipped[n++] = RenderVertex.Interpolate(previous, current, fraction, camera.NearPlane);
                     }
                     if (inside) clipped[n++] = current;
                     previous = current;
                 }
-                for (var i = 1; i + 1 < n; i++) Raster(clipped[0], clipped[i], clipped[i + 1], color, id);
+                for (var i = 1; i + 1 < n; i++) Raster(clipped[0], clipped[i], clipped[i + 1], color, id, attributes, texture);
             }
         }
 
@@ -269,8 +306,16 @@ public sealed class DepthRenderer
             return (width * .5 + p.X * s, height * .5 - p.Y * s);
         }
 
-        void Raster(Vector3 a, Vector3 b, Vector3 c, uint color, int id)
+        Vector3 Illumination(Vector3 normal, bool lit)
         {
+            if (!lit) return Vector3.One;
+            var diffuse = light is null ? 0 : light.Intensity * MathF.Max(0, Vector3.Dot(normal, -light.Direction));
+            return new Vector3(scene.AmbientLight) + (light?.Rgb ?? Vector3.Zero) * diffuse;
+        }
+
+        void Raster(in RenderVertex va, in RenderVertex vb, in RenderVertex vc, uint color, int id, bool attributes, Texture2D? texture)
+        {
+            var a = va.Position; var b = vb.Position; var c = vc.Position;
             var pa = Project(a);
             var pb = Project(b);
             var pc = Project(c);
@@ -284,6 +329,25 @@ public sealed class DepthRenderer
             rasterSamples += ((long)maxX - (long)minX + 1) * ((long)maxY - (long)minY + 1);
             if (rasterSamples > MaximumRasterSamples)
                 throw new RasterBudgetExceededException();
+            if (!attributes)
+            {
+                // Keep the common solid-color loop small; optional attributes do not enter its pixel path.
+                for (var y = (int)minY; y <= (int)maxY; y++)
+                    for (var x = (int)minX; x <= (int)maxX; x++)
+                    {
+                        var w0 = Edge(pb, pc, x + .5, y + .5) / area;
+                        var w1 = Edge(pc, pa, x + .5, y + .5) / area;
+                        var w2 = 1 - w0 - w1;
+                        if (w0 < 0 || w1 < 0 || w2 < 0) continue;
+                        var z = (float)(perspective ? 1 / (w0 / a.Z + w1 / b.Z + w2 / c.Z) : w0 * a.Z + w1 * b.Z + w2 * c.Z);
+                        var index = y * width + x;
+                        if (z >= camera.NearPlane && z < _depth[index])
+                        {
+                            _depth[index] = z; pixels[index] = color; ids[index] = id;
+                        }
+                    }
+                return;
+            }
             for (var y = (int)minY; y <= (int)maxY; y++)
                 for (var x = (int)minX; x <= (int)maxX; x++)
                 {
@@ -297,7 +361,22 @@ public sealed class DepthRenderer
                     if (z >= camera.NearPlane && z < _depth[index])
                     {
                         _depth[index] = z;
-                        pixels[index] = color;
+                        // Reuse the depth denominator; interpolate attributes in object space.
+                        if (perspective)
+                        {
+                            var reciprocal = 1 / (w0 / a.Z + w1 / b.Z + w2 / c.Z);
+                            w0 = w0 / a.Z * reciprocal;
+                            w1 = w1 / b.Z * reciprocal;
+                            w2 = w2 / c.Z * reciprocal;
+                        }
+                        var interpolated = va.Color + (vb.Color - va.Color) * (float)w1 + (vc.Color - va.Color) * (float)w2;
+                        if (texture is not null)
+                        {
+                            var u = va.UV.X * w0 + vb.UV.X * w1 + vc.UV.X * w2;
+                            var v = va.UV.Y * w0 + vb.UV.Y * w1 + vc.UV.Y * w2;
+                            interpolated *= Rgb(texture.SampleCore(u, v)) / 255;
+                        }
+                        pixels[index] = Pack(interpolated);
                         ids[index] = id;
                     }
                 }
@@ -307,7 +386,22 @@ public sealed class DepthRenderer
     private static bool Finite(Vector3 p) => float.IsFinite(p.X) && float.IsFinite(p.Y) && float.IsFinite(p.Z);
     private static double Edge((double X, double Y) a, (double X, double Y) b, double x, double y) =>
         (b.X - a.X) * (y - a.Y) - (b.Y - a.Y) * (x - a.X);
-    private static uint Shade(uint color, float light) => 0xFF000000 |
-        ((uint)(((color >> 16) & 255) * light) << 16) |
-        ((uint)(((color >> 8) & 255) * light) << 8) | (uint)((color & 255) * light);
+    private static Vector3 Rgb(uint color) => new((color >> 16) & 255, (color >> 8) & 255, color & 255);
+    private static uint Pack(Vector3 color)
+    {
+        color = Vector3.Clamp(color, Vector3.Zero, new Vector3(255));
+        return 0xFF000000 | ((uint)color.X << 16) | ((uint)color.Y << 8) | (uint)color.Z;
+    }
+
+    private readonly record struct RenderVertex(Vector3 Position, Vector2 UV, Vector3 Color)
+    {
+        internal static RenderVertex Interpolate(RenderVertex a, RenderVertex b, double t, float near)
+        {
+            // Double interpolation also handles finite coordinates whose subtraction overflows float.
+            float Mix(float x, float y) => (float)(x * (1 - t) + y * t);
+            return new(new(Mix(a.Position.X, b.Position.X), Mix(a.Position.Y, b.Position.Y), near),
+                new(Mix(a.UV.X, b.UV.X), Mix(a.UV.Y, b.UV.Y)),
+                new(Mix(a.Color.X, b.Color.X), Mix(a.Color.Y, b.Color.Y), Mix(a.Color.Z, b.Color.Z)));
+        }
+    }
 }

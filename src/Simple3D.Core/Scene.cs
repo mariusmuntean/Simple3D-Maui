@@ -9,6 +9,26 @@ public sealed class Scene
     public const int MaximumNodes = 100_000;
     private readonly List<Shape> _shapes = new();
     private readonly List<WorldLabel> _labels = new();
+    private DirectionalLight? _light = DirectionalLight.Default;
+    private float _ambientLight = .38f;
+
+    /// <summary>World-space directional light; null disables diffuse light. Changes trigger redraw.</summary>
+    public DirectionalLight? Light
+    {
+        get => _light;
+        set { if (ReferenceEquals(_light, value)) return; _light = value; Notify(); }
+    }
+    /// <summary>Uniform ambient brightness in [0,1]. Default .38; changes trigger redraw.</summary>
+    public float AmbientLight
+    {
+        get => _ambientLight;
+        set
+        {
+            Validation.UnitInterval(value, nameof(value));
+            if (_ambientLight == value) return;
+            _ambientLight = value; Notify();
+        }
+    }
 
     /// <summary>Creates an empty scene.</summary>
     public Scene()
