@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.0-preview.1 · 2026-10-14
+
+- `Texture2D` image textures with nearest/bilinear filtering and clamp/repeat addressing; `Material(Texture2D)` and texture-ready box, sphere, cylinder and pyramid UVs.
+- `TextureLoader.Load` decodes opaque PNG/JPEG and other Skia-supported images into textures, writing directly into texture storage.
+- Configurable `Scene.Light` (`DirectionalLight` direction, color, intensity) and `Scene.AmbientLight`; defaults keep the previous appearance.
+- Optional mesh normals enable smooth Gouraud shading; `Mesh.WithCalculatedNormals()` computes area-weighted normals.
+- Optional per-vertex colors multiply material color and texture.
+- `ObjReader` imports bounded OBJ geometry with UVs, normals, negative indices and convex polygons.
+- Perspective-correct attribute interpolation, including across near-plane clipping; solid flat materials keep their separate fast pixel loop.
+- Gallery: Equipment shows a textured imported controller; Surface compares flat/smooth shading and light from the left or right.
+
 ## 0.1.0-preview.1 · 2026-10-04
 
 - Portable scene hierarchy, immutable indexed meshes, perspective and orthographic cameras.

@@ -8,6 +8,7 @@ using Simple3D.Demo;
 using SkiaSharp;
 
 if (args.Contains("--performance")) return PerformanceProbe.Run();
+if (args.Contains("--appearance-performance")) { AppearancePerformanceProbe.Run(); return 0; }
 
 var tests = new (string Name, Action Run)[]
 {
@@ -56,6 +57,24 @@ var tests = new (string Name, Action Run)[]
         var second = view.CaptureFrame(96, 80);
         camera.Orbit(.2f, 0);
         Assert(!ReferenceEquals(second, view.CaptureFrame(96, 80)), "camera mutation kept stale frame");
+    }),
+    ("lighting mutations invalidate cached frames and preserve no-op caching", () =>
+    {
+        var scene = new Scene().Add(Shape.Box());
+        var view = new SceneView { Scene = scene, Camera = new Camera(5, 0, 0) };
+        var initial = view.CaptureFrame(48, 48);
+        scene.Light = null;
+        var ambient = view.CaptureFrame(48, 48);
+        Assert(!ReferenceEquals(initial, ambient) && !initial.Pixels.Span.SequenceEqual(ambient.Pixels.Span),
+            "disabling the light kept stale pixels");
+        scene.AmbientLight = 1;
+        var bright = view.CaptureFrame(48, 48);
+        Assert(!ReferenceEquals(ambient, bright) && !ambient.Pixels.Span.SequenceEqual(bright.Pixels.Span),
+            "ambient brightness kept stale pixels");
+        scene.AmbientLight = 1;
+        scene.Light = null;
+        Assert(ReferenceEquals(bright, view.CaptureFrame(48, 48)), "unchanged lighting rerendered the frame");
+        view.ReleaseRenderResources();
     }),
     ("selection highlights only visible pixels and restores original materials", () =>
     {
@@ -784,6 +803,7 @@ var tests = new (string Name, Action Run)[]
 };
 
 var failed = 0;
+tests = tests.Concat(TextureLoaderTests.Cases).Concat(DemoAppearanceTests.Cases).ToArray();
 foreach (var (name, run) in tests)
 {
     try { run(); Console.WriteLine($"PASS {name}"); }

@@ -1,6 +1,6 @@
 # Meshes and groups
 
-A `Mesh` copies finite vertices and triangle indices and validates index ranges and nondegenerate faces. The same immutable mesh can be shared by many `Shape.FromMesh` instances. Material controls opaque color, fixed directional lighting, and whether back faces render.
+A `Mesh` copies finite vertices and triangle indices and validates index ranges and nondegenerate faces. The same immutable mesh can be shared by many `Shape.FromMesh` instances. Material controls opaque color, texture, whether scene lighting applies, and whether back faces render. See [materials and import](materials-and-import.md) for UVs, smooth normals, vertex colors, and OBJ assets.
 
 ```csharp
 using System.Numerics;
@@ -17,4 +17,4 @@ var scene = new Scene().Add(face).Add(face.At(0, 0, -1));
 
 ![Procedural indexed wave surface](images/Surface.png)
 
-The [surface factory](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Surface.cs) builds a 16 × 16 grid from shared indexed vertices. The [executable examples](examples.md) render it without MAUI, and the [demo](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Demo/GalleryPage.cs) adds orbit and selection.
+The [surface factory](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Surface.cs) builds a 16 × 16 grid with calculated smooth normals and height-based vertex colors. The [executable examples](examples.md) render it without MAUI, and the [demo](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Demo/GalleryPage.cs) adds orbit and selection.

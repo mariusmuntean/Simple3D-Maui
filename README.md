@@ -8,13 +8,13 @@ A 3D software renderer for .NET 10 MAUI on iOS, Android and Mac Catalyst. Build 
 
 ## Start with a scene
 
-Install the [MAUI preview](https://www.nuget.org/packages/Simple3D.Maui/0.1.0-preview.1) in a .NET 10 MAUI app with Android, iOS or Mac Catalyst targets:
+Install the [MAUI preview](https://www.nuget.org/packages/Simple3D.Maui/0.2.0-preview.1) in a .NET 10 MAUI app with Android, iOS or Mac Catalyst targets:
 
 ```bash
-dotnet add YourApp.csproj package Simple3D.Maui --version 0.1.0-preview.1
+dotnet add YourApp.csproj package Simple3D.Maui --version 0.2.0-preview.1
 ```
 
-Core is a transitive dependency. Headless applications can install [Simple3D.Core](https://www.nuget.org/packages/Simple3D.Core/0.1.0-preview.1) alone. For source or local-feed builds, see [packaging](docs/PACKAGING.md). Register SkiaSharp in `MauiProgram`:
+Core is a transitive dependency. Headless applications can install [Simple3D.Core](https://www.nuget.org/packages/Simple3D.Core/0.2.0-preview.1) alone. For source or local-feed builds, see [packaging](docs/PACKAGING.md). Register SkiaSharp in `MauiProgram`:
 
 ```csharp
 using SkiaSharp.Views.Maui.Controls.Hosting;
@@ -44,7 +44,7 @@ Core colors use opaque `0xFFRRGGBB`; angles use radians. Shape transforms return
 
 Open [Simple3D.sln](Simple3D.sln) in Rider or another MAUI IDE with .NET 10 and the target's MAUI workload. Choose **Simple3D.Demo** and an Android device, iOS simulator or Mac Catalyst target. Apple targets require macOS and a workload-compatible Xcode.
 
-The five examples progress from [Equipment](samples/Simple3D.Shared/Equipment.cs) for primitives and labels, through [Telemetry](samples/Simple3D.Shared/Telemetry.cs) for data updates, [Surface](samples/Simple3D.Shared/Surface.cs) for indexed meshes and [Robot Arm](samples/Simple3D.Shared/RobotArm.cs) for hierarchy, to [Gantry Crane](samples/Simple3D.Shared/GantryCrane.cs) for coordinated motion. Each file contains one scene and its animation. The gallery pauses in the background; press Animate to resume.
+The five examples progress from [Equipment](samples/Simple3D.Shared/Equipment.cs) for primitives, labels and an imported controller with a mapped display, through [Telemetry](samples/Simple3D.Shared/Telemetry.cs) for data updates, [Surface](samples/Simple3D.Shared/Surface.cs) for height-based vertex colors and [Robot Arm](samples/Simple3D.Shared/RobotArm.cs) for hierarchy, to [Gantry Crane](samples/Simple3D.Shared/GantryCrane.cs) for coordinated motion. In Surface, use **Shading: smooth / flat** to compare normals and **Light: from right / left** to move the directional light. Each file contains one scene and its animation. The gallery pauses in the background; press Animate to resume.
 
 ## Documentation
 
@@ -54,11 +54,12 @@ Read the [documentation site](https://mariusmuntean.github.io/Simple3D-Maui/), i
 - [Architecture and rendering pipeline](docs/site/architecture.md)
 - [Scenes and cameras](docs/site/scenes-and-cameras.md)
 - [Meshes and groups](docs/site/meshes-and-groups.md)
+- [Materials, lighting, and OBJ import](docs/site/materials-and-import.md)
 - [Interaction and selection](docs/site/interaction-and-picking.md)
 - [Examples](docs/site/examples.md)
 - [Rendering limits](docs/site/rendering-limits.md)
 
-The software renderer supports opaque triangles, depth-aware picking and fixed directional flat lighting. It has no transparency, texture mapping or shadows. Labels overlay geometry. Viewport and work budgets bound rendering costs; frame rate depends on scene complexity, viewport and device. See the limits page before choosing it for your application.
+The renderer supports opaque textured triangles, configurable directional lighting, smooth normals, vertex colors, OBJ geometry import, and depth-aware picking. Transparency, PBR, and shadows remain unsupported. Labels overlay geometry. Viewport and work budgets bound rendering costs; frame rate depends on scene complexity, viewport and device. See the limits page before choosing it for your application.
 
 ## Develop
 

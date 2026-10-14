@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
+using System.Numerics;
 using Simple3D.Core;
 
 var box = Shape.Box().Named("Package box");
@@ -22,10 +23,32 @@ renderer.RenderInto(scene, camera, target);
 Require(frame.Pixels.Span.SequenceEqual(retained), "Owned snapshot changed after render");
 Console.WriteLine("PACKAGE_CORE_PASS: pixels, picking and retained snapshots");
 
+var imported = ObjReader.Parse("""
+    v -1 -1 0
+    v 1 -1 0
+    v 0 1 0
+    vt 0 0
+    vt 1 0
+    vt 0.5 1
+    f 1/1 2/2 3/3
+    """).WithCalculatedNormals();
+var appearance = new Mesh(imported.Vertices, imported.Indices, imported.TextureCoordinates, imported.Normals,
+    [0xFFFF0000, 0xFF00FF00, 0xFF0000FF]);
+var texture = new Texture2D(1, 1, [0xFFFFFFFF], TextureFilter.Bilinear, TextureAddressMode.Repeat);
+var colored = Shape.FromMesh(appearance, new Material(texture));
+var litScene = new Scene { AmbientLight = 0, Light = new DirectionalLight(-Vector3.UnitZ) };
+litScene.Add(colored);
+var litFrame = renderer.Render(litScene, new Camera(5, 0, 0), 64, 64);
+var center = litFrame.Pixels.Span[32 * 64 + 32];
+Require(ReferenceEquals(litFrame.Pick(32, 32), colored), "Imported textured geometry cannot be picked");
+Require((center & 255) > 0 && ((center >> 8) & 255) > 0 && ((center >> 16) & 255) > 0,
+    "Packaged UVs, smooth normals, directional light or vertex colors are missing");
+Console.WriteLine("PACKAGE_APPEARANCE_PASS: OBJ, calculated normals, texture, directional light and vertex colors");
+
 if (args.Length == 0) return;
 foreach (var name in new[] { "Simple3D.Core", "Simple3D.Maui" })
 {
-    var path = Path.Combine(args[0], $"{name}.0.1.0-preview.1.nupkg");
+    var path = Path.Combine(args[0], $"{name}.0.2.0-preview.1.nupkg");
     using var package = ZipFile.OpenRead(path);
     var nuspec = XDocument.Load(package.Entries.Single(e => e.FullName.EndsWith(".nuspec")).Open());
     var metadata = nuspec.Root!.Elements().Single(e => e.Name.LocalName == "metadata");

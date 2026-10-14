@@ -524,9 +524,10 @@ internal static class CoreRegressionTests
     private static void EquipmentAnimation()
     {
         var sample = DemoScenes.Equipment();
+        var initial = sample.Scene.Shapes.Single(shape => shape.Name == "Output axis");
         sample.Animate(.75f);
         var arrow = sample.Scene.Shapes.Single(shape => shape.Name == "Output axis");
-        Check(arrow.Position == new Vector3(.55f, -.2f, 0),
+        Check(arrow.Position == initial.Position,
             "output arrow must be positioned at its fixed tail");
         Check(arrow.Geometry!.Vertices.Contains(Vector3.Zero), "output arrow tail moved");
     }

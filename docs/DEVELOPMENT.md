@@ -19,6 +19,8 @@ python3 -m unittest discover -s scripts -p 'test_*.py'
 dotnet run --project tests/Simple3D.Maui.Tests -c Release -- --performance
 ```
 
+For a faster Core correctness run without the trailing timing benchmarks, append `-- --tests-only`. Allocation checks still run.
+
 The performance runner reports selected animation and pan CPU medians, managed allocations and Core pixel hashes. Compare under similar machine load. It excludes native presentation and does not measure displayed FPS.
 
 Build each native target sequentially. Android Debug uses JIT. Apple Debug compiles rendering libraries and framework assemblies, retaining interpreter support for the demo UI. Clean native outputs when changing interpreter configuration or workloads.

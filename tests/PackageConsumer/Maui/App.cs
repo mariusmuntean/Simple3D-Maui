@@ -1,5 +1,6 @@
 using Simple3D.Core;
 using Simple3D.Maui;
+using SkiaSharp;
 using SkiaSharp.Views.Maui.Controls.Hosting;
 
 namespace Simple3D.Demo;
@@ -14,7 +15,13 @@ public sealed class App : Application
     protected override Window CreateWindow(IActivationState? activationState)
     {
         var box = Shape.Box(0xFF8DA9FF).Named("Packaged box");
-        var scene = new Scene().Add(box).Add(Shape.Sphere(0xFFFFB775).At(1.5f, 0, 0));
+        using var bitmap = new SKBitmap(1, 1);
+        bitmap.SetPixel(0, 0, new SKColor(255, 183, 117));
+        using var encoded = bitmap.Encode(SKEncodedImageFormat.Png, 100);
+        using var imageStream = encoded.AsStream();
+        var texture = TextureLoader.Load(imageStream);
+        var textured = Shape.Sphere().WithMaterial(new Material(texture, lit: false)).At(1.5f, 0, 0);
+        var scene = new Scene().Add(box).Add(textured);
         var view = new SceneView { Scene = scene, HeightRequest = 400 };
         view.Camera.FitToScene(scene, 1.5f);
         view.Loaded += (_, _) =>
@@ -37,7 +44,10 @@ public sealed class App : Application
             view.IsInteractive = true;
             if (!view.GestureRecognizers.Contains(hostTap))
                 throw new InvalidOperationException("Packaged control lost host gesture when enabling interaction");
-            Console.WriteLine("PACKAGE_MAUI_PASS: native control, pixels, picking, selection clearing and host gestures");
+            if (!frame.Pixels.Span.Contains(0xFFFFB775u))
+                throw new InvalidOperationException("Packaged image loader or textured primitive changed opaque texels");
+            Console.WriteLine("PACKAGE_MAUI_PASS: decoded texture, native control, pixels, picking, selection clearing and host gestures");
+            if (Environment.GetEnvironmentVariable("SIMPLE3D_PACKAGE_PROBE") == "1") Environment.Exit(0);
         };
         return new Window(new ContentPage
         {

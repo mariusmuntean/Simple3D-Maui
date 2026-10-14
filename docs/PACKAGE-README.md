@@ -7,7 +7,7 @@ Use `Simple3D.Maui` in a .NET 10 MAUI app targeting Android, iOS or Mac Catalyst
 Install the preview from NuGet.org:
 
 ```bash
-dotnet add YourApp.csproj package Simple3D.Maui --version 0.1.0-preview.1
+dotnet add YourApp.csproj package Simple3D.Maui --version 0.2.0-preview.1
 ```
 
 For development builds, [build and restore from a local feed](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/docs/PACKAGING.md). Register `UseSkiaSharp()` on the app builder, then assign a `Scene` to a `SceneView`.
@@ -42,6 +42,8 @@ view.Camera.FitToScene(scene, 4f / 3);
 Content = view;
 ```
 
-Drag to orbit, pinch to zoom and tap to select. Use `IsInteractive = false` for display-only content. Keep scene and camera mutations on the UI thread. Rendering uses opaque triangles and fixed directional lighting; image textures, transparency and shadows are unsupported.
+Drag to orbit, pinch to zoom and tap to select. Use `IsInteractive = false` for display-only content. Keep scene and camera mutations on the UI thread.
+
+Rendering supports opaque textures, configurable directional and ambient lighting, smooth normals, vertex colors and OBJ geometry import. See the [material and import examples](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/docs/site/materials-and-import.md). Transparency, PBR and shadows are unsupported.
 
 Read the [setup, examples, limits and API documentation](https://mariusmuntean.github.io/Simple3D-Maui/). Source and the interactive gallery are in the [repository](https://github.com/mariusmuntean/Simple3D-Maui). Licensed under MIT, copyright Marius Muntean.

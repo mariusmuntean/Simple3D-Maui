@@ -79,17 +79,27 @@ public sealed class Shape
     public IReadOnlyList<Shape> Children { get; }
     /// <summary>Surface appearance.</summary>
     public Material Material { get; }
-    /// <summary>Custom indexed mesh, or null for cached primitives and groups.</summary>
+    /// <summary>Indexed geometry, or null for untextured cached primitives and groups.</summary>
     public Mesh? Geometry { get; }
     /// <summary>Returns a copy with an application identifier.</summary>
     public Shape Named(string? name) => new(Mesh, Color, Position, Rotation, Size, name, Children, Material, Geometry);
     /// <summary>Returns a copy with a different immutable material.</summary>
-    public Shape WithMaterial(Material material) => new(Mesh, (material ?? throw new ArgumentNullException(nameof(material))).Color, Position, Rotation, Size, Name, Children, material, Geometry);
+    public Shape WithMaterial(Material material)
+    {
+        ArgumentNullException.ThrowIfNull(material);
+        var geometry = Geometry;
+        if (material.Texture is not null && geometry is null) geometry = PrimitiveTextures.Get(Mesh);
+        if (material.Texture is not null && geometry?.TextureCoordinates is null)
+            throw new ArgumentException("Textured shapes require mesh texture coordinates.", nameof(material));
+        return new(geometry?.Triangles ?? Mesh, material.Color, Position, Rotation, Size, Name, Children, material, geometry);
+    }
     /// <summary>Creates an instance sharing an immutable indexed mesh.</summary>
     public static Shape FromMesh(Mesh mesh, Material? material = null)
     {
         ArgumentNullException.ThrowIfNull(mesh);
         material ??= new Material();
+        if (material.Texture is not null && mesh.TextureCoordinates is null)
+            throw new ArgumentException("Textured shapes require mesh texture coordinates.", nameof(material));
         return new(mesh.Triangles, material.Color, Vector3.Zero, Vector3.Zero, Vector3.One, material: material, geometry: mesh);
     }
     /// <summary>Creates an immutable group. Children are copied; maximum hierarchy depth is 64.</summary>

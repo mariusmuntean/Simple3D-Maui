@@ -8,6 +8,6 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Simple3D.Core" Version="0.1.0-preview.1" />
+    <PackageReference Include="Simple3D.Core" Version="0.2.0-preview.1" />
   </ItemGroup>
 </Project>

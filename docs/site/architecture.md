@@ -1,6 +1,6 @@
 # Architecture and rendering pipeline
 
-Simple3D is a small CPU renderer for opaque 3D diagrams inside ordinary .NET MAUI pages. You describe geometry and a camera in Core. The MAUI control renders that geometry to a bitmap, presents it through SkiaSharp, and connects pointer gestures to the camera and selection.
+Simple3D is a small CPU renderer for opaque 3D scenes inside ordinary .NET MAUI pages. You describe geometry and a camera in Core. The MAUI control renders that geometry to a bitmap, presents it through SkiaSharp, and connects pointer gestures to the camera and selection.
 
 ## Package boundaries
 
@@ -23,7 +23,7 @@ This boundary keeps geometry and rendering tests portable. Your page hosts a nor
 
 1. **Invalidate.** Scene and camera mutations raise synchronous notifications. The view marks cached output dirty and requests a paint. An unchanged native paint can reuse its previous target.
 2. **Flatten and validate.** Core traverses groups iteratively, composes child and parent transforms, and collects geometry leaves. Repeated instances count separately. Node and triangle limits bound preparation.
-3. **Transform and shade.** Each triangle moves to world coordinates. Core rejects degenerate triangles, applies optional back-face culling, and computes one color per triangle from its normal and a fixed world-space directional light. Unlit materials retain their color.
+3. **Transform and shade.** Each triangle moves to world coordinates. Core rejects degenerate triangles, applies optional back-face culling, and computes diffuse color from configurable world-space directional and ambient light. Mesh normals enable per-vertex Gouraud shading; otherwise lighting remains flat. Unlit materials bypass lighting.
 4. **Clip and project.** Points move into camera space. Core clips triangles against the near plane, then projects with perspective or orthographic math. It bounds each projected triangle to the viewport.
 5. **Rasterize.** At each covered pixel center, Core compares interpolated depth with the nearest stored depth. A nearer triangle writes color and its leaf-shape ID together. Perspective uses reciprocal depth; orthographic mode uses linear depth. Equal-depth samples retain the earlier shape.
 6. **Present.** The view copies changed pixels into a reusable Skia bitmap, optionally filters diagonal edges, adds selection tint and contour, and scales to the native surface. It draws labels afterward, with bounds and overlap handling.
@@ -59,7 +59,7 @@ Your application owns animation timing. Replace shapes from a UI timer and stop 
 
 ## Deliberate scope
 
-The software path keeps rendering, visibility and picking in one inspectable pipeline. Its tradeoff is CPU work per covered pixel. Simple3D supports opaque triangles and fixed directional flat lighting; it has no image textures, transparency, PBR or shadows.
+The software path keeps rendering, visibility and picking in one inspectable pipeline. Its tradeoff is CPU work per covered pixel. Simple3D supports opaque textures, flat or smooth diffuse lighting, vertex colors, and OBJ geometry import. It has no transparency, PBR or shadows. Attribute interpolation is perspective-correct, including across near-plane clipping.
 
 `SceneRenderer` is the older projected-triangle API, retained for compatible primitive/default-camera code. `SceneView` uses `DepthRenderer`. Use the depth path for custom meshes, newer camera features and intersecting geometry.
 

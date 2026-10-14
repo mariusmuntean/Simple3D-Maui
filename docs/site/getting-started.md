@@ -4,10 +4,10 @@
 
 Use .NET 10 with the target's MAUI workload and an iOS, Android or Mac Catalyst app. Windows is not supported; remove a Windows target from a default MAUI project before restoring. Apple builds require macOS and a workload-compatible Xcode.
 
-Install the [MAUI preview from NuGet.org](https://www.nuget.org/packages/Simple3D.Maui/0.1.0-preview.1):
+Install the [MAUI preview from NuGet.org](https://www.nuget.org/packages/Simple3D.Maui/0.2.0-preview.1):
 
 ```bash
-dotnet add YourApp.csproj package Simple3D.Maui --version 0.1.0-preview.1
+dotnet add YourApp.csproj package Simple3D.Maui --version 0.2.0-preview.1
 ```
 
 For a local-feed build, follow [packaging](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/docs/PACKAGING.md).
