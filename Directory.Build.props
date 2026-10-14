@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Simple3D.Core' or '$(MSBuildProjectName)' == 'Simple3D.Maui'">
-    <Version>0.1.0-preview.1</Version>
+    <Version>0.2.0-preview.1</Version>
     <Authors>Marius Muntean</Authors>
     <Copyright>Copyright (c) 2026 Marius Muntean</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

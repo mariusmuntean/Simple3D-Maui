@@ -1,6 +1,6 @@
 # Materials, lighting, and model import
 
-These APIs are available in the current source version; they are not included in the published `0.1.0-preview.1` package. Use a source build until a release includes them.
+These APIs are available from `0.2.0-preview.1`.
 
 ## Textures
 

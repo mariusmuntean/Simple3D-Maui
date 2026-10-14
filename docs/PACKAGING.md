@@ -1,9 +1,9 @@
 # Packaging and consumer validation
 
-The preview version is `0.1.0-preview.1` on NuGet.org. The MAUI package depends on Core, so applications install `Simple3D.Maui` alone.
+The preview version is `0.2.0-preview.1` on NuGet.org. The MAUI package depends on Core, so applications install `Simple3D.Maui` alone.
 
 ```bash
-dotnet add YourApp.csproj package Simple3D.Maui --version 0.1.0-preview.1
+dotnet add YourApp.csproj package Simple3D.Maui --version 0.2.0-preview.1
 ```
 
 Core-only applications install `Simple3D.Core` instead. See [Getting started](site/getting-started.md) for platform requirements, SkiaSharp registration and the first scene. The local-feed instructions below support development builds.
@@ -37,7 +37,7 @@ In an existing .NET 10 MAUI app, keep only supported targets (Android, iOS and M
 ```
 
 ```bash
-dotnet add YourApp.csproj package Simple3D.Maui --version 0.1.0-preview.1 --no-restore
+dotnet add YourApp.csproj package Simple3D.Maui --version 0.2.0-preview.1 --no-restore
 dotnet restore YourApp.csproj
 ```
 
@@ -57,7 +57,7 @@ The fixture copies gallery platform bootstrap and icon resources. It neither ref
 
 ## Publish a preview
 
-The manual-only [`publish-preview.yml`](../.github/workflows/publish-preview.yml) publishes the validated `0.1.0-preview.1` artifacts attached to the GitHub preview release, including matching symbols. It runs on `main`, checks four committed SHA-256 hashes before authentication, and uses a standard Ubuntu runner. Public repositories do not consume private-repository Actions minutes. It does not rebuild packages or run the native validation matrix.
+The manual-only [`publish-preview.yml`](../.github/workflows/publish-preview.yml) publishes the validated `0.2.0-preview.1` artifacts attached to the GitHub preview release, including matching symbols. It runs on `main`, checks four committed SHA-256 hashes before authentication, and uses a standard Ubuntu runner. Public repositories do not consume private-repository Actions minutes. It does not rebuild packages or run the native validation matrix.
 
 Configure a NuGet.org trusted publishing policy for owner `marius.muntean`, GitHub owner `mariusmuntean`, repository `Simple3D-Maui`, workflow `publish-preview.yml`, and no environment. Allow pushing new packages and versions for the exact IDs `Simple3D.Core` and `Simple3D.Maui`; do not grant unlist/relist access. The workflow uses a short-lived key from [NuGet trusted publishing](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing), so no long-lived API key belongs in GitHub secrets. Dispatch it only after the release artifacts and their source commit have passed the checks below. For another version, update the filenames, release tag and hashes after validating that version; this workflow deliberately publishes only this preview.
 

@@ -2,7 +2,7 @@
 
 ![Simple3D: 3D software renderer](images/brand-banner.svg)
 
-Simple3D draws opaque, depth-aware illustrations on iOS, Android, and Mac Catalyst. Build scenes from boxes, spheres, cylinders, pyramids, lines, arrows, or your own indexed mesh. The current source adds textures, OBJ geometry import, vertex colors and flat or smooth directional lighting. These additions are not in the published `0.1.0-preview.1` package. Place a `SceneView` in a MAUI page, then drag to orbit, pinch to zoom, and tap to pick the visible shape.
+Simple3D draws opaque, depth-aware illustrations on iOS, Android, and Mac Catalyst. Build scenes from boxes, spheres, cylinders, pyramids, lines, arrows, or your own indexed mesh. Add textures, OBJ geometry, vertex colors and flat or smooth directional lighting. Place a `SceneView` in a MAUI page, then drag to orbit, pinch to zoom, and tap to pick the visible shape.
 
 ![Equipment scene with a motor, imported textured controller, base plate and arrow](images/Equipment.png)
 

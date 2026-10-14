@@ -18,7 +18,7 @@
     <_AppBundleName Condition="'$(TargetFramework)' == 'net10.0-maccatalyst'">$(AssemblyName)</_AppBundleName>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Simple3D.Maui" Version="0.1.0-preview.1" />
+    <PackageReference Include="Simple3D.Maui" Version="0.2.0-preview.1" />
     <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
     <MauiIcon Include="Resources/AppIcon/appicon.svg" ForegroundFile="Resources/AppIcon/appiconfg.svg" Color="#101A2D" />
     <MauiSplashScreen Include="Resources/Splash/splash.svg" Color="#101A2D" BaseSize="128,128" />

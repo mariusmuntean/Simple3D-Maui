@@ -48,7 +48,7 @@ Console.WriteLine("PACKAGE_APPEARANCE_PASS: OBJ, calculated normals, texture, di
 if (args.Length == 0) return;
 foreach (var name in new[] { "Simple3D.Core", "Simple3D.Maui" })
 {
-    var path = Path.Combine(args[0], $"{name}.0.1.0-preview.1.nupkg");
+    var path = Path.Combine(args[0], $"{name}.0.2.0-preview.1.nupkg");
     using var package = ZipFile.OpenRead(path);
     var nuspec = XDocument.Load(package.Entries.Single(e => e.FullName.EndsWith(".nuspec")).Open());
     var metadata = nuspec.Root!.Elements().Single(e => e.Name.LocalName == "metadata");
