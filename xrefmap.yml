@@ -341,6 +341,70 @@ references:
   isSpec: "True"
   fullName: Simple3D.Core.DepthRenderer.RenderInto
   nameWithType: DepthRenderer.RenderInto
+- uid: Simple3D.Core.DirectionalLight
+  name: DirectionalLight
+  href: api/Simple3D.Core.DirectionalLight.html
+  commentId: T:Simple3D.Core.DirectionalLight
+  fullName: Simple3D.Core.DirectionalLight
+  nameWithType: DirectionalLight
+- uid: Simple3D.Core.DirectionalLight.#ctor(System.Numerics.Vector3,System.UInt32,System.Single)
+  name: DirectionalLight(Vector3, uint, float)
+  href: api/Simple3D.Core.DirectionalLight.html#Simple3D_Core_DirectionalLight__ctor_System_Numerics_Vector3_System_UInt32_System_Single_
+  commentId: M:Simple3D.Core.DirectionalLight.#ctor(System.Numerics.Vector3,System.UInt32,System.Single)
+  name.vb: New(Vector3, UInteger, Single)
+  fullName: Simple3D.Core.DirectionalLight.DirectionalLight(System.Numerics.Vector3, uint, float)
+  fullName.vb: Simple3D.Core.DirectionalLight.New(System.Numerics.Vector3, UInteger, Single)
+  nameWithType: DirectionalLight.DirectionalLight(Vector3, uint, float)
+  nameWithType.vb: DirectionalLight.New(Vector3, UInteger, Single)
+- uid: Simple3D.Core.DirectionalLight.#ctor*
+  name: DirectionalLight
+  href: api/Simple3D.Core.DirectionalLight.html#Simple3D_Core_DirectionalLight__ctor_
+  commentId: Overload:Simple3D.Core.DirectionalLight.#ctor
+  isSpec: "True"
+  name.vb: New
+  fullName: Simple3D.Core.DirectionalLight.DirectionalLight
+  fullName.vb: Simple3D.Core.DirectionalLight.New
+  nameWithType: DirectionalLight.DirectionalLight
+  nameWithType.vb: DirectionalLight.New
+- uid: Simple3D.Core.DirectionalLight.Color
+  name: Color
+  href: api/Simple3D.Core.DirectionalLight.html#Simple3D_Core_DirectionalLight_Color
+  commentId: P:Simple3D.Core.DirectionalLight.Color
+  fullName: Simple3D.Core.DirectionalLight.Color
+  nameWithType: DirectionalLight.Color
+- uid: Simple3D.Core.DirectionalLight.Color*
+  name: Color
+  href: api/Simple3D.Core.DirectionalLight.html#Simple3D_Core_DirectionalLight_Color_
+  commentId: Overload:Simple3D.Core.DirectionalLight.Color
+  isSpec: "True"
+  fullName: Simple3D.Core.DirectionalLight.Color
+  nameWithType: DirectionalLight.Color
+- uid: Simple3D.Core.DirectionalLight.Direction
+  name: Direction
+  href: api/Simple3D.Core.DirectionalLight.html#Simple3D_Core_DirectionalLight_Direction
+  commentId: P:Simple3D.Core.DirectionalLight.Direction
+  fullName: Simple3D.Core.DirectionalLight.Direction
+  nameWithType: DirectionalLight.Direction
+- uid: Simple3D.Core.DirectionalLight.Direction*
+  name: Direction
+  href: api/Simple3D.Core.DirectionalLight.html#Simple3D_Core_DirectionalLight_Direction_
+  commentId: Overload:Simple3D.Core.DirectionalLight.Direction
+  isSpec: "True"
+  fullName: Simple3D.Core.DirectionalLight.Direction
+  nameWithType: DirectionalLight.Direction
+- uid: Simple3D.Core.DirectionalLight.Intensity
+  name: Intensity
+  href: api/Simple3D.Core.DirectionalLight.html#Simple3D_Core_DirectionalLight_Intensity
+  commentId: P:Simple3D.Core.DirectionalLight.Intensity
+  fullName: Simple3D.Core.DirectionalLight.Intensity
+  nameWithType: DirectionalLight.Intensity
+- uid: Simple3D.Core.DirectionalLight.Intensity*
+  name: Intensity
+  href: api/Simple3D.Core.DirectionalLight.html#Simple3D_Core_DirectionalLight_Intensity_
+  commentId: Overload:Simple3D.Core.DirectionalLight.Intensity
+  isSpec: "True"
+  fullName: Simple3D.Core.DirectionalLight.Intensity
+  nameWithType: DirectionalLight.Intensity
 - uid: Simple3D.Core.DrawTriangle
   name: DrawTriangle
   href: api/Simple3D.Core.DrawTriangle.html
@@ -437,6 +501,15 @@ references:
   commentId: T:Simple3D.Core.Material
   fullName: Simple3D.Core.Material
   nameWithType: Material
+- uid: Simple3D.Core.Material.#ctor(Simple3D.Core.Texture2D,System.UInt32,System.Boolean,System.Boolean)
+  name: Material(Texture2D, uint, bool, bool)
+  href: api/Simple3D.Core.Material.html#Simple3D_Core_Material__ctor_Simple3D_Core_Texture2D_System_UInt32_System_Boolean_System_Boolean_
+  commentId: M:Simple3D.Core.Material.#ctor(Simple3D.Core.Texture2D,System.UInt32,System.Boolean,System.Boolean)
+  name.vb: New(Texture2D, UInteger, Boolean, Boolean)
+  fullName: Simple3D.Core.Material.Material(Simple3D.Core.Texture2D, uint, bool, bool)
+  fullName.vb: Simple3D.Core.Material.New(Simple3D.Core.Texture2D, UInteger, Boolean, Boolean)
+  nameWithType: Material.Material(Texture2D, uint, bool, bool)
+  nameWithType.vb: Material.New(Texture2D, UInteger, Boolean, Boolean)
 - uid: Simple3D.Core.Material.#ctor(System.UInt32,System.Boolean,System.Boolean)
   name: Material(uint, bool, bool)
   href: api/Simple3D.Core.Material.html#Simple3D_Core_Material__ctor_System_UInt32_System_Boolean_System_Boolean_
@@ -495,6 +568,19 @@ references:
   isSpec: "True"
   fullName: Simple3D.Core.Material.Lit
   nameWithType: Material.Lit
+- uid: Simple3D.Core.Material.Texture
+  name: Texture
+  href: api/Simple3D.Core.Material.html#Simple3D_Core_Material_Texture
+  commentId: P:Simple3D.Core.Material.Texture
+  fullName: Simple3D.Core.Material.Texture
+  nameWithType: Material.Texture
+- uid: Simple3D.Core.Material.Texture*
+  name: Texture
+  href: api/Simple3D.Core.Material.html#Simple3D_Core_Material_Texture_
+  commentId: Overload:Simple3D.Core.Material.Texture
+  isSpec: "True"
+  fullName: Simple3D.Core.Material.Texture
+  nameWithType: Material.Texture
 - uid: Simple3D.Core.Mesh
   name: Mesh
   href: api/Simple3D.Core.Mesh.html
@@ -510,6 +596,15 @@ references:
   fullName.vb: Simple3D.Core.Mesh.New(System.Collections.Generic.IEnumerable(Of System.Numerics.Vector3), System.Collections.Generic.IEnumerable(Of Integer))
   nameWithType: Mesh.Mesh(IEnumerable<Vector3>, IEnumerable<int>)
   nameWithType.vb: Mesh.New(IEnumerable(Of Vector3), IEnumerable(Of Integer))
+- uid: Simple3D.Core.Mesh.#ctor(System.Collections.Generic.IEnumerable{System.Numerics.Vector3},System.Collections.Generic.IEnumerable{System.Int32},System.Collections.Generic.IEnumerable{System.Numerics.Vector2},System.Collections.Generic.IEnumerable{System.Numerics.Vector3},System.Collections.Generic.IEnumerable{System.UInt32})
+  name: Mesh(IEnumerable<Vector3>, IEnumerable<int>, IEnumerable<Vector2>?, IEnumerable<Vector3>?, IEnumerable<uint>?)
+  href: api/Simple3D.Core.Mesh.html#Simple3D_Core_Mesh__ctor_System_Collections_Generic_IEnumerable_System_Numerics_Vector3__System_Collections_Generic_IEnumerable_System_Int32__System_Collections_Generic_IEnumerable_System_Numerics_Vector2__System_Collections_Generic_IEnumerable_System_Numerics_Vector3__System_Collections_Generic_IEnumerable_System_UInt32__
+  commentId: M:Simple3D.Core.Mesh.#ctor(System.Collections.Generic.IEnumerable{System.Numerics.Vector3},System.Collections.Generic.IEnumerable{System.Int32},System.Collections.Generic.IEnumerable{System.Numerics.Vector2},System.Collections.Generic.IEnumerable{System.Numerics.Vector3},System.Collections.Generic.IEnumerable{System.UInt32})
+  name.vb: New(IEnumerable(Of Vector3), IEnumerable(Of Integer), IEnumerable(Of Vector2), IEnumerable(Of Vector3), IEnumerable(Of UInteger))
+  fullName: Simple3D.Core.Mesh.Mesh(System.Collections.Generic.IEnumerable<System.Numerics.Vector3>, System.Collections.Generic.IEnumerable<int>, System.Collections.Generic.IEnumerable<System.Numerics.Vector2>?, System.Collections.Generic.IEnumerable<System.Numerics.Vector3>?, System.Collections.Generic.IEnumerable<uint>?)
+  fullName.vb: Simple3D.Core.Mesh.New(System.Collections.Generic.IEnumerable(Of System.Numerics.Vector3), System.Collections.Generic.IEnumerable(Of Integer), System.Collections.Generic.IEnumerable(Of System.Numerics.Vector2), System.Collections.Generic.IEnumerable(Of System.Numerics.Vector3), System.Collections.Generic.IEnumerable(Of UInteger))
+  nameWithType: Mesh.Mesh(IEnumerable<Vector3>, IEnumerable<int>, IEnumerable<Vector2>?, IEnumerable<Vector3>?, IEnumerable<uint>?)
+  nameWithType.vb: Mesh.New(IEnumerable(Of Vector3), IEnumerable(Of Integer), IEnumerable(Of Vector2), IEnumerable(Of Vector3), IEnumerable(Of UInteger))
 - uid: Simple3D.Core.Mesh.#ctor*
   name: Mesh
   href: api/Simple3D.Core.Mesh.html#Simple3D_Core_Mesh__ctor_
@@ -520,6 +615,19 @@ references:
   fullName.vb: Simple3D.Core.Mesh.New
   nameWithType: Mesh.Mesh
   nameWithType.vb: Mesh.New
+- uid: Simple3D.Core.Mesh.Colors
+  name: Colors
+  href: api/Simple3D.Core.Mesh.html#Simple3D_Core_Mesh_Colors
+  commentId: P:Simple3D.Core.Mesh.Colors
+  fullName: Simple3D.Core.Mesh.Colors
+  nameWithType: Mesh.Colors
+- uid: Simple3D.Core.Mesh.Colors*
+  name: Colors
+  href: api/Simple3D.Core.Mesh.html#Simple3D_Core_Mesh_Colors_
+  commentId: Overload:Simple3D.Core.Mesh.Colors
+  isSpec: "True"
+  fullName: Simple3D.Core.Mesh.Colors
+  nameWithType: Mesh.Colors
 - uid: Simple3D.Core.Mesh.Indices
   name: Indices
   href: api/Simple3D.Core.Mesh.html#Simple3D_Core_Mesh_Indices
@@ -539,6 +647,32 @@ references:
   commentId: F:Simple3D.Core.Mesh.MaximumElements
   fullName: Simple3D.Core.Mesh.MaximumElements
   nameWithType: Mesh.MaximumElements
+- uid: Simple3D.Core.Mesh.Normals
+  name: Normals
+  href: api/Simple3D.Core.Mesh.html#Simple3D_Core_Mesh_Normals
+  commentId: P:Simple3D.Core.Mesh.Normals
+  fullName: Simple3D.Core.Mesh.Normals
+  nameWithType: Mesh.Normals
+- uid: Simple3D.Core.Mesh.Normals*
+  name: Normals
+  href: api/Simple3D.Core.Mesh.html#Simple3D_Core_Mesh_Normals_
+  commentId: Overload:Simple3D.Core.Mesh.Normals
+  isSpec: "True"
+  fullName: Simple3D.Core.Mesh.Normals
+  nameWithType: Mesh.Normals
+- uid: Simple3D.Core.Mesh.TextureCoordinates
+  name: TextureCoordinates
+  href: api/Simple3D.Core.Mesh.html#Simple3D_Core_Mesh_TextureCoordinates
+  commentId: P:Simple3D.Core.Mesh.TextureCoordinates
+  fullName: Simple3D.Core.Mesh.TextureCoordinates
+  nameWithType: Mesh.TextureCoordinates
+- uid: Simple3D.Core.Mesh.TextureCoordinates*
+  name: TextureCoordinates
+  href: api/Simple3D.Core.Mesh.html#Simple3D_Core_Mesh_TextureCoordinates_
+  commentId: Overload:Simple3D.Core.Mesh.TextureCoordinates
+  isSpec: "True"
+  fullName: Simple3D.Core.Mesh.TextureCoordinates
+  nameWithType: Mesh.TextureCoordinates
 - uid: Simple3D.Core.Mesh.TriangleCount
   name: TriangleCount
   href: api/Simple3D.Core.Mesh.html#Simple3D_Core_Mesh_TriangleCount
@@ -565,6 +699,72 @@ references:
   isSpec: "True"
   fullName: Simple3D.Core.Mesh.Vertices
   nameWithType: Mesh.Vertices
+- uid: Simple3D.Core.Mesh.WithCalculatedNormals
+  name: WithCalculatedNormals()
+  href: api/Simple3D.Core.Mesh.html#Simple3D_Core_Mesh_WithCalculatedNormals
+  commentId: M:Simple3D.Core.Mesh.WithCalculatedNormals
+  fullName: Simple3D.Core.Mesh.WithCalculatedNormals()
+  nameWithType: Mesh.WithCalculatedNormals()
+- uid: Simple3D.Core.Mesh.WithCalculatedNormals*
+  name: WithCalculatedNormals
+  href: api/Simple3D.Core.Mesh.html#Simple3D_Core_Mesh_WithCalculatedNormals_
+  commentId: Overload:Simple3D.Core.Mesh.WithCalculatedNormals
+  isSpec: "True"
+  fullName: Simple3D.Core.Mesh.WithCalculatedNormals
+  nameWithType: Mesh.WithCalculatedNormals
+- uid: Simple3D.Core.ObjReader
+  name: ObjReader
+  href: api/Simple3D.Core.ObjReader.html
+  commentId: T:Simple3D.Core.ObjReader
+  fullName: Simple3D.Core.ObjReader
+  nameWithType: ObjReader
+- uid: Simple3D.Core.ObjReader.MaximumFaceVertices
+  name: MaximumFaceVertices
+  href: api/Simple3D.Core.ObjReader.html#Simple3D_Core_ObjReader_MaximumFaceVertices
+  commentId: F:Simple3D.Core.ObjReader.MaximumFaceVertices
+  fullName: Simple3D.Core.ObjReader.MaximumFaceVertices
+  nameWithType: ObjReader.MaximumFaceVertices
+- uid: Simple3D.Core.ObjReader.MaximumLineLength
+  name: MaximumLineLength
+  href: api/Simple3D.Core.ObjReader.html#Simple3D_Core_ObjReader_MaximumLineLength
+  commentId: F:Simple3D.Core.ObjReader.MaximumLineLength
+  fullName: Simple3D.Core.ObjReader.MaximumLineLength
+  nameWithType: ObjReader.MaximumLineLength
+- uid: Simple3D.Core.ObjReader.MaximumTextLength
+  name: MaximumTextLength
+  href: api/Simple3D.Core.ObjReader.html#Simple3D_Core_ObjReader_MaximumTextLength
+  commentId: F:Simple3D.Core.ObjReader.MaximumTextLength
+  fullName: Simple3D.Core.ObjReader.MaximumTextLength
+  nameWithType: ObjReader.MaximumTextLength
+- uid: Simple3D.Core.ObjReader.Parse(System.String)
+  name: Parse(string)
+  href: api/Simple3D.Core.ObjReader.html#Simple3D_Core_ObjReader_Parse_System_String_
+  commentId: M:Simple3D.Core.ObjReader.Parse(System.String)
+  name.vb: Parse(String)
+  fullName: Simple3D.Core.ObjReader.Parse(string)
+  fullName.vb: Simple3D.Core.ObjReader.Parse(String)
+  nameWithType: ObjReader.Parse(string)
+  nameWithType.vb: ObjReader.Parse(String)
+- uid: Simple3D.Core.ObjReader.Parse*
+  name: Parse
+  href: api/Simple3D.Core.ObjReader.html#Simple3D_Core_ObjReader_Parse_
+  commentId: Overload:Simple3D.Core.ObjReader.Parse
+  isSpec: "True"
+  fullName: Simple3D.Core.ObjReader.Parse
+  nameWithType: ObjReader.Parse
+- uid: Simple3D.Core.ObjReader.Read(System.IO.TextReader)
+  name: Read(TextReader)
+  href: api/Simple3D.Core.ObjReader.html#Simple3D_Core_ObjReader_Read_System_IO_TextReader_
+  commentId: M:Simple3D.Core.ObjReader.Read(System.IO.TextReader)
+  fullName: Simple3D.Core.ObjReader.Read(System.IO.TextReader)
+  nameWithType: ObjReader.Read(TextReader)
+- uid: Simple3D.Core.ObjReader.Read*
+  name: Read
+  href: api/Simple3D.Core.ObjReader.html#Simple3D_Core_ObjReader_Read_
+  commentId: Overload:Simple3D.Core.ObjReader.Read
+  isSpec: "True"
+  fullName: Simple3D.Core.ObjReader.Read
+  nameWithType: ObjReader.Read
 - uid: Simple3D.Core.ProjectedLabel
   name: ProjectedLabel
   href: api/Simple3D.Core.ProjectedLabel.html
@@ -885,6 +1085,19 @@ references:
   isSpec: "True"
   fullName: Simple3D.Core.Scene.AddLabel
   nameWithType: Scene.AddLabel
+- uid: Simple3D.Core.Scene.AmbientLight
+  name: AmbientLight
+  href: api/Simple3D.Core.Scene.html#Simple3D_Core_Scene_AmbientLight
+  commentId: P:Simple3D.Core.Scene.AmbientLight
+  fullName: Simple3D.Core.Scene.AmbientLight
+  nameWithType: Scene.AmbientLight
+- uid: Simple3D.Core.Scene.AmbientLight*
+  name: AmbientLight
+  href: api/Simple3D.Core.Scene.html#Simple3D_Core_Scene_AmbientLight_
+  commentId: Overload:Simple3D.Core.Scene.AmbientLight
+  isSpec: "True"
+  fullName: Simple3D.Core.Scene.AmbientLight
+  nameWithType: Scene.AmbientLight
 - uid: Simple3D.Core.Scene.Changed
   name: Changed
   href: api/Simple3D.Core.Scene.html#Simple3D_Core_Scene_Changed
@@ -930,6 +1143,19 @@ references:
   isSpec: "True"
   fullName: Simple3D.Core.Scene.Labels
   nameWithType: Scene.Labels
+- uid: Simple3D.Core.Scene.Light
+  name: Light
+  href: api/Simple3D.Core.Scene.html#Simple3D_Core_Scene_Light
+  commentId: P:Simple3D.Core.Scene.Light
+  fullName: Simple3D.Core.Scene.Light
+  nameWithType: Scene.Light
+- uid: Simple3D.Core.Scene.Light*
+  name: Light
+  href: api/Simple3D.Core.Scene.html#Simple3D_Core_Scene_Light_
+  commentId: Overload:Simple3D.Core.Scene.Light
+  isSpec: "True"
+  fullName: Simple3D.Core.Scene.Light
+  nameWithType: Scene.Light
 - uid: Simple3D.Core.Scene.MaximumNodes
   name: MaximumNodes
   href: api/Simple3D.Core.Scene.html#Simple3D_Core_Scene_MaximumNodes
@@ -1379,6 +1605,154 @@ references:
   isSpec: "True"
   fullName: Simple3D.Core.ShapeReplacementEventArgs.OldShape
   nameWithType: ShapeReplacementEventArgs.OldShape
+- uid: Simple3D.Core.Texture2D
+  name: Texture2D
+  href: api/Simple3D.Core.Texture2D.html
+  commentId: T:Simple3D.Core.Texture2D
+  fullName: Simple3D.Core.Texture2D
+  nameWithType: Texture2D
+- uid: Simple3D.Core.Texture2D.#ctor(System.Int32,System.Int32,System.Collections.Generic.IEnumerable{System.UInt32},Simple3D.Core.TextureFilter,Simple3D.Core.TextureAddressMode)
+  name: Texture2D(int, int, IEnumerable<uint>, TextureFilter, TextureAddressMode)
+  href: api/Simple3D.Core.Texture2D.html#Simple3D_Core_Texture2D__ctor_System_Int32_System_Int32_System_Collections_Generic_IEnumerable_System_UInt32__Simple3D_Core_TextureFilter_Simple3D_Core_TextureAddressMode_
+  commentId: M:Simple3D.Core.Texture2D.#ctor(System.Int32,System.Int32,System.Collections.Generic.IEnumerable{System.UInt32},Simple3D.Core.TextureFilter,Simple3D.Core.TextureAddressMode)
+  name.vb: New(Integer, Integer, IEnumerable(Of UInteger), TextureFilter, TextureAddressMode)
+  fullName: Simple3D.Core.Texture2D.Texture2D(int, int, System.Collections.Generic.IEnumerable<uint>, Simple3D.Core.TextureFilter, Simple3D.Core.TextureAddressMode)
+  fullName.vb: Simple3D.Core.Texture2D.New(Integer, Integer, System.Collections.Generic.IEnumerable(Of UInteger), Simple3D.Core.TextureFilter, Simple3D.Core.TextureAddressMode)
+  nameWithType: Texture2D.Texture2D(int, int, IEnumerable<uint>, TextureFilter, TextureAddressMode)
+  nameWithType.vb: Texture2D.New(Integer, Integer, IEnumerable(Of UInteger), TextureFilter, TextureAddressMode)
+- uid: Simple3D.Core.Texture2D.#ctor*
+  name: Texture2D
+  href: api/Simple3D.Core.Texture2D.html#Simple3D_Core_Texture2D__ctor_
+  commentId: Overload:Simple3D.Core.Texture2D.#ctor
+  isSpec: "True"
+  name.vb: New
+  fullName: Simple3D.Core.Texture2D.Texture2D
+  fullName.vb: Simple3D.Core.Texture2D.New
+  nameWithType: Texture2D.Texture2D
+  nameWithType.vb: Texture2D.New
+- uid: Simple3D.Core.Texture2D.AddressMode
+  name: AddressMode
+  href: api/Simple3D.Core.Texture2D.html#Simple3D_Core_Texture2D_AddressMode
+  commentId: P:Simple3D.Core.Texture2D.AddressMode
+  fullName: Simple3D.Core.Texture2D.AddressMode
+  nameWithType: Texture2D.AddressMode
+- uid: Simple3D.Core.Texture2D.AddressMode*
+  name: AddressMode
+  href: api/Simple3D.Core.Texture2D.html#Simple3D_Core_Texture2D_AddressMode_
+  commentId: Overload:Simple3D.Core.Texture2D.AddressMode
+  isSpec: "True"
+  fullName: Simple3D.Core.Texture2D.AddressMode
+  nameWithType: Texture2D.AddressMode
+- uid: Simple3D.Core.Texture2D.Filter
+  name: Filter
+  href: api/Simple3D.Core.Texture2D.html#Simple3D_Core_Texture2D_Filter
+  commentId: P:Simple3D.Core.Texture2D.Filter
+  fullName: Simple3D.Core.Texture2D.Filter
+  nameWithType: Texture2D.Filter
+- uid: Simple3D.Core.Texture2D.Filter*
+  name: Filter
+  href: api/Simple3D.Core.Texture2D.html#Simple3D_Core_Texture2D_Filter_
+  commentId: Overload:Simple3D.Core.Texture2D.Filter
+  isSpec: "True"
+  fullName: Simple3D.Core.Texture2D.Filter
+  nameWithType: Texture2D.Filter
+- uid: Simple3D.Core.Texture2D.Height
+  name: Height
+  href: api/Simple3D.Core.Texture2D.html#Simple3D_Core_Texture2D_Height
+  commentId: P:Simple3D.Core.Texture2D.Height
+  fullName: Simple3D.Core.Texture2D.Height
+  nameWithType: Texture2D.Height
+- uid: Simple3D.Core.Texture2D.Height*
+  name: Height
+  href: api/Simple3D.Core.Texture2D.html#Simple3D_Core_Texture2D_Height_
+  commentId: Overload:Simple3D.Core.Texture2D.Height
+  isSpec: "True"
+  fullName: Simple3D.Core.Texture2D.Height
+  nameWithType: Texture2D.Height
+- uid: Simple3D.Core.Texture2D.MaximumDimension
+  name: MaximumDimension
+  href: api/Simple3D.Core.Texture2D.html#Simple3D_Core_Texture2D_MaximumDimension
+  commentId: F:Simple3D.Core.Texture2D.MaximumDimension
+  fullName: Simple3D.Core.Texture2D.MaximumDimension
+  nameWithType: Texture2D.MaximumDimension
+- uid: Simple3D.Core.Texture2D.Pixels
+  name: Pixels
+  href: api/Simple3D.Core.Texture2D.html#Simple3D_Core_Texture2D_Pixels
+  commentId: P:Simple3D.Core.Texture2D.Pixels
+  fullName: Simple3D.Core.Texture2D.Pixels
+  nameWithType: Texture2D.Pixels
+- uid: Simple3D.Core.Texture2D.Pixels*
+  name: Pixels
+  href: api/Simple3D.Core.Texture2D.html#Simple3D_Core_Texture2D_Pixels_
+  commentId: Overload:Simple3D.Core.Texture2D.Pixels
+  isSpec: "True"
+  fullName: Simple3D.Core.Texture2D.Pixels
+  nameWithType: Texture2D.Pixels
+- uid: Simple3D.Core.Texture2D.Sample(System.Single,System.Single)
+  name: Sample(float, float)
+  href: api/Simple3D.Core.Texture2D.html#Simple3D_Core_Texture2D_Sample_System_Single_System_Single_
+  commentId: M:Simple3D.Core.Texture2D.Sample(System.Single,System.Single)
+  name.vb: Sample(Single, Single)
+  fullName: Simple3D.Core.Texture2D.Sample(float, float)
+  fullName.vb: Simple3D.Core.Texture2D.Sample(Single, Single)
+  nameWithType: Texture2D.Sample(float, float)
+  nameWithType.vb: Texture2D.Sample(Single, Single)
+- uid: Simple3D.Core.Texture2D.Sample*
+  name: Sample
+  href: api/Simple3D.Core.Texture2D.html#Simple3D_Core_Texture2D_Sample_
+  commentId: Overload:Simple3D.Core.Texture2D.Sample
+  isSpec: "True"
+  fullName: Simple3D.Core.Texture2D.Sample
+  nameWithType: Texture2D.Sample
+- uid: Simple3D.Core.Texture2D.Width
+  name: Width
+  href: api/Simple3D.Core.Texture2D.html#Simple3D_Core_Texture2D_Width
+  commentId: P:Simple3D.Core.Texture2D.Width
+  fullName: Simple3D.Core.Texture2D.Width
+  nameWithType: Texture2D.Width
+- uid: Simple3D.Core.Texture2D.Width*
+  name: Width
+  href: api/Simple3D.Core.Texture2D.html#Simple3D_Core_Texture2D_Width_
+  commentId: Overload:Simple3D.Core.Texture2D.Width
+  isSpec: "True"
+  fullName: Simple3D.Core.Texture2D.Width
+  nameWithType: Texture2D.Width
+- uid: Simple3D.Core.TextureAddressMode
+  name: TextureAddressMode
+  href: api/Simple3D.Core.TextureAddressMode.html
+  commentId: T:Simple3D.Core.TextureAddressMode
+  fullName: Simple3D.Core.TextureAddressMode
+  nameWithType: TextureAddressMode
+- uid: Simple3D.Core.TextureAddressMode.Clamp
+  name: Clamp
+  href: api/Simple3D.Core.TextureAddressMode.html#Simple3D_Core_TextureAddressMode_Clamp
+  commentId: F:Simple3D.Core.TextureAddressMode.Clamp
+  fullName: Simple3D.Core.TextureAddressMode.Clamp
+  nameWithType: TextureAddressMode.Clamp
+- uid: Simple3D.Core.TextureAddressMode.Repeat
+  name: Repeat
+  href: api/Simple3D.Core.TextureAddressMode.html#Simple3D_Core_TextureAddressMode_Repeat
+  commentId: F:Simple3D.Core.TextureAddressMode.Repeat
+  fullName: Simple3D.Core.TextureAddressMode.Repeat
+  nameWithType: TextureAddressMode.Repeat
+- uid: Simple3D.Core.TextureFilter
+  name: TextureFilter
+  href: api/Simple3D.Core.TextureFilter.html
+  commentId: T:Simple3D.Core.TextureFilter
+  fullName: Simple3D.Core.TextureFilter
+  nameWithType: TextureFilter
+- uid: Simple3D.Core.TextureFilter.Bilinear
+  name: Bilinear
+  href: api/Simple3D.Core.TextureFilter.html#Simple3D_Core_TextureFilter_Bilinear
+  commentId: F:Simple3D.Core.TextureFilter.Bilinear
+  fullName: Simple3D.Core.TextureFilter.Bilinear
+  nameWithType: TextureFilter.Bilinear
+- uid: Simple3D.Core.TextureFilter.Nearest
+  name: Nearest
+  href: api/Simple3D.Core.TextureFilter.html#Simple3D_Core_TextureFilter_Nearest
+  commentId: F:Simple3D.Core.TextureFilter.Nearest
+  fullName: Simple3D.Core.TextureFilter.Nearest
+  nameWithType: TextureFilter.Nearest
 - uid: Simple3D.Core.WorldLabel
   name: WorldLabel
   href: api/Simple3D.Core.WorldLabel.html
@@ -1745,3 +2119,22 @@ references:
   isSpec: "True"
   fullName: Simple3D.Maui.SceneView.Zoom
   nameWithType: SceneView.Zoom
+- uid: Simple3D.Maui.TextureLoader
+  name: TextureLoader
+  href: api/Simple3D.Maui.TextureLoader.html
+  commentId: T:Simple3D.Maui.TextureLoader
+  fullName: Simple3D.Maui.TextureLoader
+  nameWithType: TextureLoader
+- uid: Simple3D.Maui.TextureLoader.Load(System.IO.Stream,Simple3D.Core.TextureFilter,Simple3D.Core.TextureAddressMode)
+  name: Load(Stream, TextureFilter, TextureAddressMode)
+  href: api/Simple3D.Maui.TextureLoader.html#Simple3D_Maui_TextureLoader_Load_System_IO_Stream_Simple3D_Core_TextureFilter_Simple3D_Core_TextureAddressMode_
+  commentId: M:Simple3D.Maui.TextureLoader.Load(System.IO.Stream,Simple3D.Core.TextureFilter,Simple3D.Core.TextureAddressMode)
+  fullName: Simple3D.Maui.TextureLoader.Load(System.IO.Stream, Simple3D.Core.TextureFilter, Simple3D.Core.TextureAddressMode)
+  nameWithType: TextureLoader.Load(Stream, TextureFilter, TextureAddressMode)
+- uid: Simple3D.Maui.TextureLoader.Load*
+  name: Load
+  href: api/Simple3D.Maui.TextureLoader.html#Simple3D_Maui_TextureLoader_Load_
+  commentId: Overload:Simple3D.Maui.TextureLoader.Load
+  isSpec: "True"
+  fullName: Simple3D.Maui.TextureLoader.Load
+  nameWithType: TextureLoader.Load

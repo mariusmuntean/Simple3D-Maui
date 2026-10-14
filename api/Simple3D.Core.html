@@ -91,11 +91,17 @@ Classes
       <h4><a class="xref" href="Simple3D.Core.DepthRenderer.html">DepthRenderer</a></h4>
       <section><p>Opaque software triangle rasterizer with per-pixel depth and picking. Instances reuse depth and traversal scratch storage and are not thread safe.</p>
 </section>
+      <h4><a class="xref" href="Simple3D.Core.DirectionalLight.html">DirectionalLight</a></h4>
+      <section><p>Immutable world-space light emitting parallel rays, without shadows.</p>
+</section>
       <h4><a class="xref" href="Simple3D.Core.Material.html">Material</a></h4>
-      <section><p>Immutable opaque flat material using packed 0xAARRGGBB color.</p>
+      <section><p>Immutable opaque material using packed 0xAARRGGBB color.</p>
 </section>
       <h4><a class="xref" href="Simple3D.Core.Mesh.html">Mesh</a></h4>
       <section><p>Immutable indexed triangle geometry. Counterclockwise vertices face outward; both sides render by default.</p>
+</section>
+      <h4><a class="xref" href="Simple3D.Core.ObjReader.html">ObjReader</a></h4>
+      <section><p>Reads a bounded OBJ geometry subset without loading files or material libraries.</p>
 </section>
       <h4><a class="xref" href="Simple3D.Core.RasterBudgetExceededException.html">RasterBudgetExceededException</a></h4>
       <section><p>Indicates that clipped triangle coverage exceeded the per-frame raster work budget.</p>
@@ -118,6 +124,9 @@ Classes
       <h4><a class="xref" href="Simple3D.Core.ShapeReplacementEventArgs.html">ShapeReplacementEventArgs</a></h4>
       <section><p>A replaced scene node. Corresponding child positions represent the same parts in the replacement tree.</p>
 </section>
+      <h4><a class="xref" href="Simple3D.Core.Texture2D.html">Texture2D</a></h4>
+      <section><p>Immutable opaque image. Pixels are top-to-bottom ARGB; UV (0,0) is the bottom-left corner.</p>
+</section>
       <h4><a class="xref" href="Simple3D.Core.WorldLabel.html">WorldLabel</a></h4>
       <section><p>Immutable world anchor for an overlay label; labels do not affect picking or depth.</p>
 </section>
@@ -138,6 +147,12 @@ Enums
 </h3>
       <h4><a class="xref" href="Simple3D.Core.CameraProjection.html">CameraProjection</a></h4>
       <section><p>Camera projection model.</p>
+</section>
+      <h4><a class="xref" href="Simple3D.Core.TextureAddressMode.html">TextureAddressMode</a></h4>
+      <section><p>How texture coordinates outside the unit square are addressed.</p>
+</section>
+      <h4><a class="xref" href="Simple3D.Core.TextureFilter.html">TextureFilter</a></h4>
+      <section><p>How a texture is sampled between pixels.</p>
 </section>
 
 

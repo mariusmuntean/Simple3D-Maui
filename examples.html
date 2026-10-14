@@ -72,7 +72,7 @@
             <article class="content wrap" id="_content" data-uid="">
 <h1 id="five-examples-to-learn-from">Five examples to learn from</h1>
 
-<p>Create the two-shape scene in <a href="getting-started.html">Getting started</a> first, then follow these five examples in order. Each adds a different API concept, progressing from primitives to a mechanism with coordinated moving parts. Each file creates a scene, fits its camera and supplies a time-based animation. The gallery adds orbit, zoom and selection through the same <code>SceneView</code> you use in an app.</p>
+<p>Create the two-shape scene in <a href="getting-started.html">Getting started</a> first, then follow these five examples in order. Each adds a different API concept, progressing from primitives to a mechanism with coordinated moving parts. Each file creates a scene, fits its camera and supplies a time-based animation. The gallery adds orbit, zoom and selection through the same <code>SceneView</code> you use in an app. The texture, lighting, normals, vertex-color and OBJ examples require <code>0.2.0-preview.1</code> or later.</p>
 <table>
 <thead>
 <tr>
@@ -84,7 +84,7 @@
 <tbody>
 <tr>
 <td><a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Equipment.cs">Equipment</a></td>
-<td>Named primitives, groups, arrows and labels</td>
+<td>Named primitives and groups; an OBJ controller with UV-mapped display</td>
 <td>Output vector sweeps</td>
 </tr>
 <tr>
@@ -94,7 +94,7 @@
 </tr>
 <tr>
 <td><a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Surface.cs">Surface</a></td>
-<td>Indexed mesh construction and depth picking</td>
+<td>Height-based vertex colors, flat/smooth normals and directional light controls</td>
 <td>Sample marker follows a wave</td>
 </tr>
 <tr>
@@ -114,6 +114,8 @@
 <img src="images/Surface.png" alt="Surface">
 <img src="images/Robot%20Arm.png" alt="Robot Arm">
 <img src="images/Gantry%20Crane.png" alt="Gantry Crane"></p>
+<p>In <strong>Equipment</strong>, orbit the controller beside the motor: the chart belongs to a mapped front face, while the solid sides reveal the imported enclosure's depth. <code>ObjReader.Parse</code> imports the wedge and its independent UV indices once. A small opaque <code>Texture2D</code> supplies its display and body colors. The texture is generated in the shared sample so Core-only image exports need no codec; use <a href="materials-and-import.html#textures">TextureLoader.Load</a> in a MAUI app to decode an image once before creating the material.</p>
+<p>In <strong>Surface</strong>, choose <strong>Shading: smooth / flat</strong>, then <strong>Light: from right / left</strong>. Smooth mode uses averaged vertex normals; flat mode omits normals from the same wave geometry. Both keep the height gradient and 512 triangles, so the comparison isolates lighting rather than changing mesh detail. The light-ray direction changes in world space while the orbit camera stays put. <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/SurfaceComparison.cs">SurfaceComparison.cs</a> keeps both meshes and lights prepared; switching does no geometry generation and preserves selection. <strong>Reset</strong> restores smooth shading, light from the right, the initial camera and sample-marker position. The comparison controls appear only in Surface, in the horizontally scrollable tool row.</p>
 <p>Telemetry and Gantry Crane use synthetic values, not live sensors or physical simulations. In an application, replace the time functions with measured values. Reuse immutable meshes and keep child order stable so selection follows the same logical part after replacement. The small shared helpers live in <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/DemoScenes.cs">DemoScenes.cs</a>.</p>
 <p>Robot Arm demonstrates child transforms relative to a parent. Gantry Crane combines group translation with state-dependent part dimensions: the cable changes length as the load rises. They teach different uses of the same hierarchy API. The examples share their animation and color helpers rather than repeating them in each file.</p>
 <p>The <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Demo/GalleryPage.cs">gallery page</a> owns the UI timer, lowers render resolution during animation and pauses on backgrounding. It targets 60 updates per second; this is not a displayed-frame-rate guarantee. Press Animate after returning to the app.</p>
@@ -121,7 +123,7 @@
 <pre><code class="lang-bash">dotnet run --project tests/Simple3D.Core.Tests -c Release -- --render-images Equipment equipment.ppm
 dotnet run --project tests/Simple3D.Core.Tests -c Release -- --render-images --all output
 </code></pre>
-<p>This exports initial still frames as binary PPM and skips the test run. Convert them to PNG with <code>python3 scripts/render-doc-images.py</code> to regenerate the documentation images. Rendering supports opaque triangles and fixed directional flat lighting; see <a href="rendering-limits.html">limits</a> before choosing a workload.</p>
+<p>This exports initial still frames as binary PPM and skips the test run. Convert them to PNG with <code>python3 scripts/render-doc-images.py</code> to regenerate the documentation images. Rendering supports opaque textured triangles and flat or smooth directional lighting; see <a href="rendering-limits.html">limits</a> before choosing a workload.</p>
 
 </article>
           </div>

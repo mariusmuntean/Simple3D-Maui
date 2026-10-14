@@ -69,6 +69,20 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.DirectionalLight.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.DirectionalLight.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.DirectionalLight",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.DirectionalLight.yml\" sourcestartlinenumber=\"1\">Immutable world-space light emitting parallel rays, without shadows.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/Simple3D.Core.DrawTriangle.yml",
       "output": {
         ".html": {
@@ -93,7 +107,7 @@
       "Uid": null,
       "IsMRef": true,
       "Title": "Simple3D.Core.Material",
-      "Summary": "<p sourcefile=\"api/Simple3D.Core.Material.yml\" sourcestartlinenumber=\"1\">Immutable opaque flat material using packed 0xAARRGGBB color.</p>\n"
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.Material.yml\" sourcestartlinenumber=\"1\">Immutable opaque material using packed 0xAARRGGBB color.</p>\n"
     },
     {
       "type": "ManagedReference",
@@ -108,6 +122,20 @@
       "IsMRef": true,
       "Title": "Simple3D.Core.Mesh",
       "Summary": "<p sourcefile=\"api/Simple3D.Core.Mesh.yml\" sourcestartlinenumber=\"1\">Immutable indexed triangle geometry. Counterclockwise vertices face outward; both sides render by default.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.ObjReader.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.ObjReader.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.ObjReader",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.ObjReader.yml\" sourcestartlinenumber=\"1\">Reads a bounded OBJ geometry subset without loading files or material libraries.</p>\n"
     },
     {
       "type": "ManagedReference",
@@ -223,6 +251,48 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.Texture2D.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.Texture2D.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.Texture2D",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.Texture2D.yml\" sourcestartlinenumber=\"1\">Immutable opaque image. Pixels are top-to-bottom ARGB; UV (0,0) is the bottom-left corner.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.TextureAddressMode.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.TextureAddressMode.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.TextureAddressMode",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.TextureAddressMode.yml\" sourcestartlinenumber=\"1\">How texture coordinates outside the unit square are addressed.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.TextureFilter.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.TextureFilter.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.TextureFilter",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.TextureFilter.yml\" sourcestartlinenumber=\"1\">How a texture is sampled between pixels.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/Simple3D.Core.WorldLabel.yml",
       "output": {
         ".html": {
@@ -276,6 +346,20 @@
       "IsMRef": true,
       "Title": "Simple3D.Maui.SceneView",
       "Summary": "<p sourcefile=\"api/Simple3D.Maui.SceneView.yml\" sourcestartlinenumber=\"1\">A depth-rendered, touch-enabled surface for small opaque scenes. Mutate its scene and camera on the UI thread.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Maui.TextureLoader.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Maui.TextureLoader.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Maui.TextureLoader",
+      "Summary": "<p sourcefile=\"api/Simple3D.Maui.TextureLoader.yml\" sourcestartlinenumber=\"1\">Decodes opaque images using the platform's Skia image codecs.</p>\n"
     },
     {
       "type": "ManagedReference",
@@ -450,6 +534,16 @@
       "output": {
         ".html": {
           "relative_path": "interaction-and-picking.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "materials-and-import.md",
+      "output": {
+        ".html": {
+          "relative_path": "materials-and-import.html"
         }
       },
       "version": ""

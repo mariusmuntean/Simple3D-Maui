@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<!--[if IE]><![endif]-->
+<html>
+
+  <head>
+    <meta charset="utf-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+      <title>Materials, lighting, and model import | Simple3D </title>
+      <meta name="viewport" content="width=device-width">
+      <meta name="title" content="Materials, lighting, and model import | Simple3D ">
+    
+    
+      <link rel="shortcut icon" href="images/favicon.png">
+      <link rel="stylesheet" href="styles/docfx.vendor.min.css">
+      <link rel="stylesheet" href="styles/docfx.css">
+      <link rel="stylesheet" href="styles/main.css">
+      <meta property="docfx:navrel" content="toc.html">
+      <meta property="docfx:tocrel" content="toc.html">
+    
+    <meta property="docfx:rel" content="">
+    
+  </head>
+  <body data-spy="scroll" data-target="#affix" data-offset="120">
+    <div id="wrapper">
+      <header>
+
+        <nav id="autocollapse" class="navbar navbar-inverse ng-scope" role="navigation">
+          <div class="container">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+
+              <a class="navbar-brand" href="index.html">
+                <img id="logo" class="svg" src="images/navigation-mark.svg" alt="Simple3D">
+              </a>
+            </div>
+            <div class="collapse navbar-collapse" id="navbar">
+              <form class="navbar-form navbar-right" role="search" id="search">
+                <div class="form-group">
+                  <input type="text" class="form-control" id="search-query" placeholder="Search" autocomplete="off">
+                </div>
+              </form>
+            </div>
+          </div>
+        </nav>
+
+        <div class="subnav navbar navbar-default">
+          <div class="container hide-when-search" id="breadcrumb">
+            <ul class="breadcrumb">
+              <li></li>
+            </ul>
+          </div>
+        </div>
+      </header>
+      <div class="container body-content">
+
+        <div id="search-results">
+          <div class="search-list">Search Results for <span></span></div>
+          <div class="sr-items">
+            <p><i class="glyphicon glyphicon-refresh index-loading"></i></p>
+          </div>
+          <ul id="pagination" data-first=First data-prev=Previous data-next=Next data-last=Last></ul>
+        </div>
+      </div>
+      <div role="main" class="container body-content hide-when-search">
+        <div class="article row grid">
+          <div class="col-md-10">
+            <article class="content wrap" id="_content" data-uid="">
+<h1 id="materials-lighting-and-model-import">Materials, lighting, and model import</h1>
+
+<p>These APIs are available from <code>0.2.0-preview.1</code>.</p>
+<h2 id="textures">Textures</h2>
+<p><code>Texture2D</code> copies opaque <code>0xFFRRGGBB</code> pixels in row order, starting at the top-left. UV coordinates use the usual bottom-left origin: U increases rightward and V upward. Nearest sampling and clamped edges are the defaults. Bilinear filtering blends four texels; repeat addressing tiles on both axes, including negative coordinates.</p>
+<pre><code class="lang-csharp">var texture = new Texture2D(2, 2,
+    [0xFFFFC070, 0xFF749DFF, 0xFF749DFF, 0xFFFFC070],
+    TextureFilter.Bilinear, TextureAddressMode.Repeat);
+var box = Shape.Box().WithMaterial(new Material(texture));
+scene.Add(box);
+</code></pre>
+<p>A texture material defaults to white, preserving the image colors. Its optional <code>color</code> multiplies the image, and <code>lit: false</code> displays it without lighting. Box and pyramid faces use planar UVs; spheres use longitude/latitude UVs; cylinders use wrapped side UVs and planar caps. Texture-ready primitive geometry is cached and shared. Use repeat addressing for tiled or seamless wrapped textures.</p>
+<p>Custom meshes supply one <code>Vector2</code> texture coordinate per vertex. Duplicate vertices wherever a UV seam needs different coordinates. A textured material on a mesh without UVs throws immediately. Textured groups are rejected: apply materials to their leaves.</p>
+<p>MAUI applications can decode PNG/JPEG and other Skia-supported images without adding a dependency:</p>
+<pre><code class="lang-csharp">using var stream = await FileSystem.OpenAppPackageFileAsync(&quot;panel.png&quot;);
+var texture = TextureLoader.Load(stream, TextureFilter.Bilinear);
+var panel = Shape.Box().WithMaterial(new Material(texture, lit: false));
+</code></pre>
+<p><code>TextureLoader.Load</code> is synchronous and leaves the stream open. Load assets once, outside animation/render callbacks; decode large images off the UI thread, then assign shapes on the UI thread. Only the first encoded image frame is loaded. Images must be fully opaque; transparent images are rejected. Dimensions are checked before decode and cannot exceed 4096 × 4096. Core itself has no image codec or file IO dependency.</p>
+<h2 id="directional-and-ambient-light">Directional and ambient light</h2>
+<pre><code class="lang-csharp">scene.Light = new DirectionalLight(
+    new Vector3(.4f, -1, -.7f), // direction rays travel toward the scene
+    color: 0xFFFFE9CF,
+    intensity: .7f);
+scene.AmbientLight = .3f;
+</code></pre>
+<p>The direction is world-space, finite, nonzero, and normalized on construction. Directional intensity and ambient brightness range from 0 to 1; final color channels saturate at 255. <code>scene.Light = null</code> disables directional lighting. Unlit materials ignore both settings. Changes notify <code>SceneView</code> automatically. There is one directional light and no shadow pass.</p>
+<p>Defaults preserve the original appearance: white light traveling along <code>(.4, -.8, -1)</code>, intensity <code>.62</code>, ambient <code>.38</code>. Lighting is diffuse Lambert shading, with packed RGB arithmetic rather than a physically based, linear-light color pipeline.</p>
+<h2 id="smooth-normals-and-vertex-colors">Smooth normals and vertex colors</h2>
+<pre><code class="lang-csharp">var mesh = new Mesh(
+    vertices: [new Vector3(-1, -1, 0), new Vector3(1, -1, 0), new Vector3(0, 1, 0)],
+    indices: [0, 1, 2],
+    colors: [0xFFFFAA70, 0xFF70AAFF, 0xFF70DDC0])
+    .WithCalculatedNormals();
+scene.Add(Shape.FromMesh(mesh, new Material(0xFFFFFFFF)));
+</code></pre>
+<p>Optional <code>normals</code>, <code>colors</code>, and <code>textureCoordinates</code> are defensively copied and must each match the vertex count. Normals are normalized and must be finite and nonzero; colors must be opaque. Meshes without normals retain flat shading. Normals enable Gouraud shading: light and vertex color are combined at triangle corners, then interpolated across the surface. Smooth shading avoids increasing triangle count, but does not change silhouettes or add specular highlights.</p>
+<p><code>WithCalculatedNormals()</code> returns a new mesh with area-weighted normals averaged at shared indices. Split vertices preserve sharp edges and UV seams; the method does not weld duplicate positions. Unused vertices or normals that cancel use +Z. Imported explicit normals are preferable when a seam should remain smooth. Nonuniform shape and group scales use inverse-transpose normal transforms. If a composed transform has no inverse but leaves a valid triangle, lighting uses its world-space face normal. Two-sided surfaces flip their lighting normals on backfaces.</p>
+<p>Colors multiply the material tint and texture. Use white material color to preserve vertex colors. UVs and shaded vertex colors use perspective-correct interpolation and are carried through near-plane clipping. Orthographic cameras interpolate linearly. The <a href="examples.html">Surface example</a> demonstrates a height gradient on 512 triangles. Its <strong>Shading: smooth / flat</strong> control compares prepared meshes with and without normals; <strong>Light: from right / left</strong> changes the world-space directional light without rebuilding geometry or resetting the orbit camera.</p>
+<h2 id="obj-geometry">OBJ geometry</h2>
+<pre><code class="lang-csharp">using var reader = new StreamReader(modelStream);
+var mesh = ObjReader.Read(reader);
+var model = Shape.FromMesh(mesh, new Material(0xFFD4DCEF));
+scene.Add(model);
+</code></pre>
+<p><code>ObjReader.Parse(string)</code> is convenient for small embedded models. The reader supports positions, UVs, normals, positive/negative indices, triangles, and strictly convex planar polygons. It preserves independent position/UV/normal indices by splitting vertices only when attribute tuples differ. Every face corner in an input must use the same attribute layout. Explicit normals control smoothness; call <code>WithCalculatedNormals()</code> yourself when appropriate.</p>
+<p>Import returns one mesh. Object/group names, material references, and smoothing directives are ignored. MTL files, textures, and other external resources are never opened; assign a material yourself. Lines, points, freeform surfaces, concave/nonplanar polygons, and collinear polygon corners are rejected. Export triangulated geometry with normals and UVs from your modeling tool for predictable results.</p>
+<p>Malformed or unsupported input throws <code>FormatException</code> with a line number. Input is bounded to 16 Mi characters, 16 Ki characters per line, 256 corners per face, and the mesh's one-million-element limits. Supplied readers remain open. Import once, share the resulting immutable mesh, and keep IO out of animation callbacks.</p>
+
+</article>
+          </div>
+
+          <div class="hidden-sm col-md-2" role="complementary">
+            <div class="sideaffix">
+              <div class="contribution">
+                <ul class="nav">
+                  <li>
+                    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/docs/site/materials-and-import.md/#L1" class="contribution-link">Edit this page</a>
+                  </li>
+                </ul>
+              </div>
+              <nav class="bs-docs-sidebar hidden-print hidden-xs hidden-sm affix" id="affix">
+                <h5>In this article</h5>
+                <div></div>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <div class="grad-bottom"></div>
+        <div class="footer">
+          <div class="container">
+            <span class="pull-right">
+              <a href="#top">Back to top</a>
+            </span>
+      
+      <span>Generated by <strong>DocFX</strong></span>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <script type="text/javascript" src="styles/docfx.vendor.min.js"></script>
+    <script type="text/javascript" src="styles/docfx.js"></script>
+    <script type="text/javascript" src="styles/main.js"></script>
+  </body>
+</html>
