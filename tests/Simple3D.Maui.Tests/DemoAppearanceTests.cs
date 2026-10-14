@@ -55,7 +55,7 @@ internal static class DemoAppearanceTests
                 var light = view.Scene.Light;
                 var camera = view.Camera;
                 Click(control);
-                Assert(SemanticProperties.GetDescription(control) == "Light: right", "accessible light state stayed left");
+                Assert(SemanticProperties.GetDescription(control) == "Light: from left", "accessible light state stayed on the right");
                 Assert(view.Scene.Light?.Direction.X > 0 && light?.Direction.X < 0, "light did not cross the surface");
                 Assert(Changed(original, view.CaptureFrame(320, 240).Pixels.ToArray()) > 1000,
                     "light change did not affect visible pixels");
@@ -77,7 +77,7 @@ internal static class DemoAppearanceTests
                 var light = buttons.Single(button => button.AutomationId == "SurfaceLight");
                 Click(shading); Click(light); Click(buttons, "Reset");
                 Assert(view.CaptureFrame(320, 240).Pixels.Span.SequenceEqual(original), "Reset retained modified appearance");
-                Assert(shading.Text!.Contains("smooth") && light.Text!.Contains("left"), "Reset retained stale control labels");
+                Assert(shading.Text!.Contains("smooth") && light.Text == "Light: from right", "Reset retained stale control labels");
                 Click(buttons, "Equipment");
                 Assert(!shading.IsVisible && !light.IsVisible, "surface controls leaked into Equipment");
                 Click(buttons, "Surface");

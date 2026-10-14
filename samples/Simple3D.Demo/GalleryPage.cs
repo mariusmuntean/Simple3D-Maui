@@ -45,14 +45,14 @@ public sealed class GalleryPage : ContentPage
         });
         _shadingButton.AutomationId = "SurfaceShading";
         SemanticProperties.SetHint(_shadingButton, "Compare smooth vertex normals with flat triangle shading");
-        _lightButton = SceneButton("Light: left", () =>
+        _lightButton = SceneButton("Light: from right", () =>
         {
             if (_current?.SurfaceComparison is not { } comparison) return;
-            comparison.SetLightToRight(!comparison.IsLightToRight);
+            comparison.SetLightFromLeft(!comparison.IsLightFromLeft);
             UpdateAppearanceControls();
         });
         _lightButton.AutomationId = "SurfaceLight";
-        SemanticProperties.SetHint(_lightButton, "Switch the world-space light direction between left and right");
+        SemanticProperties.SetHint(_lightButton, "Shine the directional light from the left or right side of the wave");
         tools.Children.Insert(0, _shadingButton);
         tools.Children.Insert(1, _lightButton);
         _view.SelectionChanged += (_, shape) => _selection.Text = shape is null ? "Tap an object to inspect it" : $"Selected: {shape.Name ?? "unnamed shape"}";
@@ -125,7 +125,7 @@ public sealed class GalleryPage : ContentPage
         var comparison = _current?.SurfaceComparison;
         _shadingButton.IsVisible = _lightButton.IsVisible = comparison is not null;
         _shadingButton.Text = comparison?.IsSmooth == false ? "Shading: flat" : "Shading: smooth";
-        _lightButton.Text = comparison?.IsLightToRight == true ? "Light: right" : "Light: left";
+        _lightButton.Text = comparison?.IsLightFromLeft == true ? "Light: from left" : "Light: from right";
         SemanticProperties.SetDescription(_shadingButton, _shadingButton.Text);
         SemanticProperties.SetDescription(_lightButton, _lightButton.Text);
     }

@@ -50,7 +50,8 @@ public sealed class Texture2D
     {
         Validate(width, height, filter, addressMode);
         if (pixels.Length != width * height) throw new ArgumentException("Pixel count must match image dimensions.", nameof(pixels));
-        if (pixels.Any(p => p >> 24 != 255)) throw new ArgumentException("Texture pixels must be opaque.", nameof(pixels));
+        foreach (var pixel in pixels)
+            if (pixel >> 24 != 255) throw new ArgumentException("Texture pixels must be opaque.", nameof(pixels));
         _pixels = pixels;
         Width = width; Height = height; Filter = filter; AddressMode = addressMode;
         Pixels = Array.AsReadOnly(_pixels);
