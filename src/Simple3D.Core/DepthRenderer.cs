@@ -356,18 +356,18 @@ public sealed class DepthRenderer
                     var w2 = 1 - w0 - w1;
                     if (w0 < 0 || w1 < 0 || w2 < 0) continue;
                     // Perspective depth is reciprocal, unlike orthographic depth.
-                    var z = (float)(perspective ? 1 / (w0 / a.Z + w1 / b.Z + w2 / c.Z) : w0 * a.Z + w1 * b.Z + w2 * c.Z);
+                    var depth = perspective ? 1 / (w0 / a.Z + w1 / b.Z + w2 / c.Z) : w0 * a.Z + w1 * b.Z + w2 * c.Z;
+                    var z = (float)depth;
                     var index = y * width + x;
                     if (z >= camera.NearPlane && z < _depth[index])
                     {
                         _depth[index] = z;
-                        // Reuse the depth denominator; interpolate attributes in object space.
+                        // Reuse unrounded reciprocal depth for perspective-correct attributes.
                         if (perspective)
                         {
-                            var reciprocal = 1 / (w0 / a.Z + w1 / b.Z + w2 / c.Z);
-                            w0 = w0 / a.Z * reciprocal;
-                            w1 = w1 / b.Z * reciprocal;
-                            w2 = w2 / c.Z * reciprocal;
+                            w0 = w0 / a.Z * depth;
+                            w1 = w1 / b.Z * depth;
+                            w2 = w2 / c.Z * depth;
                         }
                         var interpolated = va.Color + (vb.Color - va.Color) * (float)w1 + (vc.Color - va.Color) * (float)w2;
                         if (texture is not null)

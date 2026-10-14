@@ -4,7 +4,11 @@ using Simple3D.Core;
 namespace Simple3D.Shared;
 
 /// <summary>A named teaching scene with its initial camera, explanation and time-based animation.</summary>
-public sealed record DemoScene(string Name, string Description, Scene Scene, Camera Camera, Action<float> Animate);
+public sealed record DemoScene(string Name, string Description, Scene Scene, Camera Camera, Action<float> Animate)
+{
+    /// <summary>Optional prepared surface comparison, controlled by the gallery.</summary>
+    public SurfaceComparison? SurfaceComparison { get; init; }
+}
 
 /// <summary>Shared scene factories for the app, examples and documentation images.</summary>
 public static partial class DemoScenes

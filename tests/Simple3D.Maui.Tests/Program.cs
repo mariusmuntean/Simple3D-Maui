@@ -8,6 +8,7 @@ using Simple3D.Demo;
 using SkiaSharp;
 
 if (args.Contains("--performance")) return PerformanceProbe.Run();
+if (args.Contains("--appearance-performance")) { AppearancePerformanceProbe.Run(); return 0; }
 
 var tests = new (string Name, Action Run)[]
 {
@@ -802,7 +803,7 @@ var tests = new (string Name, Action Run)[]
 };
 
 var failed = 0;
-tests = tests.Concat(TextureLoaderTests.Cases).ToArray();
+tests = tests.Concat(TextureLoaderTests.Cases).Concat(DemoAppearanceTests.Cases).ToArray();
 foreach (var (name, run) in tests)
 {
     try { run(); Console.WriteLine($"PASS {name}"); }

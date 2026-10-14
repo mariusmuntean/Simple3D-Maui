@@ -6,6 +6,34 @@ internal static class TextureLoaderTests
 {
     public static readonly (string Name, Action Run)[] Cases =
     [
+        ("image decoding allocates one pixel buffer and exposes no mutable alias", () =>
+        {
+            const int size = 256;
+            using var source = Png(size, size, Enumerable.Repeat(0xFF123456u, size * size).ToArray());
+            _ = TextureLoader.Load(source);
+            source.Position = 0;
+            var start = GC.GetAllocatedBytesForCurrentThread();
+            var texture = TextureLoader.Load(source);
+            var bytes = GC.GetAllocatedBytesForCurrentThread() - start;
+            Assert(bytes < size * size * 4 + 32_768, $"decode allocated {bytes} bytes");
+            source.Position = 0;
+            source.WriteByte(0);
+            var exposed = (IList<uint>)texture.Pixels;
+            Throws<NotSupportedException>(() => exposed[0] = 0xFFFFFFFF);
+            Assert(texture.Pixels.All(pixel => pixel == 0xFF123456), "decoded texture has a mutable alias");
+        }),
+        ("image decoding releases failed decode resources before retry", () =>
+        {
+            using var source = Png(16, 16, Enumerable.Repeat(0x80123456u, 256).ToArray());
+            for (var attempt = 0; attempt < 4; attempt++)
+            {
+                source.Position = 0;
+                Throws<InvalidDataException>(() => TextureLoader.Load(source));
+                Assert(source.CanRead, "failed decode closed its stream");
+            }
+            using var valid = Png(1, 1, [0xFF123456]);
+            Assert(TextureLoader.Load(valid).Pixels[0] == 0xFF123456, "failed decode affected later loading");
+        }),
         ("image textures preserve RGB channels and top-to-bottom rows", () =>
         {
             using var stream = Png(2, 2, [0xFF123456, 0xFFABCDEF, 0xFF987654, 0xFF2468AC]);

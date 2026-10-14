@@ -13,6 +13,8 @@ public sealed class GalleryPage : ContentPage
     private readonly Label _selection = new() { FontSize = 14, TextColor = Color.FromArgb("#8EE1CD") };
     private readonly IReadOnlyList<DemoScene> _scenes = DemoScenes.All;
     private readonly Button _animationButton;
+    private readonly Button _shadingButton;
+    private readonly Button _lightButton;
     private DemoScene? _current;
     private IDispatcherTimer? _animationTimer;
     private double _animationSeconds;
@@ -35,6 +37,24 @@ public sealed class GalleryPage : ContentPage
         tools.Add(SceneButton("+", () => _view.Zoom(1.25f)));
         _animationButton = SceneButton("Animate", ToggleAnimation);
         tools.Add(_animationButton);
+        _shadingButton = SceneButton("Shading: smooth", () =>
+        {
+            if (_current?.SurfaceComparison is not { } comparison) return;
+            comparison.SetSmoothShading(!comparison.IsSmooth);
+            UpdateAppearanceControls();
+        });
+        _shadingButton.AutomationId = "SurfaceShading";
+        SemanticProperties.SetHint(_shadingButton, "Compare smooth vertex normals with flat triangle shading");
+        _lightButton = SceneButton("Light: left", () =>
+        {
+            if (_current?.SurfaceComparison is not { } comparison) return;
+            comparison.SetLightToRight(!comparison.IsLightToRight);
+            UpdateAppearanceControls();
+        });
+        _lightButton.AutomationId = "SurfaceLight";
+        SemanticProperties.SetHint(_lightButton, "Switch the world-space light direction between left and right");
+        tools.Children.Insert(0, _shadingButton);
+        tools.Children.Insert(1, _lightButton);
         _view.SelectionChanged += (_, shape) => _selection.Text = shape is null ? "Tap an object to inspect it" : $"Selected: {shape.Name ?? "unnamed shape"}";
         var sceneScroller = new ScrollView { Orientation = ScrollOrientation.Horizontal,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Never, Content = scenes };
@@ -82,6 +102,8 @@ public sealed class GalleryPage : ContentPage
     {
         StopAnimation();
         _current = sample;
+        sample.SurfaceComparison?.Reset();
+        UpdateAppearanceControls();
         _animationSeconds = 0;
         sample.Animate(0);
         _view.Scene = sample.Scene;
@@ -96,6 +118,16 @@ public sealed class GalleryPage : ContentPage
         _view.ClearSelection();
         _caption.Text = $"{sample.Name} · {sample.Description}";
         _selection.Text = "Tap an object to inspect it";
+    }
+
+    private void UpdateAppearanceControls()
+    {
+        var comparison = _current?.SurfaceComparison;
+        _shadingButton.IsVisible = _lightButton.IsVisible = comparison is not null;
+        _shadingButton.Text = comparison?.IsSmooth == false ? "Shading: flat" : "Shading: smooth";
+        _lightButton.Text = comparison?.IsLightToRight == true ? "Light: right" : "Light: left";
+        SemanticProperties.SetDescription(_shadingButton, _shadingButton.Text);
+        SemanticProperties.SetDescription(_lightButton, _lightButton.Text);
     }
 
     private void ToggleAnimation()

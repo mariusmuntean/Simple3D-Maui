@@ -22,6 +22,8 @@ internal static class NativeRenderProbe
         if (!ReferenceEquals(target.Pick(256, 157), boxScene.Shapes[0]))
             throw new InvalidOperationException("Native box picking failed.");
         CheckAppearance(renderer);
+        if (Environment.GetEnvironmentVariable("SIMPLE3D_APPEARANCE_PERFORMANCE") == "1")
+            AppearancePerformanceProbe.Run();
 
         foreach (var sample in DemoScenes.All)
         {

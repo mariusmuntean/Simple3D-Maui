@@ -2,11 +2,11 @@
 
 ![Simple3D: 3D software renderer](images/brand-banner.svg)
 
-Simple3D draws opaque, depth-aware illustrations on iOS, Android, and Mac Catalyst. Build scenes from boxes, spheres, cylinders, pyramids, lines, arrows, or your own indexed mesh. Place a `SceneView` in a MAUI page, then drag to orbit, pinch to zoom, and tap to pick the visible shape.
+Simple3D draws opaque, depth-aware illustrations on iOS, Android, and Mac Catalyst. Build scenes from boxes, spheres, cylinders, pyramids, lines, arrows, or your own indexed mesh. The current source adds textures, OBJ geometry import, vertex colors and flat or smooth directional lighting. These additions are not in the published `0.1.0-preview.1` package. Place a `SceneView` in a MAUI page, then drag to orbit, pinch to zoom, and tap to pick the visible shape.
 
-![Equipment scene with a motor, base plate and arrow](images/Equipment.png)
+![Equipment scene with a motor, imported textured controller, base plate and arrow](images/Equipment.png)
 
-Start with [Getting started](getting-started.md), then learn [scenes and cameras](scenes-and-cameras.md), [meshes and groups](meshes-and-groups.md), and [interaction and picking](interaction-and-picking.md). The [five examples](examples.md) share their scene factories with the interactive app. The [API reference](xref:Simple3D.Core) covers both library projects.
+Start with [Getting started](getting-started.md), then learn [scenes and cameras](scenes-and-cameras.md), [meshes and groups](meshes-and-groups.md), [materials, lighting and OBJ import](materials-and-import.md), and [interaction and picking](interaction-and-picking.md). The [five examples](examples.md) share their scene factories with the interactive app: orbit Equipment's textured controller and use Surface's shading and light controls to compare the rendering options. The [API reference](xref:Simple3D.Core) covers both library projects.
 
 Read [Architecture and rendering pipeline](architecture.md) for package boundaries, depth rendering, picking and buffer ownership.
 

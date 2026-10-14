@@ -38,17 +38,46 @@ public sealed class Texture2D
     /// <summary>Copies exactly width * height opaque pixels. Sizes, pixels and sampler settings are validated.</summary>
     public Texture2D(int width, int height, IEnumerable<uint> pixels,
         TextureFilter filter = TextureFilter.Nearest, TextureAddressMode addressMode = TextureAddressMode.Clamp)
+        : this(width, height, CopyPixels(width, height, pixels, filter, addressMode), filter, addressMode)
     {
-        ArgumentNullException.ThrowIfNull(pixels);
+    }
+
+    // The decoder transfers exclusive ownership; neither it nor public callers retain this buffer.
+    internal static Texture2D FromOwnedPixels(int width, int height, uint[] pixels,
+        TextureFilter filter, TextureAddressMode addressMode) => new(width, height, pixels, filter, addressMode);
+
+    private Texture2D(int width, int height, uint[] pixels, TextureFilter filter, TextureAddressMode addressMode)
+    {
+        Validate(width, height, filter, addressMode);
+        if (pixels.Length != width * height) throw new ArgumentException("Pixel count must match image dimensions.", nameof(pixels));
+        if (pixels.Any(p => p >> 24 != 255)) throw new ArgumentException("Texture pixels must be opaque.", nameof(pixels));
+        _pixels = pixels;
+        Width = width; Height = height; Filter = filter; AddressMode = addressMode;
+        Pixels = Array.AsReadOnly(_pixels);
+    }
+
+    private static void Validate(int width, int height, TextureFilter filter, TextureAddressMode addressMode)
+    {
         if (width < 1 || width > MaximumDimension) throw new ArgumentOutOfRangeException(nameof(width));
         if (height < 1 || height > MaximumDimension) throw new ArgumentOutOfRangeException(nameof(height));
         if (!Enum.IsDefined(filter)) throw new ArgumentOutOfRangeException(nameof(filter));
         if (!Enum.IsDefined(addressMode)) throw new ArgumentOutOfRangeException(nameof(addressMode));
-        _pixels = pixels.Take(width * height + 1).ToArray();
-        if (_pixels.Length != width * height) throw new ArgumentException("Pixel count must match image dimensions.", nameof(pixels));
-        if (_pixels.Any(p => p >> 24 != 255)) throw new ArgumentException("Texture pixels must be opaque.", nameof(pixels));
-        Width = width; Height = height; Filter = filter; AddressMode = addressMode;
-        Pixels = Array.AsReadOnly(_pixels);
+    }
+
+    private static uint[] CopyPixels(int width, int height, IEnumerable<uint> pixels,
+        TextureFilter filter, TextureAddressMode addressMode)
+    {
+        ArgumentNullException.ThrowIfNull(pixels);
+        Validate(width, height, filter, addressMode);
+        var copy = new uint[width * height];
+        using var iterator = pixels.GetEnumerator();
+        for (var i = 0; i < copy.Length; i++)
+        {
+            if (!iterator.MoveNext()) throw new ArgumentException("Pixel count must match image dimensions.", nameof(pixels));
+            copy[i] = iterator.Current;
+        }
+        if (iterator.MoveNext()) throw new ArgumentException("Pixel count must match image dimensions.", nameof(pixels));
+        return copy;
     }
 
     /// <summary>Samples an opaque color at finite UV coordinates.</summary>

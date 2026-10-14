@@ -29,25 +29,28 @@ public static partial class DemoScenes
                 var a = z * (cells + 1) + x;
                 indices.AddRange([a, a + cells + 1, a + 1, a + 1, a + cells + 1, a + cells + 2]);
             }
-        var mesh = new Mesh(vertices, indices, colors: colors).WithCalculatedNormals();
+        var mesh = new Mesh(vertices, indices, colors: colors);
+        var material = new Material(0xFFFFFFFF);
+        var flat = Shape.FromMesh(mesh, material).Named("Wave surface");
+        var smooth = Shape.FromMesh(mesh.WithCalculatedNormals(), material).Named("Wave surface");
         var scene = new Scene
         {
-            AmbientLight = .3f,
-            Light = new DirectionalLight(new(-.5f, -1, -.7f), intensity: .7f)
-        }.Add(Shape.FromMesh(mesh, new Material(0xFFFFFFFF)).Named("Wave surface"));
+            AmbientLight = .3f
+        }.Add(smooth);
+        var comparison = new SurfaceComparison(scene, flat, smooth);
         var samplePoint = Shape.Sphere(0xFFFFBE79).Named("Sample point").Scaled(.13f).At(0, .13f, 0);
         scene.Add(samplePoint);
-        scene.AddLabel(new("SMOOTH MESH · VERTEX COLORS", new(0, .8f, 0), 0xFFE4ECFF));
+        scene.AddLabel(new("HEIGHT · VERTEX COLORS", new(0, .8f, 0), 0xFFE4ECFF));
         var camera = new Camera(5, .55f, .65f);
         camera.FitToScene(scene, 4f / 3);
-        return new("Surface", "Smooth normals, height-based vertex colors and a directional light.", scene, camera,
+        return new("Surface", "Compare flat and smooth shading, then move the light across a height-colored wave.", scene, camera,
             AnimateNode(scene, samplePoint, time =>
             {
                 var x = 1.15f * MathF.Sin(time * 1.25f);
                 var z = .7f * MathF.Sin(time * .73f);
                 var y = .38f * MathF.Sin(x * 2.5f) * MathF.Cos(z * 2.2f) + .13f;
                 return samplePoint.At(x, y, z);
-            }));
+            })) { SurfaceComparison = comparison };
     }
 
 }

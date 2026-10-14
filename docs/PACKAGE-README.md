@@ -42,6 +42,8 @@ view.Camera.FitToScene(scene, 4f / 3);
 Content = view;
 ```
 
-Drag to orbit, pinch to zoom and tap to select. Use `IsInteractive = false` for display-only content. Keep scene and camera mutations on the UI thread. Rendering supports opaque textures, directional and ambient lighting, smooth normals, vertex colors and OBJ geometry import. Transparency, PBR and shadows are unsupported. See the source documentation for material and import examples.
+Drag to orbit, pinch to zoom and tap to select. Use `IsInteractive = false` for display-only content. Keep scene and camera mutations on the UI thread.
+
+The current source adds opaque textures, configurable directional and ambient lighting, smooth normals, vertex colors and OBJ geometry import. These additions are not included in the published `0.1.0-preview.1` package; use a source or local-feed build to try them. See the [material and import examples](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/docs/site/materials-and-import.md). Transparency, PBR and shadows are unsupported.
 
 Read the [setup, examples, limits and API documentation](https://mariusmuntean.github.io/Simple3D-Maui/). Source and the interactive gallery are in the [repository](https://github.com/mariusmuntean/Simple3D-Maui). Licensed under MIT, copyright Marius Muntean.

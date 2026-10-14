@@ -44,7 +44,7 @@ Core colors use opaque `0xFFRRGGBB`; angles use radians. Shape transforms return
 
 Open [Simple3D.sln](Simple3D.sln) in Rider or another MAUI IDE with .NET 10 and the target's MAUI workload. Choose **Simple3D.Demo** and an Android device, iOS simulator or Mac Catalyst target. Apple targets require macOS and a workload-compatible Xcode.
 
-The five examples progress from [Equipment](samples/Simple3D.Shared/Equipment.cs) for primitives, labels and a textured OBJ panel, through [Telemetry](samples/Simple3D.Shared/Telemetry.cs) for data updates, [Surface](samples/Simple3D.Shared/Surface.cs) for smooth colored meshes and [Robot Arm](samples/Simple3D.Shared/RobotArm.cs) for hierarchy, to [Gantry Crane](samples/Simple3D.Shared/GantryCrane.cs) for coordinated motion. Each file contains one scene and its animation. The gallery pauses in the background; press Animate to resume.
+The five examples progress from [Equipment](samples/Simple3D.Shared/Equipment.cs) for primitives, labels and an imported controller with a mapped display, through [Telemetry](samples/Simple3D.Shared/Telemetry.cs) for data updates, [Surface](samples/Simple3D.Shared/Surface.cs) for height-based vertex colors and [Robot Arm](samples/Simple3D.Shared/RobotArm.cs) for hierarchy, to [Gantry Crane](samples/Simple3D.Shared/GantryCrane.cs) for coordinated motion. In Surface, use **Shading: smooth / flat** to compare normals and **Light: left / right** to move the directional light. Each file contains one scene and its animation. The gallery pauses in the background; press Animate to resume.
 
 ## Documentation
 

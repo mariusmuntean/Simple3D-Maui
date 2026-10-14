@@ -189,7 +189,7 @@ var tests = new (string Name, Action Run)[]
     })
 };
 var failed = 0;
-tests = tests.Concat(CoreRegressionTests.Cases).Concat(AppearanceTests.Cases).Concat(AppearanceRenderingTests.Cases).Concat(ObjReaderTests.Cases).ToArray();
+tests = tests.Concat(CoreRegressionTests.Cases).Concat(AppearanceTests.Cases).Concat(AppearanceRenderingTests.Cases).Concat(ObjReaderTests.Cases).Concat(TextureStorageTests.Cases).ToArray();
 foreach (var (name, run) in tests) {
     try { run(); Console.WriteLine($"PASS {name}"); }
     catch (Exception error) { failed++; Console.Error.WriteLine($"FAIL {name}: {error.Message}"); }

@@ -1,5 +1,6 @@
 using Simple3D.Core;
 using SkiaSharp;
+using System.Runtime.InteropServices;
 
 namespace Simple3D.Maui;
 
@@ -30,12 +31,17 @@ public static class TextureLoader
             throw new InvalidDataException($"Image dimensions must be between 1 and {Texture2D.MaximumDimension} pixels.");
 
         var info = new SKImageInfo(source.Width, source.Height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
-        using var bitmap = new SKBitmap(info);
-        if (codec.GetPixels(info, bitmap.GetPixels()) != SKCodecResult.Success)
-            throw new InvalidDataException("The image could not be completely decoded.");
-
-        var bytes = bitmap.GetPixelSpan();
         var pixels = new uint[source.Width * source.Height];
+        // Decode into the final buffer. Pin only during native decoding, including failure paths.
+        var pinned = GCHandle.Alloc(pixels, GCHandleType.Pinned);
+        try
+        {
+            if (codec.GetPixels(info, pinned.AddrOfPinnedObject()) != SKCodecResult.Success)
+                throw new InvalidDataException("The image could not be completely decoded.");
+        }
+        finally { pinned.Free(); }
+
+        var bytes = MemoryMarshal.AsBytes(pixels.AsSpan());
         for (var i = 0; i < pixels.Length; i++)
         {
             var offset = i * 4;
@@ -43,6 +49,6 @@ public static class TextureLoader
                 throw new InvalidDataException("Texture images must contain only opaque pixels.");
             pixels[i] = 0xFF000000u | (uint)bytes[offset] << 16 | (uint)bytes[offset + 1] << 8 | bytes[offset + 2];
         }
-        return new Texture2D(source.Width, source.Height, pixels, filter, addressMode);
+        return Texture2D.FromOwnedPixels(source.Width, source.Height, pixels, filter, addressMode);
     }
 }
