@@ -35,4 +35,5 @@
 - C# compilation against Android and iOS platform reference assemblies passes with warnings treated as errors, including native probe sources. This is not a native application build.
 - Native Android SDK dependency installation failed in this environment; no Apple runtime is available. Actual native builds, Metal shader execution, MAUI embedding and physical-device behavior remain PR merge gates.
 - Review fixes: near-only label clipping, guarded overlay/picking preparation failures, asynchronous Metal command errors, inclusive CPU preparation timing and aspect-preserving tall-view picking.
+- Review follow-up: scene budget/node errors and transform overflow no longer count as hardware failures; cofactor normals; failed surfaces released; lazy Metal init; EGL checks; init background; GLES VAO/UBO ranges; SceneView-level native probe; gallery renderer switching test.
 - Ruling: GLES3 retained for the initial Android backend after discussing Vulkan tradeoffs; document Vulkan as a future option, with no speedup claim without physical-device evidence.

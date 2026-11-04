@@ -6,6 +6,8 @@
 - Cache native geometry/textures, depth-test opaque surfaces, and composite visible selection masks.
 - Add gallery backend controls, portable GPU preparation tests, headless GLES comparisons/performance probes and opt-in native GPU probes.
 - Breaking preview API change: SceneView now derives from ContentView rather than SKCanvasView. CaptureFrame remains an owned software snapshot.
+- Scene budget errors are reported through `RenderingDiagnostic` without disabling hardware rendering; near-singular transforms render on the GPU; failed native surfaces release their resources.
+- Gallery renderer picker switches Auto/Software/Hardware at runtime; native GPU probes now include a SceneView-level stage.
 
 
 ## 0.2.0-preview.1 · 2026-10-14

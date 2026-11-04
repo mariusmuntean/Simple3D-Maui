@@ -26,7 +26,7 @@ view.RenderingFailed += (_, error) =>
 
 Change the property on the UI thread to switch modes without rebuilding the scene or losing the camera/selection. After a failed attempt, switch to Software and back to Auto/Hardware to retry. `ActiveRenderingBackend` is `None` while waiting for a native surface or after disconnect. Merely selecting Hardware does not establish that a GPU frame succeeded. Subscribe before attaching the view to observe initialization failures.
 
-Auto's fallback stays selected until a mode change or handler reconnection; it does not repeatedly retry a failing device every frame. Only device, driver, shader and allocation failures count: scene content that cannot be prepared (such as exceeding the triangle budget) skips GPU frames and is reported in `RenderingDiagnostic`, and hardware rendering resumes as soon as the scene is valid again. After a failure the native surface is disconnected and its GPU resources released. Old surfaces are likewise disconnected and released when modes change. Android surface destruction drops context-owned resources and reconstructs them on surface recreation. Metal command execution errors are reported asynchronously on the UI thread.
+Auto's fallback stays selected until a mode change or handler reconnection; it does not repeatedly retry a failing device every frame. Only device, driver, shader and allocation failures count: scene content that cannot be prepared (exceeding the triangle or node budget) skips GPU frames and is reported in `RenderingDiagnostic`, and hardware rendering resumes as soon as the scene is valid again. After a failure the native surface is disconnected and its GPU resources released. Old surfaces are likewise disconnected and released when modes change. Android surface destruction drops context-owned resources and reconstructs them on surface recreation. Metal command execution errors are reported asynchronously on the UI thread.
 
 ## What is shared and what differs
 
@@ -36,7 +36,7 @@ GPU geometry is expanded at upload time to preserve flat face normals, cached by
 
 `MaximumRenderDimension` limits the internal GPU render target; presentation scales to the native surface. GPU rendering does not use the CPU path's 512-pixel drag limit. `IsAntialiasEnabled` controls software presentation only; the initial GPU backend does not enable MSAA.
 
-Normals use the transform's cofactor matrix, so very small composed scales that become singular in floating-point arithmetic still render, lighting the surviving faces like the software renderer. Shapes whose transformed bounds overflow to non-finite values are skipped, as the software renderer skips non-finite triangles. Perspective GPU projection uses an infinite far plane. Orthographic geometry uses a far plane computed from scene bounds; overlay labels retain near-plane-only visibility.
+Normals use the transform's cofactor matrix, so very small composed scales that become singular in floating-point arithmetic still render, lighting the surviving faces like the software renderer. A shape whose transformed bounds overflow to non-finite values is skipped as a whole on the GPU, whereas the software renderer skips only its non-finite triangles. Perspective GPU projection uses an infinite far plane. Orthographic geometry uses a far plane computed from scene bounds; overlay labels retain near-plane-only visibility.
 
 ## Picking, labels and snapshots
 

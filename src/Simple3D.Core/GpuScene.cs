@@ -65,7 +65,7 @@ internal sealed class GpuScene
         _width = width; _height = height;
         var far = camera.NearPlane * 2;
         long triangles = 0;
-        foreach (var (shape, world) in scene.Flatten())
+        foreach (var (shape, world) in Nodes(scene))
         {
             triangles += shape.TriangleCount;
             if (triangles > DepthRenderer.MaximumTriangles) throw new GpuSceneException("Scene exceeds triangle budget.");
@@ -110,6 +110,21 @@ internal sealed class GpuScene
                 Labels.Add(new(label, p, Vector3.Dot(label.Position - Eye, _forward)));
         }
         _camera = camera;
+    }
+
+    // Scene.Flatten enforces the node visit budget with a plain ArgumentException. Surface it as
+    // a scene-content error like the triangle budget, so it never counts as a device failure.
+    private static IEnumerable<(Shape Shape, Matrix4x4 World)> Nodes(Scene scene)
+    {
+        using var nodes = scene.Flatten().GetEnumerator();
+        while (true)
+        {
+            bool next;
+            try { next = nodes.MoveNext(); }
+            catch (ArgumentException error) when (error is not GpuSceneException) { throw new GpuSceneException(error.Message); }
+            if (!next) yield break;
+            yield return nodes.Current;
+        }
     }
 
     // Cofactor matrix: equals det * transpose(inverse) for invertible transforms, scaled by

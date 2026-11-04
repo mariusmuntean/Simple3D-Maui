@@ -84,6 +84,12 @@ internal static class GpuSceneTests
         for (var i = 0; i <= DepthRenderer.MaximumTriangles / Shape.Box().TriangleCount; i++) scene.Add(Shape.Box());
         try { frame.Update(scene, camera, 100, 100); Check(false, "over-budget scene accepted"); }
         catch (GpuSceneException) { }
+        // The node visit budget (enforced by Scene.Flatten) is a scene error too.
+        var group = Shape.Group(); // No geometry, so only the node budget applies.
+        for (var depth = 0; depth < 4; depth++) group = Shape.Group(Enumerable.Repeat(group, 20).ToArray());
+        scene = new Scene().Add(group);
+        try { frame.Update(scene, camera, 100, 100); Check(false, "over-node-budget scene accepted"); }
+        catch (GpuSceneException error) { Check(error.Message.Contains("node"), "node budget message"); }
         Console.WriteLine("PASS GPU scene tolerates singular and overflowing transforms; budget is a scene error");
     }
     private static float R(Random random) => .2f + (float)random.NextDouble();
