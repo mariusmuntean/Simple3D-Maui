@@ -29,7 +29,7 @@ if name == "xcrun" and args == ["simctl", "list", "devices", "available", "-j"]:
 if name == "xcrun" and args[1:2] == [os.environ.get("SMOKE_FAIL")]:
     sys.exit(23)
 if name == "xcrun" and args[1:2] == ["launch"] and "--console" in args and not os.environ.get("SMOKE_NO_RENDER_MARKER"):
-    print("NATIVE_RENDER_PROBE_PASS")
+    print("NATIVE_GPU_PROBE_PASS" if os.environ.get("SIMCTL_CHILD_SIMPLE3D_GPU_PROBE") else "NATIVE_RENDER_PROBE_PASS")
 if name == "xcrun" and args[1:2] == ["bootstatus"] and os.environ.get("SMOKE_BLOCK"):
     pathlib.Path(os.environ["SMOKE_LOG"] + ".ready").touch()
     time.sleep(10)
@@ -37,7 +37,7 @@ if name == "xcrun" and args[1:2] == ["bootstatus"] and os.environ.get("SMOKE_BLO
 
 
 class IosSmokeCleanupTests(unittest.TestCase):
-    def run_smoke(self, terminate=False, render_probe=False, configuration="Debug", **settings):
+    def run_smoke(self, terminate=False, render_probe=False, gpu_probe=False, configuration="Debug", **settings):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             tools = root / "tools"
@@ -51,7 +51,7 @@ class IosSmokeCleanupTests(unittest.TestCase):
             log = root / "commands.jsonl"
             env = dict(os.environ, PATH=f"{tools}{os.pathsep}{os.environ['PATH']}",
                        SMOKE_LOG=str(log), BUILD_CONFIGURATION=configuration, **settings)
-            command = ["bash", str(SCRIPT), *(["--render-probe"] if render_probe else [])]
+            command = ["bash", str(SCRIPT), *(["--gpu-probe"] if gpu_probe else ["--render-probe"] if render_probe else [])]
             if terminate:
                 env["SMOKE_BLOCK"] = "1"
                 process = subprocess.Popen(command, cwd=root, env=env,
@@ -81,6 +81,14 @@ class IosSmokeCleanupTests(unittest.TestCase):
             ["xcrun", "simctl", "terminate", device, "dev.simple3d.gallery"],
             ["xcrun", "simctl", "shutdown", device],
         ])
+
+    def test_gpu_probe_requires_success_and_releases_device(self):
+        result, commands = self.run_smoke(gpu_probe=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assert_cleanup(commands)
+        result, commands = self.run_smoke(gpu_probe=True, SMOKE_NO_RENDER_MARKER="1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assert_cleanup(commands)
 
     def test_release_native_probe_releases_device(self):
         result, commands = self.run_smoke(render_probe=True, configuration="Release")

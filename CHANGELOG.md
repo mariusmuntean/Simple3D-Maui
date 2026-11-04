@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Add Auto/Software/Hardware rendering modes, native Metal and GLES3 backends, active-backend diagnostics and strict hardware failure reporting.
+- Cache native geometry/textures, depth-test opaque surfaces, and composite visible selection masks.
+- Add gallery backend controls, portable GPU preparation tests, headless GLES comparisons/performance probes and opt-in native GPU probes.
+- Breaking preview API change: SceneView now derives from ContentView rather than SKCanvasView. CaptureFrame remains an owned software snapshot.
+
+
 ## 0.2.0-preview.1 · 2026-10-14
 
 - `Texture2D` image textures with nearest/bilinear filtering and clamp/repeat addressing; `Material(Texture2D)` and texture-ready box, sphere, cylinder and pyramid UVs.

@@ -72,3 +72,35 @@ DocFX needs the workload-enabled `dotnet` first in `PATH`; set `DOTNET_ROOT` if 
 After reviewing `_site`, run `bash scripts/publish-docs.sh`. It publishes generated files to `gh-pages` through a temporary checkout and a normal push. It preserves the source checkout and cleans up its temporary directory. GitHub Pages serves the branch root; `.nojekyll` keeps DocFX assets intact. This triggers only the Pages deployment, not the manual MAUI validation workflow.
 
 To test a Release iOS simulator build, use `BUILD_CONFIGURATION=Release bash scripts/ios-simulator-smoke.sh --render-probe` after building with `-p:EnableNativeRenderProbe=true`. Remove that property and rebuild for distribution. If ordinary Clean leaves stale registrar or SDK compiler cache files, move only the affected generated `bin/Release` and `obj/Release` target directories aside and rebuild.
+
+## GPU validation
+
+The portable suites now include scene preparation/projection/picking and rendering-mode failure policy. Run the actual GLES shader pipeline on Linux with Mesa EGL/GLES installed:
+
+```bash
+sudo apt-get install libegl1 libgles2 libgl1-mesa-dri
+dotnet run --project tests/Simple3D.Gpu.Tests -c Release
+dotnet run --project tests/Simple3D.Gpu.Tests -c Release -- --performance
+```
+
+`GPU_TESTS_PASS` requires real shader compilation, framebuffer rendering/readback, depth, textures, filtering, culling, clipping, selection, image comparisons across the five gallery scenes, resize/empty-scene behavior, and warm-frame resource reuse. The test prints the renderer identity. `llvmpipe`/software Mesa validates the API path but does not measure hardware acceleration. Performance prints CPU submission and completed frame timings separately; it reports measurements rather than imposing a machine-dependent speed threshold. Resource-upload assertions are deterministic performance regression checks.
+
+The `Portable and GLES rendering tests` workflow runs on PRs and can be started manually. The existing **Build and test** manual workflow additionally runs native Metal and Android GLES probes, storing their logs with the screenshots. Native probes must finish with `NATIVE_GPU_PROBE_PASS`; unavailability is a failure, never a skipped success.
+
+On Apple, build the demo in Debug (or Release with `-p:EnableNativeRenderProbe=true`), then:
+
+```bash
+bash scripts/ios-simulator-smoke.sh --gpu-probe
+# Mac Catalyst: run the executable from the built .app bundle:
+SIMPLE3D_GPU_PROBE=1 path/to/Simple3D.Demo.app/Contents/MacOS/Simple3D.Demo
+```
+
+On a connected Android emulator/device after building a Debug APK:
+
+```bash
+bash scripts/android-emulator-smoke.sh --gpu-probe
+```
+
+Native probes render offscreen with the same backend/shaders, compare all gallery scenes to software with edge/rounding tolerance, test depth and selection, and print completed+readback timings. This measures actual API completion plus explicit readback, not display FPS. The ordinary screenshot smoke checks separately validate view embedding. Probe code is absent from ordinary Release demo builds. Never distribute a Release build with `EnableNativeRenderProbe` enabled.
+
+Before merging GPU changes, run native builds/probes on all three targets and manually exercise runtime switching, orbit/pinch/tap, selected animation, rotation/resizing and background/resume. For device performance, compare Software and Hardware on the same physical device in Release with matching scenes and render dimensions. The gallery shows the active backend so a fallback cannot masquerade as GPU performance.

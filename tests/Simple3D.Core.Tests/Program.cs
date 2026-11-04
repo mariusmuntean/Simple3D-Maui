@@ -5,6 +5,8 @@ using Simple3D.Shared;
 if (args.Length > 0 && args[0] == "--render-images")
     return RenderImages.Run(args[1..]);
 
+GpuSceneTests.Run();
+
 var tests = new (string Name, Action Run)[]
 {
     ("indexed meshes validate and defensively copy", () => {
@@ -190,7 +192,8 @@ var tests = new (string Name, Action Run)[]
 };
 var failed = 0;
 tests = tests.Concat(CoreRegressionTests.Cases).Concat(AppearanceTests.Cases).Concat(AppearanceRenderingTests.Cases).Concat(ObjReaderTests.Cases).Concat(TextureStorageTests.Cases).ToArray();
-foreach (var (name, run) in tests) {
+foreach (var (name, run) in tests)
+{
     try { run(); Console.WriteLine($"PASS {name}"); }
     catch (Exception error) { failed++; Console.Error.WriteLine($"FAIL {name}: {error.Message}"); }
 }
@@ -242,7 +245,8 @@ static bool Finite(DrawTriangle face) => float.IsFinite(face.A.X) && float.IsFin
 static void AssertOutOfRange(Action action, string parameter)
 {
     try { action(); }
-    catch (ArgumentOutOfRangeException error) {
+    catch (ArgumentOutOfRangeException error)
+    {
         Assert(error.ParamName == parameter, $"Expected {parameter}, got {error.ParamName}");
         return;
     }

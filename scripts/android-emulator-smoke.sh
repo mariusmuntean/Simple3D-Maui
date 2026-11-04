@@ -3,6 +3,8 @@ set -euo pipefail
 
 # The emulator runner owns the device lifecycle. This script owns only the
 # gallery launch, including a start command that fails after creating a process.
+mode="${1:-}"
+case "$mode" in ''|--gpu-probe) ;; *) echo 'Usage: android-emulator-smoke.sh [--gpu-probe]' >&2; exit 2 ;; esac
 gallery_started=false
 cleanup() {
     local status=$?
@@ -40,6 +42,21 @@ case "$activity" in
     *) echo "Gallery launcher activity not found: $activity" >&2; exit 1 ;;
 esac
 gallery_started=true
+if [ "$mode" = --gpu-probe ]; then
+    mkdir -p artifacts
+    adb shell am start -W -n "$activity" --es simple3d_gpu_probe 1
+    for attempt in $(seq 1 30); do
+        adb logcat -d -v brief > artifacts/android-gpu-probe.log
+        if grep -q NATIVE_GPU_PROBE_PASS artifacts/android-gpu-probe.log; then exit 0; fi
+        if grep -q 'FATAL EXCEPTION' artifacts/android-gpu-probe.log; then
+            cat artifacts/android-gpu-probe.log >&2; exit 1
+        fi
+        sleep 2
+    done
+    cat artifacts/android-gpu-probe.log >&2
+    echo 'Native GPU probe did not complete within 60 seconds' >&2
+    exit 1
+fi
 adb shell am start -W -n "$activity"
 mkdir -p artifacts
 for attempt in 1 2 3; do

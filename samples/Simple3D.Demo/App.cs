@@ -6,6 +6,9 @@ public sealed class App : Application
     {
 #if DEBUG || NATIVE_RENDER_PROBE
         NativeRenderProbe.RunIfRequested();
+#if IOS || MACCATALYST || ANDROID
+        NativeGpuProbe.RunIfRequested();
+#endif
 #endif
         var page = new GalleryPage();
         var window = new Window(page) { Title = "Simple3D Gallery" };

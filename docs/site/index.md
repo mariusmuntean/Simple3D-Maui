@@ -1,6 +1,6 @@
-# 3D software renderer for .NET MAUI
+# 3D scene renderer for .NET MAUI
 
-![Simple3D: 3D software renderer](images/brand-banner.svg)
+![Simple3D: 3D scene renderer](images/brand-banner.svg)
 
 Simple3D draws opaque, depth-aware illustrations on iOS, Android, and Mac Catalyst. Build scenes from boxes, spheres, cylinders, pyramids, lines, arrows, or your own indexed mesh. Add textures, OBJ geometry, vertex colors and flat or smooth directional lighting. Place a `SceneView` in a MAUI page, then drag to orbit, pinch to zoom, and tap to pick the visible shape.
 
@@ -11,3 +11,5 @@ Start with [Getting started](getting-started.md), then learn [scenes and cameras
 Read [Architecture and rendering pipeline](architecture.md) for package boundaries, depth rendering, picking and buffer ownership.
 
 Use the library under the [MIT license](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/LICENSE). Source and the gallery app are in the [repository](https://github.com/mariusmuntean/Simple3D-Maui).
+
+[Choose native GPU or software rendering](hardware-rendering.md).

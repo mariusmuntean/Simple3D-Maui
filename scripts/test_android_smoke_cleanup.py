@@ -25,6 +25,7 @@ elif args[:3] == ["shell", "am", "start"]:
 elif args[:3] == ["shell", "am", "force-stop"]:
     if scenario in ("cleanup-failure", "launch-and-cleanup-failure"): sys.exit(7)
     Path(os.environ["TEST_RUNNING"]).unlink(missing_ok=True)
+elif args[:2] == ["logcat", "-d"] and scenario == "gpu-success": print("NATIVE_GPU_PROBE_PASS")
 elif args[:2] == ["exec-out", "screencap"]: sys.stdout.buffer.write(b"capture")
 '''
 SLEEP = '''#!/usr/bin/env python3
@@ -38,7 +39,7 @@ sys.exit(1 if os.environ["TEST_SCENARIO"] == "screenshot-failure" else 0)
 
 
 class AndroidCleanupTests(unittest.TestCase):
-    def run_smoke(self, scenario, configuration="Debug"):
+    def run_smoke(self, scenario, configuration="Debug", gpu_probe=False):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             tools = root / "tools"
@@ -55,9 +56,19 @@ class AndroidCleanupTests(unittest.TestCase):
             log, running = root / "adb.log", root / "running"
             env = dict(os.environ, PATH=str(tools) + os.pathsep + os.environ["PATH"],
                        TEST_SCENARIO=scenario, TEST_ADB_LOG=str(log), TEST_RUNNING=str(running), BUILD_CONFIGURATION=configuration)
-            result = subprocess.run(["bash", str(SCRIPT)], cwd=root, env=env,
+            result = subprocess.run(["bash", str(SCRIPT), *(["--gpu-probe"] if gpu_probe else [])], cwd=root, env=env,
                                     capture_output=True, text=True, timeout=10)
             return result, log.read_text().splitlines(), running.exists()
+
+    def test_gpu_probe_requires_marker_and_stops_gallery(self):
+        result, commands, running = self.run_smoke("gpu-success", gpu_probe=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(running)
+        self.assertTrue(any("--es simple3d_gpu_probe 1" in command for command in commands))
+        result, commands, running = self.run_smoke("gpu-no-marker", gpu_probe=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(running)
+        self.assertIn("did not complete", result.stderr)
 
     def test_release_launch_stops_gallery(self):
         result, commands, running = self.run_smoke("success", configuration="Release")

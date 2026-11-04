@@ -47,3 +47,7 @@ Drag to orbit, pinch to zoom and tap to select. Use `IsInteractive = false` for 
 Rendering supports opaque textures, configurable directional and ambient lighting, smooth normals, vertex colors and OBJ geometry import. See the [material and import examples](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/docs/site/materials-and-import.md). Transparency, PBR and shadows are unsupported.
 
 Read the [setup, examples, limits and API documentation](https://mariusmuntean.github.io/Simple3D-Maui/). Source and the interactive gallery are in the [repository](https://github.com/mariusmuntean/Simple3D-Maui). Licensed under MIT, copyright Marius Muntean.
+
+## Rendering mode
+
+`SceneView.RenderingMode` selects `Auto` (default), `Software`, or `Hardware`. Native rendering uses Metal on Apple platforms and OpenGL ES 3 on Android. Auto reports a software fallback through `RenderingDiagnostic`; Hardware reports failure without silently falling back. `CaptureFrame` remains a software snapshot. See [hardware rendering](https://mariusmuntean.github.io/Simple3D-Maui/hardware-rendering.html) for compatibility and validation.
