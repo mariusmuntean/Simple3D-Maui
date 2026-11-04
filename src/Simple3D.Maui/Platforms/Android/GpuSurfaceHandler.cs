@@ -40,9 +40,14 @@ internal sealed class AndroidGpuView : TextureView, TextureView.ISurfaceTextureL
             if(!EGL14.EglChooseConfig(_display,new[]{ EGL14.EglRenderableType,0x0040,EGL14.EglSurfaceType,EGL14.EglWindowBit,
                 EGL14.EglRedSize,8,EGL14.EglGreenSize,8,EGL14.EglBlueSize,8,EGL14.EglAlphaSize,8,EGL14.EglNone },0,configs,0,1,count,0)||count[0]==0)
                 throw new InvalidOperationException("No OpenGL ES 3 EGL configuration.");
+            // Failed EGL calls return EGL_NO_* sentinels rather than null; report the real error.
             _context=EGL14.EglCreateContext(_display,configs[0],EGL14.EglNoContext,new[]{EGL14.EglContextClientVersion,3,EGL14.EglNone},0);
+            if(_context is null || _context.Equals(EGL14.EglNoContext))
+            { _context=null; throw new InvalidOperationException($"OpenGL ES 3 context creation failed: 0x{EGL14.EglGetError():X}."); }
             _window=new Surface(surface);
             _surface=EGL14.EglCreateWindowSurface(_display,configs[0],_window,new[]{EGL14.EglNone},0);
+            if(_surface is null || _surface.Equals(EGL14.EglNoSurface))
+            { _surface=null; throw new InvalidOperationException($"EGL window surface creation failed: 0x{EGL14.EglGetError():X}."); }
             MakeCurrent(); _renderer=new GlesRenderer(); RequestRender();
         }
         catch(Exception ex) { _owner.ReportHardwareFailure(ex); ReleaseContext(); }
@@ -65,6 +70,7 @@ internal sealed class AndroidGpuView : TextureView, TextureView.ISurfaceTextureL
             var size=SceneView.RenderSize(Width,Height,_owner.MaximumRenderDimension);
             var started=System.Diagnostics.Stopwatch.GetTimestamp();
             var frame=_owner.PrepareHardwareFrame(size.Width,size.Height);
+            if(frame is null)return; // Scene content skipped; the owner reported why.
             _renderer.Render(frame,size.Width,size.Height,Width,Height);
             if(!EGL14.EglSwapBuffers(_display,_surface))throw new InvalidOperationException($"EGL presentation failed: 0x{EGL14.EglGetError():X}.");
             _owner.HardwareFramePresented(_renderer.Name,System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds);
@@ -87,7 +93,8 @@ internal sealed class AndroidGpuView : TextureView, TextureView.ISurfaceTextureL
             if(_context is not null)EGL14.EglDestroyContext(_display,_context);
             // EGLDisplay is shared with other views. Do not eglTerminate it here.
         }
-        _window?.Dispose();_window=null;_surface=null;_context=null;_display=null;
+        // Dispose only drops the managed peer; Release frees the native window now.
+        _window?.Release();_window?.Dispose();_window=null;_surface=null;_context=null;_display=null;
     }
 }
 #endif

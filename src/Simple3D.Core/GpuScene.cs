@@ -41,6 +41,9 @@ internal sealed class GpuGeometry
 
 internal readonly record struct GpuItem(Shape Shape, GpuGeometry Geometry, Matrix4x4 World, Matrix4x4 Normal);
 
+/// <summary>The scene content cannot be prepared (for example it exceeds the triangle budget). Not a device failure.</summary>
+internal sealed class GpuSceneException(string message) : ArgumentException(message);
+
 internal sealed class GpuScene
 {
     private readonly ConditionalWeakTable<object, GpuGeometry> _geometry = new();
@@ -65,18 +68,22 @@ internal sealed class GpuScene
         foreach (var (shape, world) in scene.Flatten())
         {
             triangles += shape.TriangleCount;
-            if (triangles > DepthRenderer.MaximumTriangles) throw new ArgumentException("Scene exceeds triangle budget.");
-            if (!Matrix4x4.Invert(world, out var inverse))
-                throw new ArgumentException("Hardware rendering requires invertible world transforms.");
+            if (triangles > DepthRenderer.MaximumTriangles) throw new GpuSceneException("Scene exceeds triangle budget.");
             var geometry = _geometry.GetValue(shape.Geometry is { } mesh ? mesh : shape.Mesh, _ => new GpuGeometry(shape));
-            for (var i = 0; i < 8; i++)
+            // Like the software renderer, skip geometry whose transform overflows instead of
+            // failing the whole frame. Bounds corners enclose every transformed vertex.
+            var itemFar = far;
+            var finite = true;
+            for (var i = 0; i < 8 && finite; i++)
             {
                 var p = Vector3.Transform(new Vector3((i & 1) == 0 ? geometry.Min.X : geometry.Max.X,
                     (i & 2) == 0 ? geometry.Min.Y : geometry.Max.Y, (i & 4) == 0 ? geometry.Min.Z : geometry.Max.Z), world);
-                Validation.Vector(p, "transformedVertex");
-                far = Math.Max(far, Vector3.Dot(p - Eye, _forward) + camera.NearPlane);
+                finite = float.IsFinite(p.X) && float.IsFinite(p.Y) && float.IsFinite(p.Z);
+                if (finite) itemFar = Math.Max(itemFar, Vector3.Dot(p - Eye, _forward) + camera.NearPlane);
             }
-            Items.Add(new(shape, geometry, world, Matrix4x4.Transpose(inverse)));
+            if (!finite || !float.IsFinite(itemFar)) continue;
+            far = itemFar;
+            Items.Add(new(shape, geometry, world, NormalMatrix(world)));
         }
         var view = new Matrix4x4(_right.X, _up.X, _forward.X, 0,
             _right.Y, _up.Y, _forward.Y, 0, _right.Z, _up.Z, _forward.Z, 0,
@@ -103,6 +110,33 @@ internal sealed class GpuScene
                 Labels.Add(new(label, p, Vector3.Dot(label.Position - Eye, _forward)));
         }
         _camera = camera;
+    }
+
+    // Cofactor matrix: equals det * transpose(inverse) for invertible transforms, scaled by
+    // sign(det) so mirrored transforms keep outward normals. Unlike the inverse it stays defined
+    // when an axis collapses, where the surviving face normal is still correct (the software
+    // renderer likewise lights such faces from their world-space normal).
+    internal static Matrix4x4 NormalMatrix(Matrix4x4 world)
+    {
+        var r0 = new Vector3(world.M11, world.M12, world.M13);
+        var r1 = new Vector3(world.M21, world.M22, world.M23);
+        var r2 = new Vector3(world.M31, world.M32, world.M33);
+        // Uniform rescaling only changes the cofactor's magnitude (the shader normalizes), and
+        // keeps the cross products of large scales from overflowing.
+        var m = Vector3.Max(Vector3.Abs(r0), Vector3.Max(Vector3.Abs(r1), Vector3.Abs(r2)));
+        var scale = MathF.Max(m.X, MathF.Max(m.Y, m.Z));
+        if (scale > 0 && float.IsFinite(scale)) { r0 /= scale; r1 /= scale; r2 /= scale; }
+        var b0 = Vector3.Cross(r1, r2);
+        var b1 = Vector3.Cross(r2, r0);
+        var b2 = Vector3.Cross(r0, r1);
+        var sign = Vector3.Dot(r0, b0) < 0 ? -1f : 1f;
+        // Normalize magnitude so a collapsed axis leaves the surviving normal near unit length
+        // rather than subnormal (which GPU normalize() may flush to zero).
+        var bm = Vector3.Max(Vector3.Abs(b0), Vector3.Max(Vector3.Abs(b1), Vector3.Abs(b2)));
+        var bScale = MathF.Max(bm.X, MathF.Max(bm.Y, bm.Z));
+        if (bScale > 0 && float.IsFinite(bScale)) sign /= bScale;
+        b0 *= sign; b1 *= sign; b2 *= sign;
+        return new(b0.X, b0.Y, b0.Z, 0, b1.X, b1.Y, b1.Z, 0, b2.X, b2.Y, b2.Z, 0, 0, 0, 0, 1);
     }
 
     // On-demand geometric picking avoids a full-frame CPU render or synchronous GPU readback.

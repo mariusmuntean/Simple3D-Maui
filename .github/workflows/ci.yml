@@ -98,7 +98,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ios-gpu-probe
-          path: artifacts/ios-gpu-probe.log
+          path: |
+            artifacts/ios-gpu-probe.log
+            artifacts/ios-gpu-view-probe.log
           if-no-files-found: warn
       - name: Save iOS screenshot
         if: always() && matrix.tfm == 'net10.0-ios'
@@ -155,4 +157,5 @@ jobs:
           path: |
             artifacts/android-gallery.png
             artifacts/android-gpu-probe.log
+            artifacts/android-gpu-view-probe.log
           if-no-files-found: warn

@@ -247,19 +247,9 @@ public sealed partial class SceneView : ContentView
             !double.IsFinite(viewWidth) || !double.IsFinite(viewHeight) || viewWidth <= 0 || viewHeight <= 0 || x < 0 || y < 0 || x >= viewWidth || y >= viewHeight) return null;
         if (ActiveRenderingBackend == RenderingBackend.Hardware)
         {
-            try
-            {
-                var size = PickSize(viewWidth, viewHeight);
-                _gpuScene.Update(Scene, Camera, size.Width, size.Height);
-                return _gpuScene.Pick(x / viewWidth * size.Width, y / viewHeight * size.Height);
-            }
-            catch (Exception error)
-            {
-                ReportHardwareFailure(error);
-                if (RenderingMode == RenderingMode.Hardware) return null;
-                var size = PickSize(viewWidth, viewHeight);
-                return CaptureFrame(size.Width, size.Height).Pick((int)(x / viewWidth * size.Width), (int)(y / viewHeight * size.Height));
-            }
+            // Geometric picking is CPU-only: a failure here is a scene problem, not a device failure.
+            var size = PickSize(viewWidth, viewHeight);
+            return TryUpdateGpuScene(size.Width, size.Height) ? _gpuScene.Pick(x / viewWidth * size.Width, y / viewHeight * size.Height) : null;
         }
         if (RenderingMode == RenderingMode.Hardware && Handler is not null) return null;
         if (_paintTarget is not null)
@@ -737,20 +727,14 @@ public sealed partial class SceneView : ContentView
         if (ActiveRenderingBackend == RenderingBackend.Hardware)
         {
             canvas.Clear(SKColors.Transparent);
-            try
-            {
-                _gpuScene.Update(Scene, Camera, args.Info.Width, args.Info.Height);
-                labels = _gpuScene.Labels; labelWidth = args.Info.Width; labelHeight = args.Info.Height;
-            }
-            catch (Exception error)
-            {
-                ReportHardwareFailure(error);
-                return;
-            }
+            if (!TryUpdateGpuScene(args.Info.Width, args.Info.Height)) return;
+            labels = _gpuScene.Labels; labelWidth = args.Info.Width; labelHeight = args.Info.Height;
         }
         else if (RenderingMode == RenderingMode.Hardware || (RenderingMode == RenderingMode.Auto && !_hardwareFailed && Handler is not null))
         {
-            canvas.Clear(ActiveRenderingBackend == RenderingBackend.None && !_hardwareFailed ? SKColors.Transparent : new SKColor(BackgroundPixel()));
+            // Opaque until the first hardware frame: the native view below has no content yet
+            // and would otherwise show through as black.
+            canvas.Clear(new SKColor(BackgroundPixel()));
             return;
         }
         else

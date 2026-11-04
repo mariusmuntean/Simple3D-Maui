@@ -44,6 +44,8 @@ internal static unsafe class Gles
     internal const int GL_FRAGMENT_SHADER = 0x8B30;
     internal const int GL_LINK_STATUS = 0x8B82;
     internal const int GL_COMPILE_STATUS = 0x8B81;
+    internal const int GL_MAX_TEXTURE_SIZE = 0x0D33;
+    internal const int GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT = 0x8A34;
 
 #if ANDROID
     private const string Library = "libGLESv2.so";
@@ -72,6 +74,8 @@ internal static unsafe class Gles
     [DllImport(Library)] internal static extern void glDeleteBuffers(int count, ref uint buffer);
     [DllImport(Library)] internal static extern void glBindBuffer(uint target, uint buffer);
     [DllImport(Library)] internal static extern void glBindBufferBase(uint target, uint index, uint buffer);
+    [DllImport(Library)] internal static extern void glBindBufferRange(uint target, uint index, uint buffer, nint offset, nint size);
+    [DllImport(Library)] internal static extern void glGetIntegerv(uint name, out int value);
     [DllImport(Library)] internal static extern void glBufferData(uint target, nint size, void* data, uint usage);
     [DllImport(Library)] internal static extern void glGenVertexArrays(int count, out uint array);
     [DllImport(Library)] internal static extern void glDeleteVertexArrays(int count, ref uint array);

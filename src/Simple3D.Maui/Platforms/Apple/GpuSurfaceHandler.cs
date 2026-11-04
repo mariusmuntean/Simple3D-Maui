@@ -27,20 +27,22 @@ internal sealed class AppleGpuView : MTKView
         Paused=true;EnableSetNeedsDisplay=true;ColorPixelFormat=MTLPixelFormat.BGRA8Unorm;
         FramebufferOnly=true;UserInteractionEnabled=false;Opaque=true;
         _drawDelegate=new DrawDelegate(this);Delegate=_drawDelegate;
-        try { _renderer=new MetalRenderer(Device??throw new PlatformNotSupportedException("Metal is unavailable.")); }
-        catch(Exception ex) { owner.ReportHardwareFailure(ex); }
+        // The renderer is created on the first draw, not here: this constructor runs inside
+        // handler creation, where reporting a failure would re-enter the owner mid-connect.
     }
     internal void RequestRender() { if(!_released&&_owner.CanRenderHardware)SetNeedsDisplay(); }
     private void Render()
     {
-        if(_released||_renderer is null||!_owner.CanRenderHardware||DrawableSize.Width<1||DrawableSize.Height<1)return;
+        if(_released||!_owner.CanRenderHardware||DrawableSize.Width<1||DrawableSize.Height<1)return;
         try
         {
-            using var drawable=CurrentDrawable;
-            if(drawable is null)return; // Window may be hidden/backgrounded. Retry on next invalidation.
+            _renderer??=new MetalRenderer(Device??throw new PlatformNotSupportedException("Metal is unavailable."));
             var size=SceneView.RenderSize((int)DrawableSize.Width,(int)DrawableSize.Height,_owner.MaximumRenderDimension);
             var started=System.Diagnostics.Stopwatch.GetTimestamp();
             var frame=_owner.PrepareHardwareFrame(size.Width,size.Height);
+            if(frame is null)return; // Scene content skipped; the owner reported why.
+            using var drawable=CurrentDrawable;
+            if(drawable is null)return; // Window may be hidden/backgrounded. Retry on next invalidation.
             _renderer.Render(frame,size.Width,size.Height,drawable.Texture,drawable,onError: error =>
                 _owner.Dispatcher.Dispatch(() => { if(!_released)_owner.ReportHardwareFailure(error); }));
             _owner.HardwareFramePresented("Metal / "+Device!.Name,System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds);

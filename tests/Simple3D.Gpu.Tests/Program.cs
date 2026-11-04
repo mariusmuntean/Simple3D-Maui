@@ -50,6 +50,15 @@ Check(ordinary[0] == highlighted[0], "selection changed unrelated background");
 Console.WriteLine("PASS texture orientation/filtering, culling, projections, clipping and selection");
 
 foreach (var sample in DemoScenes.All) Compare(sample.Scene, sample.Camera, sample.Name);
+// Non-invertible transform (collapsed axis): must render and light like software instead of failing.
+var panel = Shape.Box(0xFFE0A030).Scaled(1e-24f, 1.5f, 1.5f).Rotated(0, .6f, 0);
+Compare(new Scene().Add(panel), new Camera(5, .3f, .2f), "collapsed-axis lit panel");
+Check(Render(new Scene().Add(panel), new Camera(5, .3f, .2f)).Count(p => p != background) > 2000, "collapsed-axis panel must be visible");
+// Many items with distinct per-item uniforms share one per-frame uniform upload.
+var grid = new Scene();
+for (var i = 0; i < 64; i++)
+    grid.Add(Shape.Box((uint)(0xFF000000 | (i * 0x030507 & 0xFFFFFF) | 0x404040)).WithMaterial(new Material((uint)(0xFF000000 | (i * 0x030507 & 0xFFFFFF) | 0x404040), lit: false)).At(i % 8 - 3.5f, i / 8 - 3.5f, 0).Scaled(.4f));
+Compare(grid, new Camera(12, 0, 0), "64 items, per-item uniform ranges");
 // Resizing must recreate attachments without leaking stale content.
 prepared.Update(scene, camera, 64, 64); renderer.Render(new(prepared, scene, camera, null, background), 64, 64);
 Check(renderer.ReadPixels().Length == 64 * 64, "resized readback");

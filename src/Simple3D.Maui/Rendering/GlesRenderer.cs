@@ -10,11 +10,14 @@ internal sealed unsafe class GlesRenderer : IDisposable
 {
     private uint _program, _screenProgram, _uniform, _vao, _fbo, _color, _mask, _depth;
     private int _width, _height;
-    private readonly int _selectedLocation;
-    private readonly Dictionary<GpuGeometry, uint> _meshes = new();
+    private readonly int _selectedLocation, _maxTextureSize, _uniformStride;
+    private readonly string _name = "";
+    private byte[] _uniformData = [];
+    // One VAO per resident mesh: attribute layout is specified once at upload, not per draw.
+    private readonly Dictionary<GpuGeometry, (uint Buffer, uint Vao)> _meshes = new();
     private readonly Dictionary<Texture2D, uint> _textures = new();
     private static readonly Texture2D White = new(1, 1, new[] { 0xFFFFFFFFu });
-    internal string Name => "OpenGL ES 3 / " + Marshal.PtrToStringAnsi(glGetString(GL_RENDERER));
+    internal string Name => _name;
     internal int GeometryUploads { get; private set; }
     internal int TextureUploads { get; private set; }
     internal GlesRenderer()
@@ -31,6 +34,11 @@ internal sealed unsafe class GlesRenderer : IDisposable
             glUseProgram(_screenProgram);
             glUniform1i(glGetUniformLocation(_screenProgram, "sceneColor"), 0);
             glUniform1i(glGetUniformLocation(_screenProgram, "sceneMask"), 1);
+            _name = "OpenGL ES 3 / " + Marshal.PtrToStringAnsi(glGetString(GL_RENDERER));
+            glGetIntegerv(GL_MAX_TEXTURE_SIZE, out _maxTextureSize);
+            glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, out var alignment);
+            alignment = Math.Max(1, alignment);
+            _uniformStride = (sizeof(GpuUniforms) + alignment - 1) / alignment * alignment;
             Check();
         }
         catch { Dispose(); throw; }
@@ -45,7 +53,8 @@ internal sealed unsafe class GlesRenderer : IDisposable
         var usedTextures = frame.Geometry.Items.Select(i => i.Shape.Material.Texture ?? White).ToHashSet();
         long bytes = usedMeshes.Sum(m => (long)m.Vertices.Length * 4) + usedTextures.Sum(t => (long)t.Width * t.Height * 4);
         if (bytes > 256L * 1024 * 1024) throw new InvalidOperationException("GPU scene resources exceed 256 MiB.");
-        Prune(_meshes, usedMeshes, true); Prune(_textures, usedTextures, false);
+        PruneMeshes(usedMeshes); Prune(_textures, usedTextures);
+        UploadUniforms(frame);
         glBindFramebuffer(GL_FRAMEBUFFER, _fbo); glViewport(0, 0, width, height);
         glDrawBuffers(2, [GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1]);
         var bg = GpuGeometry.Rgba(frame.Background);
@@ -53,26 +62,20 @@ internal sealed unsafe class GlesRenderer : IDisposable
         glDepthMask(1); glClearBufferfv(GL_DEPTH, 0, [1]);
         glEnable(GL_DEPTH_TEST); glDepthFunc(GL_LESS); glDisable(GL_BLEND);
         glFrontFace(GL_CCW); glCullFace(GL_BACK);
-        glUseProgram(_program); glBindVertexArray(_vao);
-        foreach (var item in frame.Geometry.Items)
+        glUseProgram(_program);
+        var items = frame.Geometry.Items;
+        for (var index = 0; index < items.Count; index++)
         {
-            if (!_meshes.TryGetValue(item.Geometry, out var buffer))
-            {
-                glGenBuffers(1, out buffer); _meshes.Add(item.Geometry, buffer); glBindBuffer(GL_ARRAY_BUFFER, buffer);
-                fixed (float* p = item.Geometry.Vertices) glBufferData(GL_ARRAY_BUFFER, item.Geometry.Vertices.Length * 4, p, GL_STATIC_DRAW);
-                GeometryUploads++;
-            }
-            glBindBuffer(GL_ARRAY_BUFFER, buffer);
-            for (uint a = 0; a < 4; a++) { glEnableVertexAttribArray(a); glVertexAttribPointer(a, 4, GL_FLOAT, 0, GpuGeometry.FloatsPerVertex * sizeof(float), (nint)(a * 16)); }
-            var u = GpuUniforms.Create(frame, item);
-            glBindBuffer(GL_UNIFORM_BUFFER, _uniform); glBufferData(GL_UNIFORM_BUFFER, sizeof(GpuUniforms), &u, GL_STREAM_DRAW); glBindBufferBase(GL_UNIFORM_BUFFER, 0, _uniform);
+            var item = items[index];
+            glBindVertexArray(Mesh(item.Geometry));
+            glBindBufferRange(GL_UNIFORM_BUFFER, 0, _uniform, (nint)index * _uniformStride, sizeof(GpuUniforms));
             glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, Texture(item.Shape.Material.Texture ?? White));
-            glUniform1f(_selectedLocation, u.Selection.X);
+            glUniform1f(_selectedLocation, ReferenceEquals(item.Shape, frame.Selected) ? 1 : 0);
             if (item.Shape.Material.DoubleSided) glDisable(GL_CULL_FACE); else glEnable(GL_CULL_FACE);
             glDrawArrays(GL_TRIANGLES, 0, item.Geometry.Vertices.Length / GpuGeometry.FloatsPerVertex);
         }
         glBindFramebuffer(GL_FRAMEBUFFER, 0); glViewport(0, 0, outputWidth > 0 ? outputWidth : width, outputHeight > 0 ? outputHeight : height); glDisable(GL_DEPTH_TEST); glDisable(GL_CULL_FACE);
-        glUseProgram(_screenProgram);
+        glUseProgram(_screenProgram); glBindVertexArray(_vao);
         glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, _color);
         glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, _mask);
         glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -89,9 +92,35 @@ internal sealed unsafe class GlesRenderer : IDisposable
             { var i = ((_height - 1 - y) * _width + x) * 4; result[y * _width + x] = 0xFF000000u | ((uint)rgba[i] << 16) | ((uint)rgba[i + 1] << 8) | rgba[i + 2]; }
         return result;
     }
+    // Every item's uniforms in one upload per frame, each at an aligned offset bound per draw.
+    private void UploadUniforms(GpuFrame frame)
+    {
+        var items = frame.Geometry.Items;
+        if (items.Count == 0) return;
+        var size = items.Count * _uniformStride;
+        if (_uniformData.Length < size) _uniformData = new byte[Math.Max(size, _uniformData.Length * 2)];
+        fixed (byte* data = _uniformData)
+        {
+            for (var i = 0; i < items.Count; i++) *(GpuUniforms*)(data + i * _uniformStride) = GpuUniforms.Create(frame, items[i]);
+            glBindBuffer(GL_UNIFORM_BUFFER, _uniform);
+            glBufferData(GL_UNIFORM_BUFFER, size, data, GL_STREAM_DRAW);
+        }
+    }
+    private uint Mesh(GpuGeometry geometry)
+    {
+        if (_meshes.TryGetValue(geometry, out var mesh)) return mesh.Vao;
+        glGenVertexArrays(1, out var vao); glGenBuffers(1, out var buffer); _meshes.Add(geometry, (buffer, vao));
+        glBindVertexArray(vao); glBindBuffer(GL_ARRAY_BUFFER, buffer);
+        fixed (float* p = geometry.Vertices) glBufferData(GL_ARRAY_BUFFER, geometry.Vertices.Length * 4, p, GL_STATIC_DRAW);
+        for (uint a = 0; a < 4; a++) { glEnableVertexAttribArray(a); glVertexAttribPointer(a, 4, GL_FLOAT, 0, GpuGeometry.FloatsPerVertex * sizeof(float), (nint)(a * 16)); }
+        GeometryUploads++;
+        return vao;
+    }
     private uint Texture(Texture2D texture)
     {
         if (_textures.TryGetValue(texture, out var id)) return id;
+        if (texture.Width > _maxTextureSize || texture.Height > _maxTextureSize)
+            throw new InvalidOperationException($"Texture {texture.Width}x{texture.Height} exceeds this device's OpenGL ES limit of {_maxTextureSize}x{_maxTextureSize}.");
         glGenTextures(1, out id); _textures.Add(texture, id); glBindTexture(GL_TEXTURE_2D, id);
         Parameters(texture.Filter == TextureFilter.Nearest ? GL_NEAREST : GL_LINEAR, texture.AddressMode == TextureAddressMode.Repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE);
         var bytes = new byte[texture.Width * texture.Height * 4];
@@ -118,8 +147,13 @@ internal sealed unsafe class GlesRenderer : IDisposable
     }
     private static void Parameters(int filter, int wrap)
     { glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap); }
-    private static void Prune<T>(Dictionary<T, uint> cache, HashSet<T> used, bool buffer) where T : notnull
-    { foreach (var key in cache.Keys.Where(k => !used.Contains(k)).ToArray()) { var id = cache[key]; if (buffer) glDeleteBuffers(1, ref id); else glDeleteTextures(1, ref id); cache.Remove(key); } }
+    private static void Prune(Dictionary<Texture2D, uint> cache, HashSet<Texture2D> used)
+    { foreach (var key in cache.Keys.Where(k => !used.Contains(k)).ToArray()) { var id = cache[key]; glDeleteTextures(1, ref id); cache.Remove(key); } }
+    private void PruneMeshes(HashSet<GpuGeometry> used)
+    {
+        foreach (var key in _meshes.Keys.Where(k => !used.Contains(k)).ToArray())
+        { var (buffer, vao) = _meshes[key]; glDeleteVertexArrays(1, ref vao); glDeleteBuffers(1, ref buffer); _meshes.Remove(key); }
+    }
     private static uint Program(string vertex, string fragment)
     {
         var v = Shader(GL_VERTEX_SHADER, vertex); uint f = 0, p = 0;
@@ -142,5 +176,5 @@ internal sealed unsafe class GlesRenderer : IDisposable
     private void ReleaseTargets()
     { glDeleteTextures(1, ref _color); glDeleteTextures(1, ref _mask); glDeleteTextures(1, ref _depth); glDeleteFramebuffers(1, ref _fbo); _color = _mask = _depth = _fbo = 0; _width = _height = 0; }
     public void Dispose()
-    { Prune(_meshes, [], true); Prune(_textures, [], false); ReleaseTargets(); glDeleteBuffers(1, ref _uniform); glDeleteVertexArrays(1, ref _vao); glDeleteProgram(_program); glDeleteProgram(_screenProgram); _uniform = _vao = _program = _screenProgram = 0; }
+    { PruneMeshes([]); Prune(_textures, []); ReleaseTargets(); glDeleteBuffers(1, ref _uniform); glDeleteVertexArrays(1, ref _vao); glDeleteProgram(_program); glDeleteProgram(_screenProgram); _uniform = _vao = _program = _screenProgram = 0; }
 }

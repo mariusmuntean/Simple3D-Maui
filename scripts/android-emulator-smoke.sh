@@ -42,20 +42,31 @@ case "$activity" in
     *) echo "Gallery launcher activity not found: $activity" >&2; exit 1 ;;
 esac
 gallery_started=true
-if [ "$mode" = --gpu-probe ]; then
-    mkdir -p artifacts
-    adb shell am start -W -n "$activity" --es simple3d_gpu_probe 1
+# Launches one opt-in probe and waits for its marker. The log is cleared first so a crash
+# from an earlier launch on the same emulator cannot be attributed to this probe.
+run_probe() {
+    local extra=$1 pass=$2 fail=$3 log=$4
+    adb shell am force-stop dev.simple3d.gallery
+    adb logcat -c
+    adb shell am start -W -n "$activity" --es "$extra" 1
     for attempt in $(seq 1 30); do
-        adb logcat -d -v brief > artifacts/android-gpu-probe.log
-        if grep -q NATIVE_GPU_PROBE_PASS artifacts/android-gpu-probe.log; then exit 0; fi
-        if grep -q 'FATAL EXCEPTION' artifacts/android-gpu-probe.log; then
-            cat artifacts/android-gpu-probe.log >&2; exit 1
+        adb logcat -d -v brief > "$log"
+        if grep -q "$pass" "$log"; then return 0; fi
+        if grep -q -e 'FATAL EXCEPTION' -e "$fail" "$log"; then
+            cat "$log" >&2; return 1
         fi
         sleep 2
     done
-    cat artifacts/android-gpu-probe.log >&2
-    echo 'Native GPU probe did not complete within 60 seconds' >&2
-    exit 1
+    cat "$log" >&2
+    echo "$extra probe did not complete within 60 seconds" >&2
+    return 1
+}
+if [ "$mode" = --gpu-probe ]; then
+    mkdir -p artifacts
+    # Renderer correctness offscreen, then a real SceneView: composition, mode switching, reattachment.
+    run_probe simple3d_gpu_probe NATIVE_GPU_PROBE_PASS NATIVE_GPU_PROBE_FAIL artifacts/android-gpu-probe.log
+    run_probe simple3d_gpu_view_probe NATIVE_GPU_VIEW_PROBE_PASS NATIVE_GPU_VIEW_PROBE_FAIL artifacts/android-gpu-view-probe.log
+    exit 0
 fi
 adb shell am start -W -n "$activity"
 mkdir -p artifacts

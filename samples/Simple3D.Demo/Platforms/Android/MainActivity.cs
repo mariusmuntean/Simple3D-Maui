@@ -13,6 +13,8 @@ public class MainActivity : MauiAppCompatActivity
     {
         if (Intent?.GetStringExtra("simple3d_gpu_probe") == "1")
             Environment.SetEnvironmentVariable("SIMPLE3D_GPU_PROBE", "1");
+        if (Intent?.GetStringExtra("simple3d_gpu_view_probe") == "1")
+            Environment.SetEnvironmentVariable("SIMPLE3D_GPU_VIEW_PROBE", "1");
         base.OnCreate(savedInstanceState);
     }
 #endif

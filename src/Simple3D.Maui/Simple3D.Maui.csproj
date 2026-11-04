@@ -12,7 +12,8 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <InternalsVisibleTo Include="Simple3D.Demo" />
+    <!-- Only diagnostic builds of the gallery (native GPU probes) may use internals; packed Release builds keep the sample on the public API. -->
+    <InternalsVisibleTo Include="Simple3D.Demo" Condition="'$(Configuration)' == 'Debug' or '$(EnableNativeRenderProbe)' == 'true'" />
     <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
     <PackageReference Include="SkiaSharp.Views.Maui.Controls" Version="3.119.2" />
     <ProjectReference Include="../Simple3D.Core/Simple3D.Core.csproj" />

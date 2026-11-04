@@ -12,7 +12,7 @@ public sealed partial class SceneView
     public RenderingMode RenderingMode { get => (RenderingMode)GetValue(RenderingModeProperty); set { if (!Enum.IsDefined(value)) throw new ArgumentOutOfRangeException(nameof(value)); SetValue(RenderingModeProperty, value); } }
     /// <summary>Backend actually presenting frames. None means initializing, disconnected or failed required hardware.</summary>
     public RenderingBackend ActiveRenderingBackend { get; private set; }
-    /// <summary>Native backend description, fallback reason or initialization status.</summary>
+    /// <summary>Native backend description, fallback reason, initialization status, or why the current scene content was skipped (for example exceeding the triangle budget).</summary>
     public string? RenderingDiagnostic { get; private set; }
     /// <summary>CPU elapsed time preparing and submitting the last GPU frame, including driver blocking. Not GPU execution time or displayed FPS.</summary>
     public double LastHardwareSubmissionMilliseconds { get; private set; }
@@ -63,26 +63,47 @@ public sealed partial class SceneView
         OnPropertyChanged(nameof(ActiveRenderingBackend)); OnPropertyChanged(nameof(RenderingDiagnostic));
         RenderingBackendChanged?.Invoke(this, EventArgs.Empty);
     }
+    // Device, driver, shader or allocation failures only. Scene content problems go through
+    // TryUpdateGpuScene and never disable hardware rendering.
     internal void ReportHardwareFailure(Exception error)
     {
         if (_hardwareFailed) return;
         _hardwareFailed = true;
         var fallback = RenderingMode == RenderingMode.Auto;
         SetBackend(fallback ? RenderingBackend.Software : RenderingBackend.None, error.Message);
-        if (_gpuSurface is not null) _gpuSurface.IsVisible = false;
+        if (_gpuSurface is { } failed)
+        {
+            failed.IsVisible = false;
+            // Free the native view and its GPU resources. Deferred because failures can be
+            // reported from inside native callbacks that still use them.
+            void Release() { if (_hardwareFailed && ReferenceEquals(_gpuSurface, failed)) ReleaseHardware(); }
+            if (Dispatcher is { } dispatcher) dispatcher.Dispatch(Release); else Release();
+        }
         _canvas.InvalidateSurface();
         RenderingFailed?.Invoke(this, new(error.Message, fallback));
     }
-    internal GpuFrame PrepareHardwareFrame(int width, int height)
+    /// <summary>Prepares the hardware scene, or returns null and reports a diagnostic when the scene content cannot be prepared.</summary>
+    internal GpuFrame? PrepareHardwareFrame(int width, int height) =>
+        TryUpdateGpuScene(width, height) ? new(_gpuScene, Scene, Camera, SelectedShape, BackgroundPixel()) : null;
+    private bool TryUpdateGpuScene(int width, int height)
     {
-        _gpuScene.Update(Scene, Camera, width, height);
-        return new(_gpuScene, Scene, Camera, SelectedShape, BackgroundPixel());
+        try
+        {
+            _gpuScene.Update(Scene, Camera, width, height);
+            return true;
+        }
+        catch (GpuSceneException error)
+        {
+            // Skip the frame but keep the backend: the next valid scene renders normally.
+            if (RenderingDiagnostic != error.Message) SetBackend(ActiveRenderingBackend, error.Message);
+            return false;
+        }
     }
     internal bool CanRenderHardware => !_hardwareFailed && RenderingMode != RenderingMode.Software;
     internal void HardwareFramePresented(string name, double submissionMilliseconds)
     {
         LastHardwareSubmissionMilliseconds = submissionMilliseconds;
-        if (ActiveRenderingBackend != RenderingBackend.Hardware) SetBackend(RenderingBackend.Hardware, name);
+        if (ActiveRenderingBackend != RenderingBackend.Hardware || RenderingDiagnostic != name) SetBackend(RenderingBackend.Hardware, name);
         _canvas.InvalidateSurface();
     }
     private void ReleaseHardware()
