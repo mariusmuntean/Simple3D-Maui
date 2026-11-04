@@ -9,6 +9,8 @@
     <Compile Include="../../src/Simple3D.Maui/Rendering/GpuFrame.cs" Link="GpuFrame.cs" />
     <Compile Include="../../src/Simple3D.Maui/Rendering/Gles.cs" Link="Gles.cs" />
     <Compile Include="../../src/Simple3D.Maui/Rendering/GlesRenderer.cs" Link="GlesRenderer.cs" />
+    <Compile Include="../../src/Simple3D.Maui/Rendering/GpuResources.cs" Link="GpuResources.cs" />
+    <Compile Include="../Shared/NativeGpuValidation.cs" Link="NativeGpuValidation.cs" />
     <Compile Include="../../samples/Simple3D.Shared/*.cs" Link="Samples/%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

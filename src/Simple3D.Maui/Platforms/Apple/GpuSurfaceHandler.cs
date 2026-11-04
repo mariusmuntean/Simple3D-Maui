@@ -1,60 +1,78 @@
 #if IOS || MACCATALYST
 using CoreGraphics;
+using Foundation;
 using Metal;
 using MetalKit;
-using Microsoft.Maui.Handlers;
+using UIKit;
 namespace Simple3D.Maui;
-
-internal sealed class GpuSurfaceHandler : ViewHandler<GpuSurface, AppleGpuView>
-{
-    private static readonly CommandMapper<GpuSurface, GpuSurfaceHandler> Commands = new(ViewCommandMapper)
-    { ["Render"] = (handler, _, _) => handler.PlatformView?.RequestRender() };
-    internal GpuSurfaceHandler() : base(ViewMapper, Commands) { }
-    protected override AppleGpuView CreatePlatformView() => new(VirtualView.Owner);
-    protected override void DisconnectHandler(AppleGpuView platformView)
-    { platformView.Release();base.DisconnectHandler(platformView); }
-}
 
 internal sealed class AppleGpuView : MTKView
 {
     private readonly SceneView _owner;
     private readonly DrawDelegate _drawDelegate;
-    private MetalRenderer? _renderer;
+    private readonly NSObject _activeObserver;
     private bool _released;
     internal AppleGpuView(SceneView owner) : base(CGRect.Empty, MTLDevice.SystemDefault)
     {
-        _owner=owner;
-        Paused=true;EnableSetNeedsDisplay=true;ColorPixelFormat=MTLPixelFormat.BGRA8Unorm;
-        FramebufferOnly=true;UserInteractionEnabled=false;Opaque=true;
-        _drawDelegate=new DrawDelegate(this);Delegate=_drawDelegate;
+        _owner = owner;
+        Paused = true; EnableSetNeedsDisplay = true; ColorPixelFormat = MTLPixelFormat.BGRA8Unorm;
+        DepthStencilPixelFormat = MTLPixelFormat.Invalid;
+        FramebufferOnly = true; UserInteractionEnabled = false; Opaque = true;
+        _drawDelegate = new DrawDelegate(this); Delegate = _drawDelegate;
+        // Frames requested while backgrounded are skipped; draw the current state on return.
+        _activeObserver = NSNotificationCenter.DefaultCenter.AddObserver(UIApplication.DidBecomeActiveNotification, _ => RequestRender());
         // The renderer is created on the first draw, not here: this constructor runs inside
         // handler creation, where reporting a failure would re-enter the owner mid-connect.
     }
-    internal void RequestRender() { if(!_released&&_owner.CanRenderHardware)SetNeedsDisplay(); }
+    internal MetalRenderer? Renderer { get; private set; }
+    internal void RequestRender() { if (!_released && _owner.CanRenderHardware) SetNeedsDisplay(); }
     private void Render()
     {
-        if(_released||!_owner.CanRenderHardware||DrawableSize.Width<1||DrawableSize.Height<1)return;
+        if (_released || !_owner.CanRenderHardware || DrawableSize.Width < 1 || DrawableSize.Height < 1) return;
+        // iOS rejects GPU work from background apps (MTLCommandBufferError.NotPermitted).
+        if (UIApplication.SharedApplication.ApplicationState == UIApplicationState.Background) return;
         try
         {
-            _renderer??=new MetalRenderer(Device??throw new PlatformNotSupportedException("Metal is unavailable."));
-            var size=SceneView.RenderSize((int)DrawableSize.Width,(int)DrawableSize.Height,_owner.MaximumRenderDimension);
-            var started=System.Diagnostics.Stopwatch.GetTimestamp();
-            var frame=_owner.PrepareHardwareFrame(size.Width,size.Height);
-            if(frame is null)return; // Scene content skipped; the owner reported why.
-            using var drawable=CurrentDrawable;
-            if(drawable is null)return; // Window may be hidden/backgrounded. Retry on next invalidation.
-            _renderer.Render(frame,size.Width,size.Height,drawable.Texture,drawable,onError: error =>
-                _owner.Dispatcher.Dispatch(() => { if(!_released)_owner.ReportHardwareFailure(error); }));
-            _owner.HardwareFramePresented("Metal / "+Device!.Name,System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+            var renderer = Renderer ??= new MetalRenderer(Device ?? throw new PlatformNotSupportedException("Metal is unavailable."), OnCommandFailed);
+            var size = SceneView.RenderSize((int)DrawableSize.Width, (int)DrawableSize.Height, _owner.MaximumRenderDimension);
+            var started = System.Diagnostics.Stopwatch.GetTimestamp();
+            var frame = _owner.PrepareHardwareFrame(size.Width, size.Height, Bounds.Width > 0 ? size.Width / Bounds.Width : 1);
+            if (frame is null) return; // Scene content skipped; the owner reported why.
+            // Keep the Metal frame and the UIKit overlay (labels, first-frame placeholder) in one transaction.
+            var withTransaction = _owner.PresentWithOverlay;
+            if (PresentsWithTransaction != withTransaction) PresentsWithTransaction = withTransaction;
+            using var drawable = CurrentDrawable;
+            if (drawable is null) return; // Window may be hidden/backgrounded. Retry on next invalidation.
+            renderer.Render(frame, size.Width, size.Height, drawable.Texture, drawable, presentWithTransaction: withTransaction);
+            _owner.HardwareFramePresented(renderer.Name, System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds, size.Width, size.Height);
         }
-        catch(Exception ex) { _owner.ReportHardwareFailure(ex); }
+        catch (Exception ex) { _owner.ReportHardwareFailure(ex); }
     }
+    // Completion handlers run on a Metal thread.
+    private void OnCommandFailed(nint code, string message) =>
+        _owner.Dispatcher.Dispatch(() =>
+        {
+            if (_released) return;
+            // A submit that raced the app moving to the background is not a device failure:
+            // keep hardware rendering and redraw once active again.
+            if (IsTransientCommandFailure(code)) RequestRender();
+            else _owner.ReportHardwareFailure(new InvalidOperationException(message));
+        });
+    internal static bool IsTransientCommandFailure(nint code) => code == (nint)(long)MTLCommandBufferError.NotPermitted;
+#if DEBUG || NATIVE_RENDER_PROBE
+    internal void DebugSimulateCommandFailure(MTLCommandBufferError code) => OnCommandFailed((nint)(long)code, "Simulated Metal command failure " + code + ".");
+#endif
     internal void Release()
-    { if(_released)return;_released=true;Delegate=null;_drawDelegate.Dispose();_renderer?.Dispose();_renderer=null;ReleaseDrawables(); }
+    {
+        if (_released) return;
+        _released = true;
+        NSNotificationCenter.DefaultCenter.RemoveObserver(_activeObserver);
+        Delegate = null; _drawDelegate.Dispose(); Renderer?.Dispose(); Renderer = null; ReleaseDrawables();
+    }
     private sealed class DrawDelegate(AppleGpuView owner) : MTKViewDelegate
     {
-        public override void Draw(MTKView view)=>owner.Render();
-        public override void DrawableSizeWillChange(MTKView view,CGSize size)=>owner.RequestRender();
+        public override void Draw(MTKView view) => owner.Render();
+        public override void DrawableSizeWillChange(MTKView view, CGSize size) => owner.RequestRender();
     }
 }
 #endif

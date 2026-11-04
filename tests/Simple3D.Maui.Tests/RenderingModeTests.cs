@@ -18,7 +18,7 @@ internal static class RenderingModeTests
         try { view.RenderingMode = (RenderingMode)42; throw new Exception("invalid mode accepted"); }
         catch (ArgumentException) { }
         var tall = new SceneView { Scene = new Scene().Add(Shape.Box().At(.5f, 0, 0)), Camera = new Camera(5, 0, 0) };
-        tall.HardwareFramePresented("test", 0);
+        tall.HardwareFramePresented("test", 0, 200, 500);
         var reference = tall.CaptureFrame(200, 500);
         for (var y = 101; y < 400; y += 17)
             for (var x = 11; x < 190; x += 11)
@@ -37,14 +37,32 @@ internal static class RenderingModeTests
             tall.RenderingDiagnostic?.Contains("budget") != true)
             throw new Exception("scene error must be reported without disabling hardware");
         tall.Scene = valid;
-        tall.HardwareFramePresented("test", 0);
+        tall.HardwareFramePresented("test", 0, 200, 500);
         var hits = 0;
         for (var y = 101; y < 400; y += 17)
             for (var x = 11; x < 190; x += 11)
                 if (reference.Pick(x, y) is { } expected && ReferenceEquals(tall.PickAt((x + .5) * 2, (y + .5) * 2, 400, 1000), expected)) hits++;
         if (tall.RenderingDiagnostic != "test" || hits == 0) throw new Exception("hardware must recover after scene error");
         Console.WriteLine("PASS rendering mode fallback, strict hardware policy and tall-view picking");
+        RunOverlayVisibility();
         RunGallery();
+    }
+
+    // The Skia overlay is a full-surface CPU raster layer: in hardware mode it is composited only
+    // while the scene has labels; before the first hardware frame it stays as the opaque placeholder.
+    private static void RunOverlayVisibility()
+    {
+        var view = new SceneView { Scene = new Scene().Add(Shape.Box()) };
+        if (!view.PresentWithOverlay) throw new Exception("overlay must cover the native view before the first hardware frame");
+        view.HardwareFramePresented("test", 0, 100, 100);
+        if (view.PresentWithOverlay) throw new Exception("overlay must be hidden in hardware mode without labels");
+        view.Scene.AddLabel(new WorldLabel("label", System.Numerics.Vector3.Zero));
+        if (!view.PresentWithOverlay) throw new Exception("adding a label must show the overlay");
+        view.Scene = new Scene().Add(Shape.Box());
+        if (view.PresentWithOverlay) throw new Exception("removing labels must hide the overlay");
+        view.RenderingMode = RenderingMode.Software;
+        if (!view.PresentWithOverlay) throw new Exception("software mode paints through the overlay");
+        Console.WriteLine("PASS overlay composited only for labels in hardware mode");
     }
 
     // The gallery must keep working with every renderer: its picker drives the view's mode,

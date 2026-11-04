@@ -46,7 +46,12 @@ internal static unsafe class Gles
     internal const int GL_COMPILE_STATUS = 0x8B81;
     internal const int GL_MAX_TEXTURE_SIZE = 0x0D33;
     internal const int GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT = 0x8A34;
+    internal const int GL_R8 = 0x8229;
+    internal const int GL_RED = 0x1903;
+    internal const int GL_DEPTH_BITS = 0x0D56;
 
+    // Android's library. Elsewhere a name the Apple linker does not map to a framework (the
+    // desktop GLES tests resolve it at runtime); GLES is never called on Apple platforms.
 #if ANDROID
     private const string Library = "libGLESv2.so";
 #else
@@ -69,11 +74,9 @@ internal static unsafe class Gles
     [DllImport(Library)] internal static extern uint glGetUniformBlockIndex(uint program, string name);
     [DllImport(Library)] internal static extern void glUniformBlockBinding(uint program, uint index, uint binding);
     [DllImport(Library)] internal static extern void glUniform1i(int location, int value);
-    [DllImport(Library)] internal static extern void glUniform1f(int location, float value);
     [DllImport(Library)] internal static extern void glGenBuffers(int count, out uint buffer);
     [DllImport(Library)] internal static extern void glDeleteBuffers(int count, ref uint buffer);
     [DllImport(Library)] internal static extern void glBindBuffer(uint target, uint buffer);
-    [DllImport(Library)] internal static extern void glBindBufferBase(uint target, uint index, uint buffer);
     [DllImport(Library)] internal static extern void glBindBufferRange(uint target, uint index, uint buffer, nint offset, nint size);
     [DllImport(Library)] internal static extern void glGetIntegerv(uint name, out int value);
     [DllImport(Library)] internal static extern void glBufferData(uint target, nint size, void* data, uint usage);
@@ -93,9 +96,10 @@ internal static unsafe class Gles
     [DllImport(Library)] internal static extern void glBindFramebuffer(uint target, uint framebuffer);
     [DllImport(Library)] internal static extern void glFramebufferTexture2D(uint target, uint attachment, uint textureTarget, uint texture, int level);
     [DllImport(Library)] internal static extern uint glCheckFramebufferStatus(uint target);
-    [DllImport(Library)] internal static extern void glDrawBuffers(int count, uint[] buffers);
+    [DllImport(Library)] internal static extern void glDrawBuffers(int count, uint* buffers);
     [DllImport(Library)] internal static extern void glViewport(int x, int y, int width, int height);
-    [DllImport(Library)] internal static extern void glClearBufferfv(uint buffer, int drawBuffer, float[] values);
+    [DllImport(Library)] internal static extern void glClearBufferfv(uint buffer, int drawBuffer, float* values);
+    [DllImport(Library)] internal static extern void glInvalidateFramebuffer(uint target, int count, uint* attachments);
     [DllImport(Library)] internal static extern void glEnable(uint cap);
     [DllImport(Library)] internal static extern void glDisable(uint cap);
     [DllImport(Library)] internal static extern void glDepthFunc(uint function);

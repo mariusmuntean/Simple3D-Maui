@@ -14,7 +14,7 @@ internal static class GpuSceneTests
         scene.Replace(box, box.Rotated(0, .2f, 0));
         frame.Update(scene, camera, 100, 100);
         Check(ReferenceEquals(geometry, frame.Items[0].Geometry), "animation must reuse geometry");
-        Check(geometry.Vertices.Length == box.TriangleCount * 3 * GpuGeometry.FloatsPerVertex, "vertex layout");
+        Check(geometry.Expand().Length == box.TriangleCount * 3 * GpuGeometry.FloatsPerVertex && geometry.VertexCount == box.TriangleCount * 3, "vertex layout");
         var near = box.At(0, 0, 1);
         scene.Clear(); scene.Add(box).Add(near);
         frame.Update(scene, camera, 100, 100);
@@ -34,12 +34,45 @@ internal static class GpuSceneTests
         Check(Vector2.Distance(frame.Labels[0].Position, new(50, 50)) < .001f, "center label");
         var p = Vector4.Transform(new Vector4(0, 0, 0, 1), frame.ViewProjection);
         Check(Math.Abs(p.X / p.W) < .001f && p.Z / p.W >= 0, "clip projection");
+        RunReversedDepth();
         Console.WriteLine("PASS GPU geometry reuse, visibility picking, clipping, labels and projection");
         RunSceneContentTolerance();
     }
 
     // Scene content the software renderer accepts must not fail GPU preparation; only real
     // scene errors use GpuSceneException, which SceneView reports without disabling hardware.
+    // Reversed depth must keep x, y and w identical to the standard projection and map the near
+    // plane to 1 and increasing distance toward 0 (perspective: near/z; orthographic: linear to far).
+    private static void RunReversedDepth()
+    {
+        var frame = new GpuScene();
+        var scene = new Scene().Add(Shape.Box().Scaled(4));
+        var camera = new Camera(5, .3f, .2f);
+        foreach (var projection in new[] { CameraProjection.Perspective, CameraProjection.Orthographic })
+        {
+            camera.Projection = projection;
+            frame.Update(scene, camera, 120, 80);
+            var previous = float.PositiveInfinity;
+            foreach (var distance in new[] { camera.NearPlane, 1f, 3f, 5f, 7f })
+            {
+                var basis = camera.Basis();
+                var world = basis.Eye + basis.Forward * distance + basis.Right * .1f + basis.Up * .2f;
+                var standard = Vector4.Transform(new Vector4(world, 1), frame.ViewProjection);
+                var reversed = Vector4.Transform(new Vector4(world, 1), frame.ReversedViewProjection);
+                Check(Math.Abs(standard.X - reversed.X) < 1e-4f && Math.Abs(standard.Y - reversed.Y) < 1e-4f && Math.Abs(standard.W - reversed.W) < 1e-4f,
+                    $"{projection} reversed depth changed x/y/w");
+                var depth = reversed.Z / reversed.W;
+                Check(depth <= 1.0001f && depth > 0 && depth < previous, $"{projection} reversed depth must decrease from 1 at the near plane ({depth} at {distance})");
+                previous = depth;
+            }
+        }
+        camera.Projection = CameraProjection.Perspective;
+        frame.Update(scene, camera, 120, 80);
+        var b = camera.Basis();
+        var near = Vector4.Transform(new Vector4(b.Eye + b.Forward * camera.NearPlane, 1), frame.ReversedViewProjection);
+        Check(Math.Abs(near.Z / near.W - 1) < 1e-4f, "perspective near plane must map to reversed depth 1");
+    }
+
     private static void RunSceneContentTolerance()
     {
         var camera = new Camera(5, 0, 0);

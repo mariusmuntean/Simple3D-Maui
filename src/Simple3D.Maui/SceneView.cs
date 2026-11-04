@@ -727,8 +727,11 @@ public sealed partial class SceneView : ContentView
         if (ActiveRenderingBackend == RenderingBackend.Hardware)
         {
             canvas.Clear(SKColors.Transparent);
-            if (!TryUpdateGpuScene(args.Info.Width, args.Info.Height)) return;
-            labels = _gpuScene.Labels; labelWidth = args.Info.Width; labelHeight = args.Info.Height;
+#if DEBUG || NATIVE_RENDER_PROBE
+            DebugCountOverlayPaint();
+#endif
+            if (HardwareOverlayLabels(args.Info.Width, args.Info.Height) is not { } overlay) return;
+            (labels, labelWidth, labelHeight) = overlay;
         }
         else if (RenderingMode == RenderingMode.Hardware || (RenderingMode == RenderingMode.Auto && !_hardwareFailed && Handler is not null))
         {

@@ -17,6 +17,10 @@
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">17.0</SupportedOSPlatformVersion>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
   </PropertyGroup>
+  <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
+    <!-- The Mac Catalyst workload (27.0.x) rejects Xcode 27.1; remove once a 27.1 workload ships. -->
+    <ValidateXcodeVersion>false</ValidateXcodeVersion>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(EnableNativeRenderProbe)' == 'true'">
     <DefineConstants>$(DefineConstants);NATIVE_RENDER_PROBE</DefineConstants>
   </PropertyGroup>

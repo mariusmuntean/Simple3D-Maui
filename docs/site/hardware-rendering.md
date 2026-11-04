@@ -1,6 +1,6 @@
 # Software and hardware rendering
 
-`SceneView` supports native Metal on iOS and Mac Catalyst and OpenGL ES 3 on Android. The hardware path uploads immutable geometry and textures once, updates transforms and lighting per draw, depth-tests triangles, and composites a visible-selection mask. It presents native textures directly; it does not render a CPU bitmap and merely upload that bitmap to a GPU.
+`SceneView` supports native Metal on iOS and Mac Catalyst and OpenGL ES 3 on Android. The hardware path uploads immutable geometry and textures once, updates transforms and lighting per draw, depth-tests triangles, and composites a selection mask only while a selected shape is visible. Other frames render in a single pass straight into the drawable or window surface. It presents native textures directly; it does not render a CPU bitmap and merely upload that bitmap to a GPU.
 
 ## Choose a mode
 
@@ -30,19 +30,23 @@ Auto's fallback stays selected until a mode change or handler reconnection; it d
 
 ## What is shared and what differs
 
-Scenes, hierarchy, materials, textures, lighting, cameras and gesture APIs are shared. Both backends support opaque geometry, Gouraud smooth lighting, vertex colors, texture addressing/filtering and selected-part highlighting. GPU selection uses a depth-tested mask and a one-render-pixel contour. Native graphics edge rules and rounding can differ from the software rasterizer; bitwise image equivalence is not promised.
+Scenes, hierarchy, materials, textures, lighting, cameras and gesture APIs are shared. Both backends support opaque geometry, Gouraud smooth lighting, vertex colors, texture addressing/filtering and selected-part highlighting. GPU selection uses a depth-tested mask and a contour one to three render pixels wide, scaled with screen density so it stays visible on high-density displays. When `MaximumRenderDimension` caps the render size, the frame is upscaled with linear filtering. Native graphics edge rules and rounding can differ from the software rasterizer; bitwise image equivalence is not promised.
 
-GPU geometry is expanded at upload time to preserve flat face normals, cached by immutable geometry identity, and reused across transformed shape copies. Resources not used by the current scene are removed from the native cache. Resident scene vertex/texture resources are capped at 256 MiB, excluding frame attachments and driver overhead. Frame color, selection and depth attachments are recreated only on resize. Node and aggregate triangle limits still apply. The CPU raster-sample budget does not constrain the GPU path.
+GPU geometry is expanded at upload time to preserve flat face normals, cached by immutable geometry identity, and reused across transformed shape copies. The expanded vertex data (64 bytes per triangle corner) exists only during upload; resident meshes keep no CPU copy. Resources not used by the current scene are removed from the native cache. Resident scene vertex/texture resources are capped at 256 MiB, excluding frame attachments and driver overhead. Depth is cleared and discarded each frame without being stored (memoryless on Apple GPUs; invalidated on OpenGL ES). The offscreen color and selection attachments are created the first time a selection is shown, and recreated only on resize. Node and aggregate triangle limits still apply. The CPU raster-sample budget does not constrain the GPU path.
 
 `MaximumRenderDimension` limits the internal GPU render target; presentation scales to the native surface. GPU rendering does not use the CPU path's 512-pixel drag limit. `IsAntialiasEnabled` controls software presentation only; the initial GPU backend does not enable MSAA.
 
-Normals use the transform's cofactor matrix, so very small composed scales that become singular in floating-point arithmetic still render, lighting the surviving faces like the software renderer. A shape whose transformed bounds overflow to non-finite values is skipped as a whole on the GPU, whereas the software renderer skips only its non-finite triangles. Perspective GPU projection uses an infinite far plane. Orthographic geometry uses a far plane computed from scene bounds; overlay labels retain near-plane-only visibility.
+Normals use the transform's cofactor matrix, so very small composed scales that become singular in floating-point arithmetic still render, lighting the surviving faces like the software renderer. A shape whose transformed bounds overflow to non-finite values is skipped as a whole on the GPU, whereas the software renderer skips only its non-finite triangles. Perspective GPU projection uses an infinite far plane. Metal uses reversed depth (near = 1) with a 32-bit float buffer for precision at distance; OpenGL ES, which lacks clip control, uses a 24-bit buffer with standard depth. Orthographic geometry uses a far plane computed from scene bounds; overlay labels retain near-plane-only visibility.
 
 ## Picking, labels and snapshots
 
 Hardware picking performs an on-demand nearest-triangle ray query with near clipping and material backface culling. It does not read an ID buffer back every frame or run the full software rasterizer. Exact boundary pixels can differ from software pixel picking. Equal-depth hits prefer the earlier scene item. Large meshes can make a tap more expensive even when GPU drawing is fast.
 
-Labels are projected into a transparent Skia overlay and use the existing layout/overlap handling. They remain independent of geometry depth.
+Labels are projected into a transparent Skia overlay and use the existing layout/overlap handling. They remain independent of geometry depth. In hardware mode the overlay is composited and repainted only while the scene has labels, once per GPU frame: on Android from the labels of the frame just presented, on Apple platforms in the same Core Animation transaction as the Metal frame, so labels do not trail the geometry during orbit.
+
+## Lifecycle
+
+Frames requested while an iOS app is in the background are skipped and redrawn on activation; a submission rejected for background execution does not disable hardware rendering. On Android, a lost or invalidated EGL context is recreated on the same surface up to three times in a short window before the failure is reported like any other device failure. Switching `RenderingMode` releases the native view and all its GPU resources.
 
 `CaptureFrame(width, height)` deliberately remains an **owned software snapshot**, regardless of the view's mode. Existing capture/picking ownership remains intact; capture is not proof that the GPU works and does not include the GPU selection composite. Normal GPU painting has no pixel readback. Native validation probes explicitly wait and read pixels for comparison.
 

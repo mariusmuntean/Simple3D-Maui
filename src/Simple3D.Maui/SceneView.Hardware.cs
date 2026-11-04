@@ -25,6 +25,18 @@ public sealed partial class SceneView
     private readonly GpuScene _gpuScene = new();
     private GpuSurface? _gpuSurface;
     private bool _hardwareFailed;
+    // Labels of the last presented GPU frame, in its render-pixel space. Android paints the overlay
+    // from this snapshot so labels match the 3D image even if the camera moved since.
+    private readonly List<ProjectedLabel> _presentedLabels = new();
+    private int _presentedWidth, _presentedHeight;
+#if DEBUG || NATIVE_RENDER_PROBE
+    // Diagnostics for the native GPU probes; compiled out of release builds.
+    internal int DebugHardwareFrames { get; private set; }
+    internal int DebugOverlayPaints { get; private set; }
+    internal bool DebugOverlayVisible => _canvas.IsVisible;
+    internal object? DebugNativeView => _gpuSurface?.Handler?.PlatformView;
+    internal void DebugCountOverlayPaint() => DebugOverlayPaints++;
+#endif
 
     private void InitializeSurfaces()
     {
@@ -60,6 +72,7 @@ public sealed partial class SceneView
     private void SetBackend(RenderingBackend backend, string diagnostic)
     {
         ActiveRenderingBackend = backend; RenderingDiagnostic = diagnostic;
+        UpdateOverlayVisibility();
         OnPropertyChanged(nameof(ActiveRenderingBackend)); OnPropertyChanged(nameof(RenderingDiagnostic));
         RenderingBackendChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -83,8 +96,9 @@ public sealed partial class SceneView
         RenderingFailed?.Invoke(this, new(error.Message, fallback));
     }
     /// <summary>Prepares the hardware scene, or returns null and reports a diagnostic when the scene content cannot be prepared.</summary>
-    internal GpuFrame? PrepareHardwareFrame(int width, int height) =>
-        TryUpdateGpuScene(width, height) ? new(_gpuScene, Scene, Camera, SelectedShape, BackgroundPixel()) : null;
+    // renderPixelsPerDip: Render pixels per device-independent unit; sizes the selection outline.
+    internal GpuFrame? PrepareHardwareFrame(int width, int height, double renderPixelsPerDip = 1) =>
+        TryUpdateGpuScene(width, height) ? new(_gpuScene, Scene, Camera, SelectedShape, BackgroundPixel(), GpuFrame.ClampOutlineRadius(renderPixelsPerDip)) : null;
     private bool TryUpdateGpuScene(int width, int height)
     {
         try
@@ -100,23 +114,58 @@ public sealed partial class SceneView
         }
     }
     internal bool CanRenderHardware => !_hardwareFailed && RenderingMode != RenderingMode.Software;
-    internal void HardwareFramePresented(string name, double submissionMilliseconds)
+    /// <summary>Whether the Metal frame should be presented inside the Core Animation transaction, so the
+    /// overlay (labels, or the opaque placeholder before the first frame) changes in the same frame.</summary>
+    internal bool PresentWithOverlay => ActiveRenderingBackend != RenderingBackend.Hardware || _canvas.IsVisible;
+    // width, height: Render width of the presented frame (the space of its projected labels).
+    internal void HardwareFramePresented(string name, double submissionMilliseconds, int width, int height)
     {
         LastHardwareSubmissionMilliseconds = submissionMilliseconds;
-        if (ActiveRenderingBackend != RenderingBackend.Hardware || RenderingDiagnostic != name) SetBackend(RenderingBackend.Hardware, name);
-        _canvas.InvalidateSurface();
+        _presentedLabels.Clear(); _presentedLabels.AddRange(_gpuScene.Labels);
+        _presentedWidth = width; _presentedHeight = height;
+#if DEBUG || NATIVE_RENDER_PROBE
+        DebugHardwareFrames++;
+#endif
+        var first = ActiveRenderingBackend != RenderingBackend.Hardware;
+        if (first || RenderingDiagnostic != name) SetBackend(RenderingBackend.Hardware, name);
+#if ANDROID
+        // The TextureView shows this frame at the next traversal; repaint labels for the same frame.
+        if (_canvas.IsVisible) _canvas.InvalidateSurface();
+#else
+        // Apple repaints the overlay with each request instead (same transaction as the Metal frame);
+        // here only the first frame replaces the opaque placeholder.
+        if (first && _canvas.IsVisible) _canvas.InvalidateSurface();
+#endif
+    }
+    // In hardware mode the transparent Skia layer is only composited and repainted when the scene has
+    // labels; it is a full-screen CPU raster surface otherwise redrawn for nothing every frame.
+    private void UpdateOverlayVisibility()
+    {
+        var visible = ActiveRenderingBackend != RenderingBackend.Hardware || Scene.Labels.Count > 0;
+        if (_canvas.IsVisible != visible) _canvas.IsVisible = visible;
+    }
+    internal (IReadOnlyList<ProjectedLabel> Labels, int Width, int Height)? HardwareOverlayLabels(int surfaceWidth, int surfaceHeight)
+    {
+#if ANDROID
+        return _presentedWidth > 0 ? (_presentedLabels, _presentedWidth, _presentedHeight) : null;
+#else
+        return TryUpdateGpuScene(surfaceWidth, surfaceHeight) ? (_gpuScene.Labels, surfaceWidth, surfaceHeight) : null;
+#endif
     }
     private void ReleaseHardware()
     {
         if (_gpuSurface is not { } surface) return;
         _gpuSurface = null;
         surface.Release();
-        _surfaces.Children.Remove(surface);
     }
     /// <summary>Requests a new native paint. Scene and camera changes call this automatically.</summary>
     public void InvalidateSurface()
     {
         _gpuSurface?.RequestRender();
-        _canvas.InvalidateSurface();
+        if (ActiveRenderingBackend != RenderingBackend.Hardware) { _canvas.InvalidateSurface(); return; }
+        UpdateOverlayVisibility();
+#if !ANDROID
+        if (_canvas.IsVisible) _canvas.InvalidateSurface();
+#endif
     }
 }
