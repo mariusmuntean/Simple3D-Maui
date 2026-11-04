@@ -29,7 +29,10 @@ if name == "xcrun" and args == ["simctl", "list", "devices", "available", "-j"]:
 if name == "xcrun" and args[1:2] == [os.environ.get("SMOKE_FAIL")]:
     sys.exit(23)
 if name == "xcrun" and args[1:2] == ["launch"] and "--console" in args and not os.environ.get("SMOKE_NO_RENDER_MARKER"):
-    print("NATIVE_GPU_PROBE_PASS" if os.environ.get("SIMCTL_CHILD_SIMPLE3D_GPU_PROBE") else "NATIVE_RENDER_PROBE_PASS")
+    if os.environ.get("SIMCTL_CHILD_SIMPLE3D_GPU_VIEW_PROBE"):
+        print("NATIVE_GPU_VIEW_PROBE_FAIL timed out" if os.environ.get("SMOKE_VIEW_PROBE_FAIL") else "NATIVE_GPU_VIEW_PROBE_PASS")
+    else:
+        print("NATIVE_GPU_PROBE_PASS" if os.environ.get("SIMCTL_CHILD_SIMPLE3D_GPU_PROBE") else "NATIVE_RENDER_PROBE_PASS")
 if name == "xcrun" and args[1:2] == ["bootstatus"] and os.environ.get("SMOKE_BLOCK"):
     pathlib.Path(os.environ["SMOKE_LOG"] + ".ready").touch()
     time.sleep(10)
@@ -86,7 +89,12 @@ class IosSmokeCleanupTests(unittest.TestCase):
         result, commands = self.run_smoke(gpu_probe=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assert_cleanup(commands)
+        # Offscreen renderer probe, then the SceneView probe.
+        self.assertEqual(sum(1 for command in commands if command[:3] == ["xcrun", "simctl", "launch"]), 2)
         result, commands = self.run_smoke(gpu_probe=True, SMOKE_NO_RENDER_MARKER="1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assert_cleanup(commands)
+        result, commands = self.run_smoke(gpu_probe=True, SMOKE_VIEW_PROBE_FAIL="1")
         self.assertNotEqual(result.returncode, 0)
         self.assert_cleanup(commands)
 
