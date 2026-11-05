@@ -62,7 +62,7 @@ NativeGpuValidation.Run(renderer.Name, (s, c, options) =>
     renderer.Render(new(prepared, s, c, options.Selected, background, options.OutlineRadius), width, height, width, height);
     if (options.SkipReadback) { Gles.glFinish(); return []; }
     return renderer.ReadPixels(width, height);
-}, () => renderer.LastFrameDirect);
+}, () => renderer.LastFrameDirect, () => (renderer.GeometryUploads, renderer.TextureUploads, renderer.PaletteUploads, renderer.PaletteUploadBytes));
 Console.WriteLine("GPU_TESTS_PASS");
 return 0;
 
