@@ -190,7 +190,7 @@ public sealed class MirrorPage : ContentPage
         _previewFrame.StrokeShape = new RoundRectangle { CornerRadius = live ? 16 : 0 };
         _previewFrame.StrokeThickness = live ? 2 : 0;
         _previewFrame.Stroke = Color.FromRgba(255, 255, 255, 120);
-        _ = _view.FadeTo(live ? 1 : 0, 250);
+        _ = _view.FadeToAsync(live ? 1 : 0, 250);
     }
 
     private void Block(string message, bool settings)
