@@ -130,7 +130,7 @@ public sealed class GalleryPage : ContentPage
         layout.Add(_hud, 0, 1); // Over the scene's top-right corner.
         layout.Add(footer, 0, 2);
         Content = layout;
-        _view.FramePresented += (_, _) => _hudFrames++;
+        _view.FrameSubmitted += (_, _) => _hudFrames++;
         var requested = Environment.GetEnvironmentVariable("SIMPLE3D_GALLERY_SCENE");
         Show(_scenes.FirstOrDefault(s => s.Name == requested) ?? _scenes[0]);
     }

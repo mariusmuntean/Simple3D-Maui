@@ -22,10 +22,11 @@ public sealed partial class SceneView
     public int LastFrameWidth { get; private set; }
     /// <summary>Pixel height of the last presented 3D frame.</summary>
     public int LastFrameHeight { get; private set; }
-    /// <summary>Raised on the UI thread after each frame is submitted for display, by either backend. Count these to
-    /// measure presented FPS; frames are drawn on demand, so an idle view raises none. Exceptions thrown by handlers
+    /// <summary>Raised on the UI thread after each frame is submitted for display, by either backend. Counting these gives
+    /// the submission rate, which matches displayed FPS unless the platform drops or rejects a submitted frame (for
+    /// example a Metal command buffer failing later). Frames are drawn on demand, so an idle view raises none. Exceptions thrown by handlers
     /// propagate to the caller as usual and are never treated as rendering failures.</summary>
-    public event EventHandler? FramePresented;
+    public event EventHandler? FrameSubmitted;
     /// <summary>Raised after backend/status changes. Subscribe before attaching the view to observe initialization failures.</summary>
     public event EventHandler? RenderingBackendChanged;
     /// <summary>Raised when hardware initialization or drawing fails. Hardware mode does not silently use software.</summary>
@@ -128,7 +129,7 @@ public sealed partial class SceneView
     /// overlay (labels, or the opaque placeholder before the first frame) changes in the same frame.</summary>
     internal bool PresentWithOverlay => ActiveRenderingBackend != RenderingBackend.Hardware || _canvas.IsVisible;
     // width, height: Render width of the presented frame (the space of its projected labels).
-    internal void HardwareFramePresented(string name, double submissionMilliseconds, int width, int height)
+    internal void HardwareFrameSubmitted(string name, double submissionMilliseconds, int width, int height)
     {
         LastHardwareSubmissionMilliseconds = submissionMilliseconds;
         RecordFrame(submissionMilliseconds, width, height);
@@ -153,7 +154,7 @@ public sealed partial class SceneView
         LastFrameMilliseconds = milliseconds; LastFrameWidth = width; LastFrameHeight = height;
     }
     // Native views call this after their failure handling, so a throwing subscriber is not taken for a GPU failure.
-    internal void RaiseFramePresented() => FramePresented?.Invoke(this, EventArgs.Empty);
+    internal void RaiseFrameSubmitted() => FrameSubmitted?.Invoke(this, EventArgs.Empty);
     // In hardware mode the transparent Skia layer is only composited and repainted when the scene has
     // labels; it is a full-screen CPU raster surface otherwise redrawn for nothing every frame.
     private void UpdateOverlayVisibility()
@@ -171,6 +172,9 @@ public sealed partial class SceneView
     }
     private void ReleaseHardware()
     {
+        // Do not keep the last hardware scene (shapes, texture pixels) alive after leaving hardware.
+        _gpuScene.Clear();
+        _presentedLabels.Clear(); _presentedWidth = _presentedHeight = 0;
         if (_gpuSurface is not { } surface) return;
         _gpuSurface = null;
         surface.Release();

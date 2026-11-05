@@ -56,9 +56,9 @@ Frames requested while an iOS app is in the background are skipped and redrawn o
 
 ## Validate and measure
 
-See [Development and native validation](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/docs/DEVELOPMENT.md#gpu-validation). The gallery includes an Auto/Software/Hardware selector, displays the active backend or failure reason, and shows a frame-statistics HUD (presented FPS, frame CPU time, render size, backend, triangle count) in the scene's top-right corner.
+See [Development and native validation](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/docs/DEVELOPMENT.md#gpu-validation). The gallery includes an Auto/Software/Hardware selector, displays the active backend or failure reason, and shows a frame-statistics HUD (FPS, frame CPU time, render size, backend, triangle count) in the scene's top-right corner.
 
-`FramePresented` is raised on the UI thread after every frame either backend submits for display (Metal: after command-buffer commit, before the GPU finishes); count the events to measure presented FPS. Frames are drawn on demand, so a still scene raises none. `LastFrameMilliseconds`, `LastFrameWidth` and `LastFrameHeight` describe the last presented frame: software rasterization time, or for hardware the same value as `LastHardwareSubmissionMilliseconds`.
+`FrameSubmitted` is raised on the UI thread after every frame either backend submits for display (Metal: after command-buffer commit, before the GPU finishes); counting the events gives the submission rate, which matches displayed FPS unless the platform later drops or rejects a submitted frame. Frames are drawn on demand, so a still scene raises none. `LastFrameMilliseconds`, `LastFrameWidth` and `LastFrameHeight` describe the last presented frame: software rasterization time, or for hardware the same value as `LastHardwareSubmissionMilliseconds`.
 
 `LastHardwareSubmissionMilliseconds` measures CPU elapsed time preparing and submitting a native frame, including any driver blocking. It is not GPU execution time or displayed FPS. For comparisons, use Release builds, the same scene/resolution and actual target devices. Headless Mesa and emulators can execute graphics APIs through software drivers; their performance numbers must not be presented as physical GPU speedups.
 

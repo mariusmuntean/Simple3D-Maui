@@ -19,11 +19,11 @@ internal static class GpuResources
     }
 }
 
-// Native mesh/texture residency shared by both backends: bounded to the current scene, capped at
-// 256 MiB, and pruned without per-frame allocation. Backends supply only native creation/deletion.
+// Native mesh/texture residency shared by both backends: bounded to the current scene (GpuScene
+// enforces the 256 MiB budget) and pruned without per-frame allocation. Backends supply only
+// native creation/deletion.
 internal sealed class GpuResources<TMesh, TTexture>(Action<TMesh> deleteMesh, Action<TTexture> deleteTexture)
 {
-    private const long BudgetBytes = 256L * 1024 * 1024;
     private readonly HashSet<GpuGeometry> _usedMeshes = new();
     private readonly HashSet<Texture2D> _usedTextures = new();
     private readonly List<GpuGeometry> _staleMeshes = new();
@@ -31,18 +31,15 @@ internal sealed class GpuResources<TMesh, TTexture>(Action<TMesh> deleteMesh, Ac
     internal Dictionary<GpuGeometry, TMesh> Meshes { get; } = new();
     internal Dictionary<Texture2D, TTexture> Textures { get; } = new();
 
-    /// <summary>Checks the scene against the budget before anything is uploaded, then frees resources it no longer uses.</summary>
+    /// <summary>Frees resources the frame no longer uses, before anything new is uploaded.</summary>
     internal void Prepare(GpuFrame frame)
     {
         _usedMeshes.Clear(); _usedTextures.Clear();
-        long bytes = 0;
         foreach (var item in frame.Geometry.Items)
         {
-            if (_usedMeshes.Add(item.Geometry)) bytes += item.Geometry.ByteSize;
-            var texture = GpuResources.TextureOf(item);
-            if (_usedTextures.Add(texture)) bytes += (long)texture.Width * texture.Height * 4;
+            _usedMeshes.Add(item.Geometry);
+            _usedTextures.Add(GpuResources.TextureOf(item));
         }
-        if (bytes > BudgetBytes) throw new InvalidOperationException("GPU scene resources exceed 256 MiB.");
         PruneUnused();
     }
 

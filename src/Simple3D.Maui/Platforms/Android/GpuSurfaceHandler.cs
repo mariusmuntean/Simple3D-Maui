@@ -97,7 +97,7 @@ internal sealed class AndroidGpuView : TextureView, TextureView.ISurfaceTextureL
             Renderer.Render(frame, size.Width, size.Height, Width, Height);
             if (!EGL14.EglSwapBuffers(_display, _surface)) throw new EglException("EGL presentation failed", EGL14.EglGetError());
             if (++_framesSinceRecovery >= RecoveryResetFrames) _recoveries = 0;
-            _owner.HardwareFramePresented(Renderer.Name, System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds, size.Width, size.Height);
+            _owner.HardwareFrameSubmitted(Renderer.Name, System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds, size.Width, size.Height);
             presented = true;
         }
         catch (EglException lost) when (lost.Recoverable && _recoveries < MaximumRecoveries && _surfaceTexture is { } surface)
@@ -111,7 +111,7 @@ internal sealed class AndroidGpuView : TextureView, TextureView.ISurfaceTextureL
             catch (Exception ex) { _owner.ReportHardwareFailure(ex); ReleaseContext(); }
         }
         catch (Exception ex) { _owner.ReportHardwareFailure(ex); ReleaseContext(); }
-        if (presented) _owner.RaiseFramePresented();
+        if (presented) _owner.RaiseFrameSubmitted();
     }
     private void MakeCurrent()
     {

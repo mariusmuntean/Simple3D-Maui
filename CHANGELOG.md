@@ -13,7 +13,7 @@
 - The label overlay is only composited and repainted in hardware mode while the scene has labels, once per GPU frame and in step with it.
 - Background GPU submissions on iOS and EGL context loss on Android no longer permanently disable hardware rendering.
 - Resident GPU meshes no longer keep their expanded CPU vertex copy; per-frame renderer bookkeeping no longer allocates.
-- Add `SceneView.FramePresented` and `LastFrameMilliseconds`/`LastFrameWidth`/`LastFrameHeight` for frame statistics. The gallery shows them in an FPS HUD and replaces the renderer picker with a segmented selector aligned with its status line.
+- Add `SceneView.FrameSubmitted` and `LastFrameMilliseconds`/`LastFrameWidth`/`LastFrameHeight` for frame statistics. The gallery shows them in an FPS HUD and replaces the renderer picker with a segmented selector aligned with its status line.
 
 
 ## 0.2.0-preview.1 · 2026-10-14

@@ -158,7 +158,9 @@ internal sealed unsafe class MetalRenderer : IDisposable
     {
         if (_resources.Textures.TryGetValue(texture, out var cached)) return cached;
         using var descriptor = MTLTextureDescriptor.CreateTexture2DDescriptor(MTLPixelFormat.RGBA8Unorm, (nuint)texture.Width, (nuint)texture.Height, false);
-        descriptor.StorageMode = MTLStorageMode.Shared; descriptor.Usage = MTLTextureUsage.ShaderRead;
+        // Default storage (Shared on iOS, Managed on macOS): Intel/AMD Macs reject Shared textures.
+        // ReplaceRegion uploads correctly in both.
+        descriptor.Usage = MTLTextureUsage.ShaderRead;
         var image = _device.CreateTexture(descriptor) ?? throw new InvalidOperationException("Metal texture allocation failed.");
         IMTLSamplerState? sampler = null;
         try

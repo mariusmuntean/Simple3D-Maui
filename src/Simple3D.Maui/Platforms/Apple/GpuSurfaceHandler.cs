@@ -45,11 +45,11 @@ internal sealed class AppleGpuView : MTKView
             using var drawable = CurrentDrawable;
             if (drawable is null) return; // Window may be hidden/backgrounded. Retry on next invalidation.
             renderer.Render(frame, size.Width, size.Height, drawable.Texture, drawable, presentWithTransaction: withTransaction);
-            _owner.HardwareFramePresented(renderer.Name, System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds, size.Width, size.Height);
+            _owner.HardwareFrameSubmitted(renderer.Name, System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds, size.Width, size.Height);
             presented = true;
         }
         catch (Exception ex) { _owner.ReportHardwareFailure(ex); }
-        if (presented) _owner.RaiseFramePresented();
+        if (presented) _owner.RaiseFrameSubmitted();
     }
     // Completion handlers run on a Metal thread.
     private void OnCommandFailed(nint code, string message) =>

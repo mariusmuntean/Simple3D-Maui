@@ -18,7 +18,7 @@ internal static class RenderingModeTests
         try { view.RenderingMode = (RenderingMode)42; throw new Exception("invalid mode accepted"); }
         catch (ArgumentException) { }
         var tall = new SceneView { Scene = new Scene().Add(Shape.Box().At(.5f, 0, 0)), Camera = new Camera(5, 0, 0) };
-        tall.HardwareFramePresented("test", 0, 200, 500);
+        tall.HardwareFrameSubmitted("test", 0, 200, 500);
         var reference = tall.CaptureFrame(200, 500);
         for (var y = 101; y < 400; y += 17)
             for (var x = 11; x < 190; x += 11)
@@ -37,7 +37,7 @@ internal static class RenderingModeTests
             tall.RenderingDiagnostic?.Contains("budget") != true)
             throw new Exception("scene error must be reported without disabling hardware");
         tall.Scene = valid;
-        tall.HardwareFramePresented("test", 0, 200, 500);
+        tall.HardwareFrameSubmitted("test", 0, 200, 500);
         var hits = 0;
         for (var y = 101; y < 400; y += 17)
             for (var x = 11; x < 190; x += 11)
@@ -55,14 +55,14 @@ internal static class RenderingModeTests
         var view = new SceneView { Scene = new Scene().Add(Shape.Box()) };
         if (!view.PresentWithOverlay) throw new Exception("overlay must cover the native view before the first hardware frame");
         var presented = 0;
-        view.FramePresented += (_, _) => presented++;
-        view.HardwareFramePresented("test", 2.5, 100, 80);
-        view.RaiseFramePresented(); // Native views raise it after their failure handling.
+        view.FrameSubmitted += (_, _) => presented++;
+        view.HardwareFrameSubmitted("test", 2.5, 100, 80);
+        view.RaiseFrameSubmitted(); // Native views raise it after their failure handling.
         if (presented != 1 || view.LastFrameMilliseconds != 2.5 || view.LastFrameWidth != 100 || view.LastFrameHeight != 80)
-            throw new Exception("a presented hardware frame must raise FramePresented with its statistics");
+            throw new Exception("a presented hardware frame must raise FrameSubmitted with its statistics");
         // A throwing subscriber is the app's bug, not a GPU failure: recording a frame never invokes subscribers.
-        view.FramePresented += (_, _) => throw new InvalidOperationException("subscriber");
-        view.HardwareFramePresented("test", 1, 100, 80);
+        view.FrameSubmitted += (_, _) => throw new InvalidOperationException("subscriber");
+        view.HardwareFrameSubmitted("test", 1, 100, 80);
         if (view.PresentWithOverlay) throw new Exception("overlay must be hidden in hardware mode without labels");
         view.Scene.AddLabel(new WorldLabel("label", System.Numerics.Vector3.Zero));
         if (!view.PresentWithOverlay) throw new Exception("adding a label must show the overlay");
@@ -70,7 +70,13 @@ internal static class RenderingModeTests
         if (view.PresentWithOverlay) throw new Exception("removing labels must hide the overlay");
         view.RenderingMode = RenderingMode.Software;
         if (!view.PresentWithOverlay) throw new Exception("software mode paints through the overlay");
-        Console.WriteLine("PASS overlay composited only for labels in hardware mode");
+        // Leaving hardware must not keep the last prepared scene (and its textures) alive.
+        view.RenderingMode = RenderingMode.Hardware;
+        var prepared = view.PrepareHardwareFrame(64, 64) ?? throw new Exception("hardware frame not prepared");
+        if (prepared.Geometry.Items.Count == 0) throw new Exception("prepared frame has no items");
+        view.RenderingMode = RenderingMode.Software;
+        if (prepared.Geometry.Items.Count != 0) throw new Exception("switching to software must release the prepared hardware scene");
+        Console.WriteLine("PASS overlay composited only for labels in hardware mode; leaving hardware releases the prepared scene");
     }
 
     // The gallery must keep working with every renderer: its mode selector drives the view's mode,

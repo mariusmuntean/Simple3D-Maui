@@ -64,7 +64,12 @@ internal sealed class GpuSceneException(string message) : ArgumentException(mess
 
 internal sealed class GpuScene
 {
+    /// <summary>Cap on the distinct vertex and texture bytes one frame may keep resident on the GPU.</summary>
+    internal long ResourceBudgetBytes { get; init; } = 256L * 1024 * 1024;
     private readonly ConditionalWeakTable<object, GpuGeometry> _geometry = new();
+    // Reused per frame: distinct resources counted against the budget.
+    private readonly HashSet<GpuGeometry> _budgetGeometry = new();
+    private readonly HashSet<Texture2D> _budgetTextures = new();
     internal List<GpuItem> Items { get; } = new();
     internal List<ProjectedLabel> Labels { get; } = new();
     internal Matrix4x4 ViewProjection { get; private set; }
@@ -83,7 +88,8 @@ internal sealed class GpuScene
         var (eye, forward, right, up) = _basis = camera.Basis();
         _width = width; _height = height;
         var far = camera.NearPlane * 2;
-        long triangles = 0;
+        long triangles = 0, resourceBytes = 0;
+        _budgetGeometry.Clear(); _budgetTextures.Clear();
         foreach (var (shape, world) in Nodes(scene))
         {
             triangles += shape.TriangleCount;
@@ -104,6 +110,10 @@ internal sealed class GpuScene
             }
             if (!finite || !float.IsFinite(itemFar)) continue;
             far = itemFar;
+            if (_budgetGeometry.Add(geometry)) resourceBytes += geometry.ByteSize;
+            if (shape.Material.Texture is { } texture && _budgetTextures.Add(texture)) resourceBytes += (long)texture.Width * texture.Height * 4;
+            // Checked here, before any upload, so it is a recoverable scene error like the triangle budget.
+            if (resourceBytes > ResourceBudgetBytes) throw new GpuSceneException($"Scene GPU resources exceed {ResourceBudgetBytes / (1024 * 1024)} MiB.");
             Items.Add(new(shape, geometry, world, NormalMatrix(world)));
         }
         var view = new Matrix4x4(right.X, up.X, forward.X, 0,
@@ -136,6 +146,13 @@ internal sealed class GpuScene
                 Labels.Add(new(label, p, Vector3.Dot(label.Position - eye, forward)));
         }
         _camera = camera;
+    }
+
+    /// <summary>Drops every reference to the last prepared scene (shapes, textures, camera).</summary>
+    internal void Clear()
+    {
+        Items.Clear(); Labels.Clear(); _camera = null;
+        _budgetGeometry.Clear(); _budgetTextures.Clear();
     }
 
     // Scene.Flatten enforces the node visit budget with a plain ArgumentException. Surface it as

@@ -123,7 +123,16 @@ internal static class GpuSceneTests
         scene = new Scene().Add(group);
         try { frame.Update(scene, camera, 100, 100); Check(false, "over-node-budget scene accepted"); }
         catch (GpuSceneException error) { Check(error.Message.Contains("node"), "node budget message"); }
-        Console.WriteLine("PASS GPU scene tolerates singular and overflowing transforms; budget is a scene error");
+        // The GPU resource budget counts each distinct mesh and texture once, before any upload.
+        var texture = new Texture2D(64, 64, Enumerable.Repeat(0xFF808080u, 64 * 64)); // 16 KiB
+        var budgeted = new GpuScene { ResourceBudgetBytes = 20 * 1024 };
+        var textured = Shape.Box().WithMaterial(new Material(texture));
+        budgeted.Update(new Scene().Add(textured).Add(textured.At(2, 0, 0)), camera, 100, 100); // Shared texture and mesh: counted once.
+        try { budgeted.Update(new Scene().Add(textured).Add(Shape.Box().WithMaterial(new Material(new Texture2D(64, 64, Enumerable.Repeat(0xFF808080u, 64 * 64))))), camera, 100, 100); Check(false, "over-resource-budget scene accepted"); }
+        catch (GpuSceneException error) { Check(error.Message.Contains("MiB"), "resource budget message"); }
+        budgeted.Clear();
+        Check(budgeted.Items.Count == 0 && budgeted.Labels.Count == 0, "Clear must drop prepared items");
+        Console.WriteLine("PASS GPU scene tolerates singular and overflowing transforms; budgets are scene errors");
     }
     private static float R(Random random) => .2f + (float)random.NextDouble();
     private static bool AllFinite(Matrix4x4 m) =>
