@@ -12,7 +12,8 @@ using Size = Android.Util.Size;
 namespace Simple3D.Demo.Mirror;
 
 /// <summary>CameraX front camera analyzed by ML Kit; KEEP_ONLY_LATEST drops frames while one is being analyzed.</summary>
-public sealed class CameraPoseSource : PoseSource
+/// <summary>A camera analyzed by ML Kit; prefers the front or back camera and falls back to any camera.</summary>
+public sealed class CameraPoseSource(bool preferFront = true) : PoseSource
 {
     private readonly SemaphoreSlim lifecycle = new(1, 1);
     private ProcessCameraProvider? provider;
@@ -55,7 +56,7 @@ public sealed class CameraPoseSource : PoseSource
         var future = ProcessCameraProvider.GetInstance(activity);
         provider = (await Task.Run(() => future.Get()).ConfigureAwait(false)).JavaCast<ProcessCameraProvider>()
             ?? throw new InvalidOperationException("CameraX is unavailable.");
-        var (selector, front) = SelectCamera(provider) ?? throw new InvalidOperationException("This device has no camera.");
+        var (selector, front) = SelectCamera(provider, preferFront) ?? throw new InvalidOperationException("This device has no camera.");
         mirrored = front;
         detector = new MlKitPoseDetector(stream: true);
         executor = Executors.NewSingleThreadExecutor()!;
@@ -80,9 +81,12 @@ public sealed class CameraPoseSource : PoseSource
         }).ConfigureAwait(false);
     }
 
-    private static (CameraSelector Selector, bool Front)? SelectCamera(ProcessCameraProvider provider)
+    private static (CameraSelector Selector, bool Front)? SelectCamera(ProcessCameraProvider provider, bool preferFront)
     {
-        foreach (var (lens, front) in new[] { (CameraSelector.LensFacingFront, true), (CameraSelector.LensFacingBack, false), (CameraSelector.LensFacingExternal, false) })
+        (int Lens, bool Front)[] order = preferFront
+            ? [(CameraSelector.LensFacingFront, true), (CameraSelector.LensFacingBack, false), (CameraSelector.LensFacingExternal, false)]
+            : [(CameraSelector.LensFacingBack, false), (CameraSelector.LensFacingExternal, false), (CameraSelector.LensFacingFront, true)];
+        foreach (var (lens, front) in order)
         {
             var selector = new CameraSelector.Builder().RequireLensFacing(lens)!.Build()!;
             try { if (provider.HasCamera(selector)) return (selector, front); }

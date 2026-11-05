@@ -18,7 +18,10 @@ public sealed class MirrorPage : ContentPage
     private readonly Border _previewFrame;
     private readonly View _intro, _guide, _blocked, _lostHint;
     private readonly Label _blockedText = Text("", 16), _status = Text("", 12, "#A9B8D4");
-    private readonly Button _blockedAction;
+    private readonly Button _blockedAction, _switchCamera;
+    // The person's choice of camera; front by default, since people usually film themselves.
+    private bool _frontCamera = Preferences.Default.Get("mirror.camera.front", true);
+    private bool _switching;
     // Debug builds can replay a video instead of the camera (and on simulators without a body-pose model, recorded
     // landmarks instead of detection) through this same page, for development and automated checks.
 #if DEBUG
@@ -70,9 +73,17 @@ public sealed class MirrorPage : ContentPage
         };
         SemanticProperties.SetDescription(close, "Close Mirror");
         close.Clicked += (_, _) => Close();
+        _switchCamera = new Button
+        {
+            Text = "⇄", FontSize = 18, WidthRequest = 44, HeightRequest = 44, CornerRadius = 22, Padding = 0,
+            BackgroundColor = Color.FromRgba(8, 12, 22, 170), TextColor = Colors.White,
+            HorizontalOptions = LayoutOptions.Start, VerticalOptions = LayoutOptions.Start, Margin = new Thickness(68, 16, 0, 0)
+        };
+        SemanticProperties.SetDescription(_switchCamera, "Switch between the front and back camera");
+        _switchCamera.Clicked += (_, _) => SwitchCamera();
         _status.HorizontalOptions = LayoutOptions.End; _status.VerticalOptions = LayoutOptions.End;
         _status.Margin = new Thickness(0, 0, 16, 12); _status.InputTransparent = true;
-        Content = new Grid { Children = { _view, _previewFrame, _guide, _lostHint, _intro, _blocked, close, _status } };
+        Content = new Grid { Children = { _view, _previewFrame, _guide, _lostHint, _intro, _blocked, close, _switchCamera, _status } };
         Show(Step.Intro);
         _loading = LoadAsync();
         if (IsRequested) Dispatcher.Dispatch(Start);
@@ -113,7 +124,7 @@ public sealed class MirrorPage : ContentPage
             }
             await _loading!;
             if (!Current()) return;
-            var source = _source = VideoPath is not { } video ? PoseSources.CreateCamera() : PoseSources.CreateVideo(video, LandmarksPath);
+            var source = _source = VideoPath is not { } video ? PoseSources.CreateCamera(_frontCamera) : PoseSources.CreateVideo(video, LandmarksPath);
             source.FrameAnalyzed += OnFrame;
             if (source is PoseSource diagnostics)
             {
@@ -129,17 +140,30 @@ public sealed class MirrorPage : ContentPage
             _timer.Interval = TimeSpan.FromMilliseconds(1000d / 30);
             _timer.Tick -= Animate; _timer.Tick += Animate;
             _timer.Start();
+            _switching = false;
             Show(Step.Guide);
             Log($"MIRROR_START source={(IsRequested ? "video" : "camera")}");
         }
         catch (Exception error)
         {
+            _switching = false;
             if (attempt != _generation) return;
             Stop();
             await _stopping;
             Block($"The camera couldn't start: {error.Message}", settings: false);
             Log($"MIRROR_FAIL {error.GetType().Name}: {error.Message}");
         }
+    }
+
+    private void SwitchCamera()
+    {
+        if (_step is not (Step.Guide or Step.Live)) return;
+        _frontCamera = !_frontCamera;
+        Preferences.Default.Set("mirror.camera.front", _frontCamera);
+        Stop();
+        _switching = true;
+        _step = Step.Intro;
+        Start();
     }
 
     // A source that fails after starting (detector or playback error) stops the session and says why.
@@ -205,7 +229,9 @@ public sealed class MirrorPage : ContentPage
     private void Show(Step step)
     {
         _step = step;
-        _intro.IsVisible = step is Step.Intro or Step.Starting;
+        // Switching cameras restarts capture without bringing back the intro.
+        _intro.IsVisible = step is Step.Intro || step == Step.Starting && !_switching;
+        _switchCamera.IsVisible = !IsRequested && step is Step.Guide or Step.Live;
         _intro.Opacity = step == Step.Starting ? .6 : 1;
         _blocked.IsVisible = step == Step.Blocked;
         _guide.IsVisible = step == Step.Guide;

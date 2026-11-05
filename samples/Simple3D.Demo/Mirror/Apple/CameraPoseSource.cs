@@ -10,7 +10,7 @@ using Foundation;
 namespace Simple3D.Demo.Mirror;
 
 /// <summary>Front camera frames analyzed by Vision on a serial queue; late frames are dropped rather than queued.</summary>
-public sealed class CameraPoseSource : PoseSource
+public sealed class CameraPoseSource(bool preferFront = true) : PoseSource
 {
     private readonly DispatchQueue _queue = new("dev.simple3d.mirror.camera");
     private AVCaptureSession? _session;
@@ -26,7 +26,8 @@ public sealed class CameraPoseSource : PoseSource
     public override Task StartAsync()
     {
         if (_session is not null) return Task.CompletedTask;
-        var device = AVCaptureDevice.GetDefaultDevice(AVCaptureDeviceType.BuiltInWideAngleCamera, AVMediaTypes.Video, AVCaptureDevicePosition.Front)
+        var preferred = preferFront ? AVCaptureDevicePosition.Front : AVCaptureDevicePosition.Back;
+        var device = AVCaptureDevice.GetDefaultDevice(AVCaptureDeviceType.BuiltInWideAngleCamera, AVMediaTypes.Video, preferred)
             ?? AVCaptureDevice.GetDefaultDevice(AVMediaTypes.Video)
             ?? throw new InvalidOperationException("This device has no camera.");
         // Only the front camera's preview is mirrored; external or back cameras show the scene as is.
