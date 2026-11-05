@@ -16,7 +16,12 @@ public sealed record MirrorCharacter(Shape Shape, Skeleton Skeleton, IReadOnlyDi
 
     /// <summary>Describes a loaded VRM character: its first skeleton and humanoid bones, which way it faces (from its
     /// toes, so VRM 0.x and 1.0 both work) and how thick its torso is (from the vertices the torso bones move).</summary>
-    public static MirrorCharacter FromVrm(GltfModel model, Shape shape, float height = 1.6f)
+    /// <param name="model">The loaded VRM.</param>
+    /// <param name="shape">The model's scene.</param>
+    /// <param name="face">How the model shows the tracked face, for example <see cref="MirrorModel.Face"/>; null for
+    /// <see cref="MirrorFace.Default"/>.</param>
+    /// <param name="height">Height on the stage in world units.</param>
+    public static MirrorCharacter FromVrm(GltfModel model, Shape shape, MirrorFace? face = null, float height = 1.6f)
     {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(shape);
@@ -29,6 +34,7 @@ public sealed record MirrorCharacter(Shape Shape, Skeleton Skeleton, IReadOnlyDi
         {
             TorsoRadius = EstimateTorsoRadius(shape, skeleton, bones),
             Express = model.Expressions.Count == 0 ? null : model.ApplyExpressions,
+            Face = face ?? MirrorFace.Default,
         };
     }
 
@@ -53,6 +59,31 @@ public sealed record MirrorCharacter(Shape Shape, Skeleton Skeleton, IReadOnlyDi
         distances.Sort();
         // The core, not the widest part (bellies, sleeves): limbs may graze the outside, but must not cross the middle.
         return distances[(int)(distances.Count * .6f)];
+        static IEnumerable<Shape> Leaves(Shape s) => s.Children.Count == 0 ? [s] : s.Children.SelectMany(Leaves);
+    }
+
+    /// <summary>Which expressions the tracked face drives.</summary>
+    public MirrorFace Face { get; init; } = MirrorFace.Default;
+
+    /// <summary>Rest-pose bounds, in skeleton space, of the vertices mostly moved by the head bone or its children (ears,
+    /// hair, jaw), and of all vertices of the character's skeleton; null without a head bone.</summary>
+    public ((Vector3 Min, Vector3 Max) Head, (Vector3 Min, Vector3 Max) Body)? HeadBounds()
+    {
+        if (!HumanoidBones.TryGetValue("head", out var headJoint)) return null;
+        var inHead = new bool[Skeleton.Joints.Count];
+        for (var j = 0; j < inHead.Length; j++) inHead[j] = j == headJoint || (Skeleton.Joints[j].Parent >= 0 && inHead[Skeleton.Joints[j].Parent]);
+        Vector3 headMin = new(float.MaxValue), headMax = new(float.MinValue), bodyMin = headMin, bodyMax = headMax;
+        foreach (var mesh in Leaves(Shape).Select(l => l.SkinnedMesh).OfType<SkinnedMesh>().Where(m => ReferenceEquals(m.Skeleton, Skeleton)).Distinct())
+            for (var v = 0; v < mesh.Mesh.Vertices.Count; v++)
+            {
+                var (joints, weights) = mesh.Influences[v];
+                var p = mesh.Mesh.Vertices[v];
+                bodyMin = Vector3.Min(bodyMin, p); bodyMax = Vector3.Max(bodyMax, p);
+                var w = (inHead[joints.X] ? weights.X : 0) + (inHead[joints.Y] ? weights.Y : 0) + (inHead[joints.Z] ? weights.Z : 0) + (inHead[joints.W] ? weights.W : 0);
+                if (w <= .5f * (weights.X + weights.Y + weights.Z + weights.W)) continue;
+                headMin = Vector3.Min(headMin, p); headMax = Vector3.Max(headMax, p);
+            }
+        return headMin.X > headMax.X ? null : ((headMin, headMax), (bodyMin, bodyMax));
         static IEnumerable<Shape> Leaves(Shape s) => s.Children.Count == 0 ? [s] : s.Children.SelectMany(Leaves);
     }
 

@@ -10,6 +10,8 @@ using SkiaSharp;
 if (args.Length > 0 && args[0] == "--render-mirror") return MirrorRender.Run(args[1..]);
 if (args.Length > 2 && args[0] == "--render-rest") return MirrorRender.Rest(args[1], args[2], args.Length > 3 ? args[3] : null);
 if (args.Length > 1 && args[0] == "--render-showcase") return MirrorRender.Showcase(args[1]);
+if (args.Length > 2 && args[0] == "--render-faces") return MirrorRender.Faces(args[1], args[2], args.Length > 3 ? args[3] : null);
+if (args.Length > 1 && args[0] == "--face-report") return MirrorFaceReport.Run(args[1..]);
 if (args.Length > 1 && args[0] == "--render-swap") return MirrorRender.Swap(args[1]);
 if (args.Contains("--performance")) return PerformanceProbe.Run();
 if (args.Contains("--appearance-performance")) { AppearancePerformanceProbe.Run(); return 0; }

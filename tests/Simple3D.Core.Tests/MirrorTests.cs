@@ -279,60 +279,134 @@ internal static class MirrorTests
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
 }
 
-/// <summary>End to end on real faces: Apple Vision fixtures of three Mixkit clips drive the cat through a full
-/// MirrorSession, and the cat's own mouth, blink and wink weights and head angles must follow the person.</summary>
+/// <summary>End to end on real faces: Apple Vision fixtures of three Mixkit clips drive every bundled character, with its own
+/// face table, through a full MirrorSession. The character's mesh must visibly follow the person: the mouth opens by a share of
+/// the head height, each eye closes, a wink closes one eye, and the head turns, nods and tilts.</summary>
 internal static class MirrorFaceTests
 {
+    /// <summary>How far, as a share of head height, the mouth vertices must move while the person's mouth is wide open.
+    /// Juanita's own "a" moves them 4.2% and only parts her lips; 6% is the least that reads as an open mouth on every model
+    /// at Mirror's face close-up (Juanita's "a"+"o", 8.4%, is a clear round mouth). The tables reach 8.7–22% on the fixture.</summary>
+    internal const float MouthOpenShare = .06f;
+    /// <summary>The share of an eye's height a blink must close.</summary>
+    internal const float BlinkClosure = .6f;
+
     internal static void Run()
     {
-        using var asset = File.OpenRead(Path.Combine(AppContext.BaseDirectory, "Assets", "cat.vrm"));
-        var model = GltfReader.Read(asset);
-        int Target(string expression) => model.Expressions[expression].Binds[0].Target;
-
-        // 46379: neutral 0–3.3 s, mouth wide open 3.6–7.9 s, eyes closed 8.4–12 s (head and shoulders, body visible).
-        var talk = Replay(model, "face-46379");
-        float Mean(IEnumerable<Sample> s, Func<Sample, float> v) => s.Any() ? s.Average(v) : float.NaN;
-        var neutral = talk.Where(s => s.Time is > 1 and < 3.3);
-        var open = talk.Where(s => s.Time is > 4 and < 7.6);
-        Check(Mean(open, s => s.Weights[Target("a")]) > .4f && Mean(neutral, s => s.Weights[Target("a")]) < .15f,
-            $"mouth: open {Mean(open, s => s.Weights[Target("a")]):0.00}, neutral {Mean(neutral, s => s.Weights[Target("a")]):0.00}");
-        // She blinks repeatedly while talking (8.4–12 s): the cat's eyes must close and open with hers.
-        float Eyes(Sample s) => (s.Weights[Target("blink_l")] + s.Weights[Target("blink_r")]) / 2;
-        Check(Correlation(talk, s => s.FaceBlink, Eyes) > .7f && Mean(neutral, Eyes) < .25f,
-            $"eyes follow blinks: r={Correlation(talk, s => s.FaceBlink, Eyes):0.00}, open {Mean(neutral, Eyes):0.00}");
-
-        // 11519: face only (no body detected); a wink with her right eye at 4.1–4.5 s; head tilts.
-        var girl = Replay(model, "face-11519");
-        Check(girl.Count > 200, $"face-only framing must track: {girl.Count} frames");
-        var wink = girl.Where(s => s.Time is > 4.15 and < 4.45);
-        Check(Mean(wink, s => s.Weights[Target("blink_r")]) > Mean(wink, s => s.Weights[Target("blink_l")]) + .3f,
-            $"wink: right {Mean(wink, s => s.Weights[Target("blink_r")]):0.00}, left {Mean(wink, s => s.Weights[Target("blink_l")]):0.00}");
-        Check(Correlation(girl, s => s.FaceRoll, s => s.HeadRoll) > .8f, $"head tilt follows: r={Correlation(girl, s => s.FaceRoll, s => s.HeadRoll):0.00}");
-        Check(Mean(girl, s => s.Weights[Target("angry")]) < .2f, $"bangs over the brows must not read as a frown: {Mean(girl, s => s.Weights[Target("angry")]):0.00}");
-
-        // 43829: laughing, head turned and nodding.
-        var laugh = Replay(model, "face-43829");
-        Check(Correlation(laugh, s => s.FaceYaw, s => s.HeadYaw) > .7f && Correlation(laugh, s => s.FacePitch, s => s.HeadPitch) > .7f,
-            $"head turn and nod follow: yaw r={Correlation(laugh, s => s.FaceYaw, s => s.HeadYaw):0.00}, pitch r={Correlation(laugh, s => s.FacePitch, s => s.HeadPitch):0.00}");
-        Console.WriteLine($"PASS mirror face end to end (cat): mouth {Mean(open, s => s.Weights[Target("a")]):0.00} open vs {Mean(neutral, s => s.Weights[Target("a")]):0.00}, " +
-            $"blinks r={Correlation(talk, s => s.FaceBlink, Eyes):0.00}, wink, head tilt r={Correlation(girl, s => s.FaceRoll, s => s.HeadRoll):0.00}, " +
-            $"turn r={Correlation(laugh, s => s.FaceYaw, s => s.HeadYaw):0.00}, nod r={Correlation(laugh, s => s.FacePitch, s => s.HeadPitch):0.00}");
+        foreach (var bundled in MirrorModels.All) Run(bundled);
     }
 
-    private sealed record Sample(double Time, float[] Weights, float FaceBlink, float FaceYaw, float FacePitch, float FaceRoll, float HeadYaw, float HeadPitch, float HeadRoll);
-
-    private static List<Sample> Replay(GltfModel model, string fixture)
+    private static void Run(MirrorModel bundled)
     {
-        var session = new MirrorSession(MirrorCharacter.FromVrm(model, model.CreateShape()));
-        var bones = model.HumanoidBones;
+        using var asset = File.OpenRead(Path.Combine(AppContext.BaseDirectory, "Assets", bundled.File));
+        var model = GltfReader.Read(asset);
+        var character = MirrorCharacter.FromVrm(model, model.CreateShape(), bundled.Face);
+        var face = character.Face;
+        var ((headMin, headMax), _) = character.HeadBounds()!.Value;
+        var headHeight = headMax.Y - headMin.Y;
+        var name = bundled.Name;
+        // The vertices each part of the face moves, from the expressions the table drives.
+        var mouth = Moved(model, face.Mouth.Keys, headHeight);
+        var (leftEye, rightEye) = face.SeparateEyes
+            ? (Moved(model, ["blink_l"], headHeight), Moved(model, ["blink_r"], headHeight))
+            : Split(Moved(model, ["blink"], headHeight));
+        Check(mouth.Count > 0 && leftEye.Count > 0 && rightEye.Count > 0, $"{name}: no mouth or eye shapes");
+
+        // 46379: neutral 0–3.3 s, mouth wide open 3.6–7.9 s, blinks while talking 8.4–12 s (head and shoulders, body visible).
+        var talk = Replay(character, "face-46379");
+        float Mean(IEnumerable<Sample> s, Func<Sample, float> v) => s.Any() ? s.Average(v) : float.NaN;
+        var neutral = talk.Where(s => s.Time is > 1 and < 3.3).ToList();
+        var open = talk.Where(s => s.Time is > 4 and < 7.6).ToList();
+        float Mouth(Sample s) => Displacement(s, mouth) / headHeight;
+        Check(Mean(open, Mouth) >= MouthOpenShare && Mean(neutral, Mouth) < MouthOpenShare / 3,
+            $"{name}: mouth moves {Mean(open, Mouth):P1} of head height open (need {MouthOpenShare:P0}), {Mean(neutral, Mouth):P1} neutral");
+        // Her blinks must close each of the character's eyes, and its eyes must follow hers.
+        float leftTravel = Travel(model, face.SeparateEyes ? "blink_l" : "blink", leftEye), rightTravel = Travel(model, face.SeparateEyes ? "blink_r" : "blink", rightEye);
+        float Left(Sample s) => Closure(s, leftEye, leftTravel);
+        float Right(Sample s) => Closure(s, rightEye, rightTravel);
+        float Eyes(Sample s) => (Left(s) + Right(s)) / 2;
+        Check(talk.Max(Left) >= BlinkClosure && talk.Max(Right) >= BlinkClosure && Mean(neutral, Eyes) < .15f,
+            $"{name}: blinks close the eyes {talk.Max(Left):P0} and {talk.Max(Right):P0} (need {BlinkClosure:P0}), neutral {Mean(neutral, Eyes):P0}");
+        Check(Correlation(talk, s => s.FaceBlink, Eyes) > .7f, $"{name}: eyes follow blinks: r={Correlation(talk, s => s.FaceBlink, Eyes):0.00}");
+
+        // 11519: face only (no body detected); a wink with her right eye at 4.1–4.5 s; head tilts.
+        var girl = Replay(character, "face-11519");
+        Check(girl.Count > 200, $"{name}: face-only framing must track: {girl.Count} frames");
+        var wink = girl.Where(s => s.Time is > 4.15 and < 4.45).ToList();
+        if (face.SeparateEyes)
+            Check(Mean(wink, Right) > Mean(wink, Left) + .3f, $"{name}: wink closes the right eye {Mean(wink, Right):P0}, left {Mean(wink, Left):P0}");
+        Check(Correlation(girl, s => s.FaceRoll, s => s.HeadRoll) > .8f, $"{name}: head tilt follows: r={Correlation(girl, s => s.FaceRoll, s => s.HeadRoll):0.00}");
+        // Bangs over her brows must not read as a frown.
+        float Frown(Sample s) => face.Frown.Keys.Where(model.Expressions.ContainsKey).Select(e => model.Expressions[e].Binds)
+            .SelectMany(b => b).Select(b => s.Weights.TryGetValue(b.Mesh, out var w) ? w[b.Target] : 0).DefaultIfEmpty().Max();
+        Check(Mean(girl, Frown) < .2f, $"{name}: bangs over the brows must not read as a frown: {Mean(girl, Frown):0.00}");
+
+        // 43829: laughing, head turned and nodding.
+        var laugh = Replay(character, "face-43829");
+        Check(Correlation(laugh, s => s.FaceYaw, s => s.HeadYaw) > .7f && Correlation(laugh, s => s.FacePitch, s => s.HeadPitch) > .7f,
+            $"{name}: head turn and nod follow: yaw r={Correlation(laugh, s => s.FaceYaw, s => s.HeadYaw):0.00}, pitch r={Correlation(laugh, s => s.FacePitch, s => s.HeadPitch):0.00}");
+        Console.WriteLine($"PASS mirror face end to end ({name}): mouth {Mean(open, Mouth):P1} of head height open vs {Mean(neutral, Mouth):P1}, " +
+            $"blinks close {talk.Max(Left):P0}/{talk.Max(Right):P0}, r={Correlation(talk, s => s.FaceBlink, Eyes):0.00}{(face.SeparateEyes ? $", wink {Mean(wink, Right):P0} vs {Mean(wink, Left):P0}" : "")}, " +
+            $"tilt r={Correlation(girl, s => s.FaceRoll, s => s.HeadRoll):0.00}, turn r={Correlation(laugh, s => s.FaceYaw, s => s.HeadYaw):0.00}, nod r={Correlation(laugh, s => s.FacePitch, s => s.HeadPitch):0.00}");
+    }
+
+    // Vertices (per mesh) that the named expressions move by more than 0.5% of the head height at full intensity.
+    private static Dictionary<SkinnedMesh, int[]> Moved(GltfModel model, IEnumerable<string> expressions, float headHeight)
+    {
+        var moved = new Dictionary<SkinnedMesh, HashSet<int>>();
+        foreach (var name in expressions)
+        {
+            if (!model.Expressions.TryGetValue(name, out var expression)) continue;
+            foreach (var (mesh, target, weight) in expression.Binds)
+                for (var v = 0; v < mesh.Mesh.Vertices.Count; v++)
+                    if ((mesh.MorphTargets[target].PositionDeltas[v] * weight).Length() > headHeight * .005f)
+                        (moved.TryGetValue(mesh, out var set) ? set : moved[mesh] = []).Add(v);
+        }
+        return moved.ToDictionary(m => m.Key, m => m.Value.ToArray());
+    }
+
+    // A both-eyes blink split into the character's left (+X) and right eye.
+    private static (Dictionary<SkinnedMesh, int[]>, Dictionary<SkinnedMesh, int[]>) Split(Dictionary<SkinnedMesh, int[]> eyes) =>
+        (eyes.ToDictionary(e => e.Key, e => e.Value.Where(v => e.Key.Mesh.Vertices[v].X > 0).ToArray()),
+         eyes.ToDictionary(e => e.Key, e => e.Value.Where(v => e.Key.Mesh.Vertices[v].X <= 0).ToArray()));
+
+    private static Vector3 Offset(Sample s, SkinnedMesh mesh, int v)
+    {
+        var offset = Vector3.Zero;
+        if (s.Weights.TryGetValue(mesh, out var weights))
+            for (var t = 0; t < weights.Length; t++)
+                if (weights[t] != 0) offset += mesh.MorphTargets[t].PositionDeltas[v] * weights[t];
+        return offset;
+    }
+
+    // The largest distance any of the vertices moved.
+    private static float Displacement(Sample s, Dictionary<SkinnedMesh, int[]> vertices) =>
+        vertices.SelectMany(m => m.Value.Select(v => Offset(s, m.Key, v).Length())).DefaultIfEmpty().Max();
+
+    // How far an eye closed: the eyelid's travel over its travel when the model's blink is fully on, which closes the eye
+    // (see the grids in docs/site/images/mirror-faces-*.png). A model whose blink only half-closes fails visually, not here.
+    private static float Closure(Sample s, Dictionary<SkinnedMesh, int[]> eye, float full) =>
+        eye.SelectMany(m => m.Value.Select(v => MathF.Abs(Offset(s, m.Key, v).Y))).DefaultIfEmpty().Max() / full;
+
+    // The eyelid's vertical travel with the eye's blink expression fully on.
+    private static float Travel(GltfModel model, string expression, Dictionary<SkinnedMesh, int[]> eye) =>
+        eye.SelectMany(m => m.Value.Select(v => MathF.Abs(model.Expressions[expression].Binds.Where(b => b.Mesh == m.Key)
+            .Aggregate(0f, (y, b) => y + m.Key.MorphTargets[b.Target].PositionDeltas[v].Y * b.Weight)))).Max();
+
+    private sealed record Sample(double Time, Dictionary<SkinnedMesh, float[]> Weights, float FaceBlink, float FaceYaw, float FacePitch, float FaceRoll, float HeadYaw, float HeadPitch, float HeadRoll);
+
+    private static List<Sample> Replay(MirrorCharacter character, string fixture)
+    {
+        var session = new MirrorSession(character);
+        var bones = character.HumanoidBones;
         var samples = new List<Sample>();
         foreach (var frame in MirrorTests.Fixture(fixture))
         {
             session.Apply(frame, mirrored: false);
             for (var i = 0; i < 4; i++) session.Present(TimeSpan.FromSeconds(1 / 100d));
             if (session.Tracker.State != TrackingState.Tracking || session.Tracker.Face is not { } face) continue;
-            var leaf = Leaf(session.Stage.CharacterShape)!;
-            var world = leaf.Pose!.WorldTransforms;
+            var leaves = Leaves(session.Stage.CharacterShape).Where(l => l.Pose is not null).ToList();
+            var world = leaves[0].Pose!.WorldTransforms;
             // Head orientation relative to the chest, in view space (the character faces the camera).
             var toView = session.Stage.CharacterToView;
             var head = Quaternion.CreateFromRotationMatrix(world[bones["head"]]);
@@ -340,11 +414,14 @@ internal static class MirrorFaceTests
             var relative = toView * Quaternion.Conjugate(chest) * head * Quaternion.Conjugate(toView);
             var forward = Vector3.Transform(Vector3.UnitZ, relative);
             var up = Vector3.Transform(Vector3.UnitY, relative);
-            samples.Add(new(frame.Timestamp.TotalSeconds, leaf.MorphWeights?.ToArray() ?? new float[32], (face.BlinkLeft + face.BlinkRight) / 2, face.Yaw, face.Pitch, face.Roll,
+            var weights = new Dictionary<SkinnedMesh, float[]>();
+            foreach (var leaf in leaves)
+                if (leaf.SkinnedMesh is { } mesh && leaf.MorphWeights is { } w) weights[mesh] = w.ToArray();
+            samples.Add(new(frame.Timestamp.TotalSeconds, weights, (face.BlinkLeft + face.BlinkRight) / 2, face.Yaw, face.Pitch, face.Roll,
                 MathF.Atan2(forward.X, forward.Z), MathF.Asin(Math.Clamp(forward.Y, -1, 1)), MathF.Atan2(-up.X, up.Y)));
         }
         return samples;
-        static Shape? Leaf(Shape s) => s.Pose is not null ? s : s.Children.Select(Leaf).FirstOrDefault(c => c is not null);
+        static IEnumerable<Shape> Leaves(Shape s) => s.Children.Count == 0 ? [s] : s.Children.SelectMany(Leaves);
     }
 
     private static float Correlation(IReadOnlyList<Sample> s, Func<Sample, float> a, Func<Sample, float> b)

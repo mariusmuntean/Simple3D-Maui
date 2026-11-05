@@ -38,7 +38,7 @@ public sealed class MirrorSession
         if (!Tracker.Update(frame)) return false;
         var face = Tracker.Face;
         _target = _retargeter.Retarget(Tracker.Landmarks, Tracker.ImageAspect, mirrored, face);
-        _targetExpressions = face is null ? Neutral : Expressions(face, mirrored);
+        _targetExpressions = face is null ? Neutral : Stage.Character.Face.Expressions(face, mirrored);
         // A fresh acquisition snaps; while tracking, Present eases toward each new target.
         if (!tracking || _shown is null) Show(_target, _targetExpressions);
         return true;
@@ -83,22 +83,6 @@ public sealed class MirrorSession
     private Quaternion[]? _rotations;
 
     private static readonly IReadOnlyDictionary<string, float> Neutral = new Dictionary<string, float>();
-
-    /// <summary>Maps face measurements to VRM expression intensities. A mirrored preview swaps the eyes, like the body.</summary>
-    public static IReadOnlyDictionary<string, float> Expressions(FaceFrame face, bool mirrored)
-    {
-        ArgumentNullException.ThrowIfNull(face);
-        var (left, right) = mirrored ? (face.BlinkRight, face.BlinkLeft) : (face.BlinkLeft, face.BlinkRight);
-        return new Dictionary<string, float>
-        {
-            ["a"] = face.MouthOpen,
-            ["joy"] = face.Smile,
-            ["angry"] = Math.Clamp(-face.Brows, 0, 1),
-            ["surprised"] = Math.Clamp(face.Brows, 0, 1),
-            // Models without separate eyes have "blink"; models with both use the per-eye presets.
-            ["blink_l"] = left, ["blink_r"] = right, ["blink"] = MathF.Min(left, right),
-        };
-    }
 
     /// <summary>Switches to another character, animated when one is on stage. Tracking carries on, so the new character
     /// copies the person from its first frame.</summary>

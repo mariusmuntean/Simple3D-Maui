@@ -90,16 +90,80 @@ internal static class MirrorRender
         var stage = new MirrorStage(character);
         stage.ShowCharacter(true);
         if (expression is not null && character.Express is { } express)
-            stage.Update(shape => express(shape, expression.Split('+').ToDictionary(e => e, _ => 1f)));
-        // Close-up on the face.
-        stage.Camera.Target = new Vector3(0, character.Height * .85f, 0);
-        stage.Camera.Zoom(stage.Camera.Distance / 1.4f);
-        var image = new DepthRenderer().Render(stage.Scene, stage.Camera, 360, 640, 0xFF0E1A2B);
+            stage.Update(shape => express(shape, Intensities(expression)));
+        FrameFace(stage, 1);
+        var image = new DepthRenderer().Render(stage.Scene, stage.Camera, 480, 480, 0xFF0E1A2B);
         using var bitmap = new SKBitmap(new SKImageInfo(image.Width, image.Height, SKColorType.Bgra8888, SKAlphaType.Opaque));
         System.Runtime.InteropServices.MemoryMarshal.AsBytes(image.Pixels.Span).CopyTo(bitmap.GetPixelSpan());
         using var png = bitmap.Encode(SKEncodedImageFormat.Png, 90);
         File.WriteAllBytes(output, png.ToArray());
         return 0;
+    }
+
+    // "a+o:.5" → a at 1, o at 0.5.
+    private static Dictionary<string, float> Intensities(string spec) => spec.Split('+', StringSplitOptions.RemoveEmptyEntries)
+        .Select(e => e.Split(':')).ToDictionary(p => p[0], p => p.Length > 1 ? float.Parse(p[1], System.Globalization.CultureInfo.InvariantCulture) : 1f);
+
+    /// <summary>Renders a row of labeled face close-ups. Without <paramref name="spec"/>, the tiles are what the character's
+    /// <see cref="MirrorFace"/> table shows for a neutral face, a wide-open mouth, each eye closed, a smile and a frown; with
+    /// it, each "label=a+o:.5" entry (separated by ';') renders those expressions directly.</summary>
+    internal static int Faces(string output, string model, string? spec = null)
+    {
+        var character = Character(model);
+        FaceFrame Face(float mouth = 0, float smile = 0, float brows = 0, float left = 0, float right = 0) => new(0, 0, 0, mouth, smile, brows, left, right);
+        var tiles = new List<(string Label, IReadOnlyDictionary<string, float> Expressions)>();
+        if (spec is null)
+        {
+            var face = character.Face;
+            tiles.Add(("neutral", face.Expressions(Face(), false)));
+            tiles.Add(("mouth open", face.Expressions(Face(mouth: 1), false)));
+            // A model that can only close both eyes shows that once, for a blink.
+            if (face.SeparateEyes) { tiles.Add(("blink left", face.Expressions(Face(left: 1), false))); tiles.Add(("blink right", face.Expressions(Face(right: 1), false))); }
+            else tiles.Add(("blink", face.Expressions(Face(left: 1, right: 1), false)));
+            tiles.Add(("smile", face.Expressions(Face(smile: 1), false)));
+            tiles.Add(("frown", face.Expressions(Face(brows: -1), false)));
+        }
+        else
+            foreach (var entry in spec.Split(';').Select(t => t.Split('=')))
+                tiles.Add((entry[0], Intensities(entry.Length > 1 ? entry[1] : entry[0])));
+        const int size = 300, label = 28;
+        using var sheet = new SKBitmap(size * tiles.Count, size + label);
+        using var canvas = new SKCanvas(sheet);
+        canvas.Clear(new SKColor(0x0E, 0x1A, 0x2B));
+        using var font = new SKFont(SKTypeface.Default, 18);
+        using var paint = new SKPaint { Color = SKColors.White, IsAntialias = true };
+        var renderer = new DepthRenderer();
+        for (var i = 0; i < tiles.Count; i++)
+        {
+            var stage = new MirrorStage(character);
+            stage.ShowCharacter(true);
+            if (character.Express is { } express) stage.Update(shape => express(shape, tiles[i].Expressions));
+            FrameFace(stage, 1);
+            var image = renderer.Render(stage.Scene, stage.Camera, size, size, 0xFF0E1A2B);
+            using var bitmap = new SKBitmap(new SKImageInfo(image.Width, image.Height, SKColorType.Bgra8888, SKAlphaType.Opaque));
+            System.Runtime.InteropServices.MemoryMarshal.AsBytes(image.Pixels.Span).CopyTo(bitmap.GetPixelSpan());
+            canvas.DrawBitmap(bitmap, i * size, label);
+            canvas.DrawText(tiles[i].Label, i * size + size / 2f, 20, SKTextAlign.Center, font, paint);
+        }
+        using var png = sheet.Encode(SKEncodedImageFormat.Png, 100);
+        File.WriteAllBytes(output, png.ToArray());
+        return 0;
+    }
+
+    /// <summary>Points the stage camera level at the whole head, top to chin and ear to ear, with a margin, for an image of the given aspect.</summary>
+    internal static void FrameFace(MirrorStage stage, float aspect)
+    {
+        var character = stage.Character;
+        // Head bounds relative to the body, which the stage scales to character.Height with the feet at the origin.
+        var ((headMin, headMax), (bodyMin, bodyMax)) = character.HeadBounds() ?? throw new InvalidOperationException("The character has no head bone.");
+        var scale = character.Height / (bodyMax.Y - bodyMin.Y);
+        float bottom = (headMin.Y - bodyMin.Y) * scale, top = (headMax.Y - bodyMin.Y) * scale;
+        float halfHeight = (top - bottom) / 2, halfWidth = (headMax.X - headMin.X) / 2 * scale, depth = (headMax.Z - headMin.Z) * scale;
+        stage.Camera.Orbit(-stage.Camera.Yaw, -stage.Camera.Pitch);
+        stage.Camera.Target = new Vector3(0, (bottom + top) / 2, 0);
+        // Whiskers and wide ears may be cut: the face matters, so the width counts up to 1.3 times the height.
+        var half = MathF.Max(halfHeight, MathF.Min(halfWidth, halfHeight * 1.3f) / aspect) * 1.1f;
+        stage.Camera.Zoom(stage.Camera.Distance / (half / MathF.Tan(stage.Camera.FieldOfView / 2) + depth / 2));
     }
 
     /// <summary>Renders the showcase: three recorded performances, each driving a different character, with animated swaps.
@@ -156,10 +220,10 @@ internal static class MirrorRender
     {
         using var asset = File.OpenRead(Path.Combine(AppContext.BaseDirectory, "Assets", file));
         var loaded = GltfLoader.Load(asset);
-        return MirrorCharacter.FromVrm(loaded.Model, loaded.Shape);
+        return MirrorCharacter.FromVrm(loaded.Model, loaded.Shape, MirrorModels.All.FirstOrDefault(m => m.File == file)?.Face);
     }
 
-    private static IReadOnlyList<PoseFrame> Frames(string fixture)
+    internal static IReadOnlyList<PoseFrame> Frames(string fixture)
     {
         using var reader = new StreamReader(new GZipStream(File.OpenRead(Path.Combine(AppContext.BaseDirectory, "Fixtures", fixture + ".jsonl.gz")), CompressionMode.Decompress));
         return PoseRecording.Read(reader);
