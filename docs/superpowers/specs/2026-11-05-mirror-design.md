@@ -12,17 +12,25 @@ Approved direction (2026-11-05): a new gallery scene, not the opening one, in wh
 
 ## Library (Core) additions
 
-- `Skeleton` (joints: name, parent, rest TRS, inverse bind matrix; ≤128 joints), `SkeletonPose` (local joint rotations + root translation, cached joint matrices), `SkinnedMesh` (bind `Mesh` + up to four joint influences per vertex + skeleton).
+- `Skeleton` (joints: name, parent, rest TRS, affine inverse bind matrix; ≤128 joints), `SkeletonPose` (local joint rotations + root translation, cached joint matrices), `SkinnedMesh` (bind `Mesh` + up to four joint influences per vertex + skeleton).
 - `Shape.FromSkinnedMesh` and `Shape.WithPose`, which applies to every skinned descendant using that skeleton. Shapes stay immutable; a pose change is a shape replacement like any animation.
 - Software renderer, picking and bounds use CPU-skinned positions/normals, computed lazily once per posed shape.
 - Metal and GLES skin in the vertex shader: bind-pose geometry uploads once; each frame uploads only the joint palette.
-- `GltfReader` (Core): binary glTF 2.0 / VRM 0.x. Meshes, indices, normals, UV0, vertex colors, base color factor/texture (image bytes returned for platform decoding), node hierarchy, skins, VRM humanoid bone map. Unsupported: morph targets, animations, alpha blending (rendered opaque), PBR (base color only), cameras, sparse accessors, Draco/KTX2. Degenerate triangles are dropped. `Simple3D.Maui.GltfLoader` decodes textures.
+- `GltfReader` (Core): binary glTF 2.0 / VRM 0.x. Meshes, indices, normals, UV0, vertex colors, base color factor/texture (image bytes returned for platform decoding), node hierarchy, skins, VRM humanoid bone map. Unsupported: morph targets, animations, alpha blending (rendered opaque), PBR (base color only), cameras, sparse accessors, Draco/KTX2. Degenerate triangles are dropped. Skins over one armature (equal inverse binds for shared joints) merge into one skeleton, so one pose moves every part. `Simple3D.Maui.GltfLoader` decodes textures.
 
 ## Sample
 
 - Portable (`samples/Simple3D.Shared/Mirror`): `PoseFrame` (13 body landmarks in normalized image space with confidence), `PoseTracker` (searching/tracking/lost state machine with hysteresis), `PoseFilter` (One Euro smoothing), `HumanoidRetargeter` (landmark directions → humanoid bone rotations, mirrored, with foreshortening-based depth), the stylized pond scene built from library primitives, and the bundled CC0 character (100Avatars "Froggy", Polygonal Mind).
 - Platform: camera frames (AVCaptureSession / CameraX) and video frames (AVAssetReader / MediaCodec) feed one detector: Apple Vision `VNDetectHumanBodyPoseRequest` (2D, simulator-capable) or Google ML Kit Pose Detection. No model files ship with the app.
 - Haptics: `UINotificationFeedbackGenerator` success/warning on Apple, `HapticFeedbackConstants.CONFIRM`/`REJECT` on Android (MAUI fallback).
+
+## Assumptions checked during implementation
+
+- Apple Vision's 2D body pose runs on macOS/Mac Catalyst (17.6 ms per 640×360 frame) but not on the iOS simulator ("Unable to setup request"); the simulator replays recorded landmarks. The 3D request is not used: it is device-only and slower.
+- Mac Catalyst probes need an unlocked desktop session; a locked screen gives the app no window.
+- 100Avatars VRM 0.x models face −Z and are T-posed; the stage turns them toward the camera and normalizes height.
+- 2D landmarks give no depth: limbs swing toward their image direction and depth is estimated from foreshortening, so reaching straight at the camera is approximate.
+- Sideways motion follows the person's position across the image, bounded to the island; scaling by leg length overshot when the person stood off-center.
 
 ## Validation without a physical camera
 
