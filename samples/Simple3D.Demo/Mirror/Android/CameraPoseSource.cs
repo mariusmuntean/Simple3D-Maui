@@ -89,6 +89,12 @@ public sealed class CameraPoseSource(bool preferFront = true) : PoseSource
         }).ConfigureAwait(false);
     }
 
+    internal void UpdateRotation(int rotation)
+    {
+        if (analysis is not null && analysis.TargetRotation != rotation) analysis.TargetRotation = rotation;
+        if (Preview is { } preview && preview.TargetRotation != rotation) preview.TargetRotation = rotation;
+    }
+
     private static (CameraSelector Selector, bool Front)? SelectCamera(ProcessCameraProvider provider, bool preferFront)
     {
         (int Lens, bool Front)[] order = preferFront

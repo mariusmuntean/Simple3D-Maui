@@ -75,6 +75,7 @@ public sealed class CameraPreviewHandler() : ViewHandler<CameraPreview, CameraPr
             // The preview layer mirrors the front camera automatically, which is what people expect to see.
             _cameraLayer = new AVCaptureVideoPreviewLayer(session) { VideoGravity = AVLayerVideoGravity.ResizeAspectFill, Frame = Bounds };
             Layer.InsertSublayer(_cameraLayer, 0);
+            SetNeedsLayout();
         }
 
         // Called on the analysis thread with a borrowed image: copy the reference before hopping threads.
@@ -93,6 +94,10 @@ public sealed class CameraPreviewHandler() : ViewHandler<CameraPreview, CameraPr
         public override void LayoutSubviews()
         {
             base.LayoutSubviews();
+#if IOS
+            _camera?.UpdateOrientation(Window?.WindowScene);
+            if (_cameraLayer?.Connection is { } connection) CameraPoseSource.Orient(connection, Window?.WindowScene);
+#endif
             CATransaction.Begin();
             CATransaction.DisableActions = true;
             _imageLayer.Frame = Bounds;

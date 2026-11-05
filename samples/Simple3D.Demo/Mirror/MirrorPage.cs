@@ -25,6 +25,7 @@ public sealed class MirrorPage : ContentPage
     private bool _switching;
     private readonly Label _zoomText = Text("", 15, center: true);
     private readonly Border _zoomPill;
+    private readonly View _guidePill;
     private int _zoomShown;
     // Debug builds can replay a video instead of the camera (and on simulators without a body-pose model, recorded
     // landmarks instead of detection) through this same page, for development and automated checks.
@@ -60,6 +61,7 @@ public sealed class MirrorPage : ContentPage
         };
         _intro = Card("Mirror", "Your camera lets a 3D frog copy your moves in real time.\nVideo stays on this device.",
             ("Start", Start), ("Back", Close));
+        _guidePill = Pill("", top: true);
         _guide = Guide();
         _lostHint = Pill("Step back into the frame: whole body, waist up, or your face");
         _blockedAction = PrimaryButton("Open Settings", CameraAccess.OpenSettings);
@@ -107,6 +109,7 @@ public sealed class MirrorPage : ContentPage
         pinch.PinchUpdated += OnPinch;
         root.GestureRecognizers.Add(pinch);
         Content = root;
+        _view.SizeChanged += (_, _) => UpdateLayout();
         Show(Step.Intro);
         _loading = LoadAsync();
         if (IsRequested) Dispatcher.Dispatch(Start);
@@ -121,6 +124,7 @@ public sealed class MirrorPage : ContentPage
         session.StateChanged += OnTrackingChanged;
         _view.Scene = session.Stage.Scene;
         _view.Camera = session.Stage.Camera;
+        UpdateLayout();
     }
 
     // Swaps the character without stopping the camera; the new one appears once the person is tracked again.
@@ -138,6 +142,7 @@ public sealed class MirrorPage : ContentPage
             var character = await Character(_model.File);
             await _loading!;
             _session!.SwitchCharacter(character);
+            UpdateLayout();
         }
         catch (Exception error) { Block($"The character couldn't load: {error.Message}", settings: false); }
     }
@@ -310,8 +315,7 @@ public sealed class MirrorPage : ContentPage
         _preview.IsVisible = step is Step.Guide or Step.Live;
         // Full-screen viewfinder while searching; a small inset while the frog performs.
         var live = step == Step.Live;
-        _previewFrame.WidthRequest = live ? 108 : -1;
-        _previewFrame.HeightRequest = live ? 144 : -1;
+        UpdateLayout();
         _previewFrame.HorizontalOptions = live ? LayoutOptions.End : LayoutOptions.Fill;
         _previewFrame.VerticalOptions = live ? LayoutOptions.Start : LayoutOptions.Fill;
         _previewFrame.Margin = live ? new Thickness(0, 16, 16, 0) : 0;
@@ -319,6 +323,29 @@ public sealed class MirrorPage : ContentPage
         _previewFrame.StrokeThickness = live ? 2 : 0;
         _previewFrame.Stroke = Color.FromRgba(255, 255, 255, 120);
         _ = _view.FadeToAsync(live ? 1 : 0, 250);
+    }
+
+    private void UpdateLayout()
+    {
+        var width = _view.Width;
+        var height = _view.Height;
+        if (width <= 0 || height <= 0) return;
+        var landscape = width > height;
+        if (_session is { } session)
+        {
+            session.Stage.Frame((float)(width / height));
+            _view.Camera = session.Stage.Camera;
+        }
+        var live = _step == Step.Live;
+        _previewFrame.WidthRequest = live ? landscape ? 192 : 108 : -1;
+        _previewFrame.HeightRequest = live ? landscape ? 108 : 144 : -1;
+        if (_guidePill is Border { Content: Label label })
+            label.Text = landscape ? "Step back · body, waist up or face" :
+                "Get into the frame: your whole body, from the waist up, or just your head for face tracking";
+        _guidePill.MaximumWidthRequest = Math.Max(1, width - 48);
+        _lostHint.MaximumWidthRequest = Math.Max(1, width - 48);
+        // Keep transient zoom feedback below the top buttons and camera inset.
+        _zoomPill.Margin = new Thickness(0, live && landscape ? 132 : 168, 0, 0);
     }
 
     private void Block(string message, bool settings)
@@ -384,12 +411,12 @@ public sealed class MirrorPage : ContentPage
                 "Q67,196 61,196 Q55,196 55,190 L52,124 L48,124 L45,190 Q45,196 39,196 Q33,196 32,190 L28,112 L28,60 L21,101 Q20,107 15,107 " +
                 "Q9,106 10,100 L18,46 Q20,36 30,36 Z")!,
             Aspect = Stretch.Uniform, Fill = Color.FromRgba(255, 255, 255, 22), Stroke = Color.FromRgba(255, 255, 255, 200),
-            StrokeThickness = 2, StrokeDashArray = [4, 3], Margin = new Thickness(0, 150, 0, 110), InputTransparent = true
+            StrokeThickness = 2, StrokeDashArray = [4, 3], Margin = new Thickness(0, 120, 0, 70), InputTransparent = true
         };
         return new Grid
         {
             InputTransparent = true,
-            Children = { silhouette, Pill("Get into the frame: your whole body, from the waist up, or just your head for face tracking", top: true) }
+            Children = { silhouette, _guidePill }
         };
     }
 

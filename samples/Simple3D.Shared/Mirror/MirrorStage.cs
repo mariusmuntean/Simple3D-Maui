@@ -80,7 +80,7 @@ public sealed class MirrorStage
     /// <summary>The scene to display.</summary>
     public Scene Scene { get; } = new() { AmbientLight = .46f, Light = new DirectionalLight(new(-.35f, -.75f, -.55f), 0xFFFFF1DC, .7f) };
     /// <summary>A camera framing the character's whole body and the island.</summary>
-    public Camera Camera { get; }
+    public Camera Camera { get; private set; }
     /// <summary>The character.</summary>
     public MirrorCharacter Character { get; private set; }
     /// <summary>Rotation from the character's skeleton space to view space, for <see cref="HumanoidRetargeter"/>.</summary>
@@ -99,6 +99,16 @@ public sealed class MirrorStage
         _shown = Shape.Group(_body);
         Camera = new(4.6f, 0, .12f) { Target = CameraTarget(character) };
         BuildPond();
+    }
+
+    /// <summary>Frames the whole body, outstretched arms and some island for the viewport.</summary>
+    public void Frame(float aspect)
+    {
+        if (!float.IsFinite(aspect) || aspect <= 0) return;
+        // Leave Target to the swap animation; portrait needs extra distance for the arms.
+        var halfExtent = Character.Height * .75f * MathF.Max(1, 1 / aspect);
+        var distance = halfExtent / MathF.Tan(Camera.FieldOfView / 2) + Character.Height * .25f;
+        Camera = new(distance, 0, .12f) { Target = Camera.Target };
     }
 
     // Normalizes the height, turns the model toward the camera and stands its feet at the origin, the island's center.

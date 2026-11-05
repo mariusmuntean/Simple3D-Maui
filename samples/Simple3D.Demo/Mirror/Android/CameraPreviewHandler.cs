@@ -22,6 +22,7 @@ public sealed class CameraPreviewHandler() : ViewHandler<CameraPreview, FrameLay
     {
         var layout = new FrameLayout(Context) { ClipToOutline = true };
         layout.SetBackgroundColor(Android.Graphics.Color.Black);
+        layout.LayoutChange += (_, _) => UpdateRotation();
         return layout;
     }
 
@@ -77,6 +78,13 @@ public sealed class CameraPreviewHandler() : ViewHandler<CameraPreview, FrameLay
     private void UpdatePreview()
     {
         if (cameraView is not null && camera?.Preview is { } preview) preview.SurfaceProvider = cameraView.SurfaceProvider;
+        UpdateRotation();
+    }
+
+    private void UpdateRotation()
+    {
+        // The activity handles rotation itself, so bound use cases survive configuration changes.
+        if (PlatformView.Display is { } display) camera?.UpdateRotation((int)display.Rotation);
     }
 
     /// <summary>Copies borrowed analysis bitmaps and recycles each one only after the next has replaced it on screen.</summary>

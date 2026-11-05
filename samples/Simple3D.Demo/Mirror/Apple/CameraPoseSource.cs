@@ -6,6 +6,9 @@ using CoreGraphics;
 using CoreMedia;
 using CoreVideo;
 using Foundation;
+#if IOS
+using UIKit;
+#endif
 
 namespace Simple3D.Demo.Mirror;
 
@@ -81,11 +84,9 @@ public sealed class CameraPoseSource(bool preferFront = true) : PoseSource
         session.AddOutput(output);
         if (output.ConnectionFromMediaType(AVMediaTypes.Video.GetConstant()!) is { } connection)
         {
-            // Analyze upright, unmirrored portrait images; only the preview is mirrored.
+            // Analyze upright, unmirrored images; only the preview is mirrored.
 #if IOS
-#pragma warning disable CA1422 // VideoOrientation: replacement (rotation angle) needs iOS 17; this sample supports iOS 15.
-            if (connection.SupportsVideoOrientation) connection.VideoOrientation = AVCaptureVideoOrientation.Portrait;
-#pragma warning restore CA1422
+            Orient(connection, Platform.GetCurrentUIViewController()?.View?.Window?.WindowScene);
 #endif
             if (connection.SupportsVideoMirroring) { connection.AutomaticallyAdjustsVideoMirroring = false; connection.VideoMirrored = false; }
         }
@@ -93,6 +94,32 @@ public sealed class CameraPoseSource(bool preferFront = true) : PoseSource
         output.SetSampleBufferDelegate(_delegate, _queue);
         session.CommitConfiguration();
     }
+
+#if IOS
+    internal void UpdateOrientation(UIWindowScene? scene)
+    {
+        if (_session is null) return;
+        foreach (var output in _session.Outputs)
+            if (output.ConnectionFromMediaType(AVMediaTypes.Video.GetConstant()!) is { } connection)
+                Orient(connection, scene);
+    }
+
+    internal static void Orient(AVCaptureConnection connection, UIWindowScene? scene)
+    {
+        // These APIs keep orientation support back to iOS 15.
+#pragma warning disable CA1422
+        var orientation = scene?.InterfaceOrientation switch
+        {
+            UIInterfaceOrientation.Portrait => AVCaptureVideoOrientation.Portrait,
+            UIInterfaceOrientation.PortraitUpsideDown => AVCaptureVideoOrientation.PortraitUpsideDown,
+            UIInterfaceOrientation.LandscapeLeft => AVCaptureVideoOrientation.LandscapeLeft,
+            UIInterfaceOrientation.LandscapeRight => AVCaptureVideoOrientation.LandscapeRight,
+            _ => (AVCaptureVideoOrientation?)null
+        };
+        if (orientation is { } value && connection.SupportsVideoOrientation) connection.VideoOrientation = value;
+#pragma warning restore CA1422
+    }
+#endif
 
     public override Task StopAsync()
     {
