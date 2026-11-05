@@ -7,7 +7,8 @@ using Foundation;
 
 namespace Simple3D.Demo.Mirror;
 
-public sealed class VideoPoseSource(string path, bool loop = false) : PoseSource, IApplePosePreview
+/// <summary>Plays a video in real time through the pose detector. With a recording, its landmarks replace detection.</summary>
+public sealed class VideoPoseSource(string path, bool loop = false, IReadOnlyList<Simple3D.Shared.Mirror.PoseFrame>? recording = null) : PoseSource, IApplePosePreview
 {
     private readonly SemaphoreSlim lifecycle = new(1, 1);
     private CancellationTokenSource? cancellation;
@@ -89,7 +90,8 @@ public sealed class VideoPoseSource(string path, bool loop = false) : PoseSource
                             ?? throw new InvalidOperationException("The video decoder returned no image.");
                         using var image = detector.CreateImage(pixels, transform);
                         var start = Stopwatch.GetTimestamp();
-                        var frame = detector.Detect(image, timestampOffset + timestamp);
+                        var frame = recording is null ? detector.Detect(image, timestampOffset + timestamp)
+                            : Simple3D.Shared.Mirror.PoseRecording.Nearest(recording, timestamp) with { Timestamp = timestampOffset + timestamp };
                         var elapsed = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
                         token.ThrowIfCancellationRequested();
                         ImageReady?.Invoke(image);

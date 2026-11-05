@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Numerics;
 using Simple3D.Core;
 using Simple3D.Shared;
 
@@ -15,7 +16,8 @@ internal static class NativeGpuValidation
     internal const int Size = 256;
     internal const uint Background = 0xFF18243B;
     /// <param name="lastFrameDirect">Whether the renderer's last frame skipped the offscreen composite.</param>
-    internal static void Run(string backend, Func<Scene, Camera, GpuProbeOptions, uint[]> render, Func<bool> lastFrameDirect)
+    internal static void Run(string backend, Func<Scene, Camera, GpuProbeOptions, uint[]> render, Func<bool> lastFrameDirect,
+        Func<(int Geometry, int Textures, int Palettes, int PaletteBytes)> uploads)
     {
         Console.WriteLine("GPU_PROBE_BACKEND: " + backend);
         var near = Shape.Box().WithMaterial(new Material(0xFFFF0000, lit: false)).At(0, 0, 1);
@@ -62,8 +64,98 @@ internal static class NativeGpuValidation
             Array.Sort(times);
             Console.WriteLine($"GPU_PROBE {sample.Name}: {mismatches} mismatches vs software, {pathDifferences} direct/composite differences; completed median={times[10]:F3}ms p95={times[18]:F3}ms; {allocated}B managed/frame (prepare+render) at {Size}x{Size}; not displayed FPS");
         }
+        Skinning(render, uploads, 2);
+        Skinning(render, uploads, Skeleton.MaximumJoints);
         if (render(new Scene(), camera, default).Any(pixel => pixel != Background)) throw new InvalidOperationException("GPU empty scene retained pixels.");
         Console.WriteLine("NATIVE_GPU_PROBE_PASS");
+    }
+    private static void Skinning(Func<Scene, Camera, GpuProbeOptions, uint[]> render,
+        Func<(int Geometry, int Textures, int Palettes, int PaletteBytes)> uploads, int jointCount)
+    {
+        var mesh = SkinnedBar(jointCount);
+        var rotations = Enumerable.Repeat(Quaternion.Identity, jointCount).ToArray();
+        rotations[^1] = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI / 3);
+        if (jointCount > 2) rotations[^2] = rotations[^1];
+        var pose = SkeletonPose.Create(mesh.Skeleton, rotations, new(.1f, .05f, .2f));
+        var texture = new Texture2D(2, 2, new uint[] { 0xFFFFE0A0, 0xFF90C0FF, 0xFF90C0FF, 0xFFFFE0A0 }, TextureFilter.Bilinear);
+        var rest = Shape.FromSkinnedMesh(mesh).WithMaterial(new Material(texture, doubleSided: false)).At(.65f, 0, 0).Scaled(.8f, 1, 1.2f);
+        var bent = rest.WithPose(pose);
+        var other = rest.At(-.65f, 0, -.2f);
+        var scene = new Scene().Add(rest).Add(other).Add(Shape.Box().Scaled(.15f).At(0, -.2f, 0));
+        var camera = new Camera(5, .12f, .08f) { Target = new(0, .9f, 0) };
+        Shape current = rest;
+        uint[]? restPixels = null;
+        foreach (var shape in new[] { rest, bent })
+        {
+            scene.Replace(current, shape); current = shape;
+            var actual = render(scene, camera, default);
+            if (shape == bent) CheckUploads();
+            var expected = new DepthRenderer().Render(scene, camera, Size, Size, Background).Pixels.ToArray();
+            var differences = Mismatches(actual, expected);
+            if (differences > Size * Size * .03) throw new InvalidOperationException($"Skinned {jointCount} joints: {differences} pixels disagree with software.");
+            if (actual.Count(p => p != Background) < 500) throw new InvalidOperationException("Skinned scene has insufficient coverage.");
+            var composite = render(scene, camera, new(ForceComposite: true));
+            if (Mismatches(actual, composite) > Size * Size * .001) throw new InvalidOperationException("Skinned direct/composite paths differ.");
+            var selected = render(scene, camera, new(shape));
+            if (Count(selected, OutlineColor) == 0 || selected.SequenceEqual(actual)) throw new InvalidOperationException("Skinned selection mask missing.");
+            if (shape == rest) restPixels = actual;
+            else if (Mismatches(restPixels!, actual) < 500) throw new InvalidOperationException("Pose change did not move skinned geometry.");
+            Console.WriteLine($"PASS GPU skinning {jointCount} joints {(shape == rest ? "rest" : "bent")}: {differences} mismatches; direct/composite and selection");
+        }
+        // Prebuilt poses isolate preparation/upload costs from application animation allocation.
+        var times = new double[20];
+        for (var i = 0; i < 3; i++) render(scene, camera, new(SkipReadback: true));
+        var allocated = GC.GetAllocatedBytesForCurrentThread();
+        for (var i = 0; i < times.Length; i++)
+        {
+            var next = i % 2 == 0 ? rest : bent;
+            scene.Replace(current, next); current = next;
+            var start = Stopwatch.GetTimestamp(); render(scene, camera, new(SkipReadback: true));
+            times[i] = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+            CheckUploads();
+        }
+        allocated = (GC.GetAllocatedBytesForCurrentThread() - allocated) / times.Length;
+        Array.Sort(times);
+        Console.WriteLine($"PASS GPU skinning pose-only reuse: {jointCount} joints, 0 vertex/texture uploads; {uploads().Palettes} palettes/{uploads().PaletteBytes}B per frame");
+        Console.WriteLine($"GPU_PROBE skinning {jointCount} joints: completed median={times[10]:F3}ms p95={times[18]:F3}ms; {allocated}B managed/frame (pose replacement+prepare+render, prebuilt poses, no readback); not isolated upload time or displayed FPS");
+        void CheckUploads()
+        {
+            var counts = uploads();
+            if (counts.Geometry != 0 || counts.Textures != 0 || counts.Palettes != 2 || counts.PaletteBytes != jointCount * 64 * 2)
+                throw new InvalidOperationException($"Pose-only resource uploads: {counts}.");
+        }
+    }
+    private static SkinnedMesh SkinnedBar(int jointCount)
+    {
+        // Same two-ring segments as the portable bar; the large palette exercises joint 127 and all four slots.
+        var joints = new Joint[jointCount];
+        for (var i = 0; i < jointCount; i++)
+        {
+            var tip = i == jointCount - 1 || (jointCount > 2 && i == jointCount - 2);
+            joints[i] = new($"joint{i}", i == 0 ? -1 : 0, tip ? Vector3.UnitY : Vector3.Zero,
+                Quaternion.Identity, Vector3.One, tip ? Matrix4x4.CreateTranslation(0, -1, 0) : Matrix4x4.Identity);
+        }
+        var vertices = new List<Vector3>(); var influences = new List<VertexInfluence>();
+        for (var y = 0; y <= 2; y++)
+            foreach (var x in new[] { -.18f, .18f })
+                foreach (var z in new[] { -.18f, .18f })
+                {
+                    vertices.Add(new(x, y, z));
+                    influences.Add(y == 0 ? new(new(0, 0, 0, 0), Vector4.UnitX)
+                        : y == 2 ? new(new(jointCount - 1, 0, 0, 0), Vector4.UnitX)
+                        : jointCount == 2 ? new(new(0, 1, 0, 0), new(.5f, .5f, 0, 0))
+                        : new(new(0, 1, jointCount - 2, jointCount - 1), new(.25f)));
+                }
+        var indices = new List<int>();
+        for (var level = 0; level < 2; level++)
+        {
+            var b = level * 4;
+            foreach (var (p, q) in new[] { (0, 1), (1, 3), (3, 2), (2, 0) })
+                indices.AddRange([b + p, b + q, b + 4 + q, b + p, b + 4 + q, b + 4 + p]);
+        }
+        var geometry = new Mesh(vertices, indices, vertices.Select(p => new Vector2((p.X + .18f) / .36f, p.Y / 2)),
+            colors: vertices.Select(p => p.Y == 1 ? 0xFFC0E0FFu : 0xFFFFFFFFu)).WithCalculatedNormals();
+        return new(geometry, new Skeleton(joints), influences);
     }
     private static bool Valid(uint[] pixels) => pixels.Length == Size * Size && pixels[Size / 2 * Size + Size / 2] == 0xFFFF0000 && pixels[0] == Background;
     private static string Describe(uint[] pixels) => pixels.Length == Size * Size

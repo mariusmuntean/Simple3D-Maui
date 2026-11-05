@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Skinned meshes: `Skeleton`, `SkeletonPose`, `SkinnedMesh`, `Shape.FromSkinnedMesh` and `Shape.WithPose`. Metal and GLES skin in the vertex shader (one joint palette upload per pose); software rendering, picking and bounds skin on the CPU.
+- `GltfReader` (Core) and `GltfLoader` (MAUI) load binary glTF 2.0 and VRM: meshes, base color materials, node hierarchy, skins and the VRM humanoid bone map.
+- Gallery: the Mirror scene, in which a 3D frog copies the body pose the camera sees (Apple Vision / Google ML Kit), with guided camera permission, framing hints and haptics.
 - Add Auto/Software/Hardware rendering modes, native Metal and GLES3 backends, active-backend diagnostics and strict hardware failure reporting.
 - Cache native geometry/textures, depth-test opaque surfaces, and composite visible selection masks.
 - Add gallery backend controls, portable GPU preparation tests, headless GLES comparisons/performance probes and opt-in native GPU probes.

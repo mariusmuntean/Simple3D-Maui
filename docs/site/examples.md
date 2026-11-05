@@ -26,6 +26,19 @@ Robot Arm demonstrates child transforms relative to a parent. Gantry Crane combi
 
 The [gallery page](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Demo/GalleryPage.cs) owns the UI timer, lowers render resolution during animation and pauses on backgrounding. It targets 60 updates per second; this is not a displayed-frame-rate guarantee. Press Animate after returning to the app.
 
+## Mirror
+
+The gallery's **Mirror ✦** button opens a full-screen scene in which a frog copies the person the camera sees. It asks for the camera, shows a silhouette until someone's whole body is in frame, then reveals the character on its pond and keeps the camera as a small inset. When the person leaves the frame, the frog holds its pose and a hint asks them to step back in; haptics mark both moments. Video stays on the device.
+
+| Piece | Source |
+| --- | --- |
+| Tracking states and smoothing | [PoseTracker.cs](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Mirror/PoseTracker.cs) |
+| Landmarks → humanoid bone rotations | [HumanoidRetargeter.cs](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Mirror/HumanoidRetargeter.cs) |
+| Pond scene from primitives | [MirrorStage.cs](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Mirror/MirrorStage.cs) |
+| Camera, detectors and page | [Simple3D.Demo/Mirror](https://github.com/mariusmuntean/Simple3D-Maui/tree/main/samples/Simple3D.Demo/Mirror) |
+
+Detection uses the platform's own models (Apple Vision on iOS and Mac Catalyst, Google ML Kit on Android), so the app ships no model file. Detectors report 2D landmarks: the retargeter turns each limb toward its landmark direction and estimates depth from foreshortening, so motion toward the camera is approximate. The character is [100Avatars "Froggy"](https://github.com/PolygonalMind/100Avatars) by Polygonal Mind (CC0), loaded with `GltfLoader`; see [skinned characters](skinned-characters.md).
+
 ## Render without MAUI
 
 ```bash

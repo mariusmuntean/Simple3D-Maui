@@ -1,9 +1,9 @@
 using System.IO.Compression;
-using System.Text.Json;
 using Simple3D.Core;
 using Simple3D.Maui;
 using Simple3D.Shared.Mirror;
 using SkiaSharp;
+using System.Diagnostics;
 
 /// <summary>Renders the Mirror character driven by recorded landmarks, for visual review next to the source video.</summary>
 /// <remarks><c>dotnet run --project tests/Simple3D.Maui.Tests -c Release -- --render-mirror out [every-nth-frame]</c>
@@ -17,47 +17,44 @@ internal static class MirrorRender
         Directory.CreateDirectory(output);
         using var asset = File.OpenRead(Path.Combine(AppContext.BaseDirectory, "Assets", "froggy.vrm"));
         var character = GltfLoader.Load(asset);
-        var stage = new MirrorStage(character.Shape, facesPositiveZ: false);
-        var retargeter = new HumanoidRetargeter(character.Model.Skeletons[0], character.Model.HumanoidBones, stage.CharacterToView);
-        var tracker = new PoseTracker();
+        var session = new MirrorSession(character.Shape, character.Model.Skeletons[0], character.Model.HumanoidBones, facesPositiveZ: false);
         var renderer = new DepthRenderer();
+        var gpu = new GpuScene();
         var timeline = new List<string>();
-        tracker.StateChanged += state => timeline.Add($"{state}");
+        var (pose, prepare, render) = (new List<double>(), new List<double>(), new List<double>());
         var index = 0;
-        var renderTimes = new List<double>();
         foreach (var frame in Frames())
         {
-            if (tracker.Update(frame))
-                stage.Pose(retargeter.Retarget(tracker.Landmarks, tracker.ImageAspect, mirrored: false));
-            stage.ShowCharacter(tracker.State != TrackingState.Searching);
-            stage.Animate((float)frame.Timestamp.TotalSeconds);
-            timeline.Add($"{index} {frame.Timestamp.TotalSeconds:0.00} {tracker.State}");
+            var started = Stopwatch.GetTimestamp();
+            if (session.Apply(frame, mirrored: false)) pose.Add(Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+            session.Stage.Animate((float)frame.Timestamp.TotalSeconds);
+            timeline.Add($"{index} {frame.Timestamp.TotalSeconds:0.00} {session.Tracker.State}");
+            // What a GPU frame costs on the CPU: scene preparation with joint palettes, no skinning.
+            started = Stopwatch.GetTimestamp();
+            gpu.Update(session.Stage.Scene, session.Stage.Camera, 720, 1280);
+            prepare.Add(Stopwatch.GetElapsedTime(started).TotalMilliseconds);
             if (index++ % every != 0) continue;
-            var started = System.Diagnostics.Stopwatch.GetTimestamp();
-            var image = renderer.Render(stage.Scene, stage.Camera, 360, 640, 0xFF0E1A2B);
-            renderTimes.Add(System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+            started = Stopwatch.GetTimestamp();
+            var image = renderer.Render(session.Stage.Scene, session.Stage.Camera, 360, 640, 0xFF0E1A2B);
+            render.Add(Stopwatch.GetElapsedTime(started).TotalMilliseconds);
             using var bitmap = new SKBitmap(new SKImageInfo(image.Width, image.Height, SKColorType.Bgra8888, SKAlphaType.Opaque));
             System.Runtime.InteropServices.MemoryMarshal.AsBytes(image.Pixels.Span).CopyTo(bitmap.GetPixelSpan());
             using var png = bitmap.Encode(SKEncodedImageFormat.Png, 90);
             File.WriteAllBytes(Path.Combine(output, $"frame-{index - 1:0000}.png"), png.ToArray());
         }
         File.WriteAllLines(Path.Combine(output, "timeline.txt"), timeline);
-        renderTimes.Sort();
-        Console.WriteLine($"MIRROR_RENDER frames={index} images={renderTimes.Count} median_render_ms={renderTimes[renderTimes.Count / 2]:0.0} output={Path.GetFullPath(output)}");
+        Console.WriteLine($"MIRROR_RENDER frames={index} images={render.Count} output={Path.GetFullPath(output)}");
+        Console.WriteLine($"MIRROR_PERF track+retarget+pose median={Median(pose):0.000}ms p95={P95(pose):0.000}ms; GPU scene prepare 720x1280 median={Median(prepare):0.000}ms; " +
+            $"software render (CPU skinning + raster) 360x640 median={Median(render):0.0}ms; CPU only, not displayed FPS");
         return 0;
     }
 
-    private static IEnumerable<PoseFrame> Frames()
+    private static double Median(List<double> values) { values.Sort(); return values[values.Count / 2]; }
+    private static double P95(List<double> values) { values.Sort(); return values[(int)(values.Count * .95)]; }
+
+    private static IReadOnlyList<PoseFrame> Frames()
     {
         using var reader = new StreamReader(new GZipStream(File.OpenRead(Path.Combine(AppContext.BaseDirectory, "Fixtures", "mirror-landmarks.jsonl.gz")), CompressionMode.Decompress));
-        while (reader.ReadLine() is { } line)
-        {
-            using var json = JsonDocument.Parse(line);
-            var root = json.RootElement;
-            var landmarks = root.GetProperty("lm").ValueKind == JsonValueKind.Array
-                ? root.GetProperty("lm").EnumerateArray().Select(p => new Landmark(p[0].GetSingle(), p[1].GetSingle(), p[2].GetSingle())).ToArray()
-                : null;
-            yield return new(TimeSpan.FromSeconds(root.GetProperty("t").GetDouble()), root.GetProperty("w").GetInt32(), root.GetProperty("h").GetInt32(), landmarks);
-        }
+        return PoseRecording.Read(reader);
     }
 }

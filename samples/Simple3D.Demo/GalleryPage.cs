@@ -58,6 +58,13 @@ public sealed class GalleryPage : ContentPage
         var scenes = new HorizontalStackLayout { Spacing = 8 };
         foreach (var sample in _scenes)
             scenes.Add(SceneButton(sample.Name, () => Show(sample)));
+#if IOS || MACCATALYST || ANDROID
+        // Mirror needs the camera, so it opens as its own full-screen page instead of a gallery scene.
+        var mirror = SceneButton("Mirror ✦", () => Navigation.PushModalAsync(new Mirror.MirrorPage()));
+        mirror.BackgroundColor = Color.FromArgb("#2E7D5B");
+        SemanticProperties.SetHint(mirror, "Opens a camera scene in which a 3D frog copies your movement");
+        scenes.Add(mirror);
+#endif
         var tools = new HorizontalStackLayout { Spacing = 8 };
         tools.Add(SceneButton("−", () => _view.Zoom(.8f)));
         tools.Add(SceneButton("Fit", () => _view.Camera.FitToScene(_view.Scene, (float)Math.Max(.1, _view.Width / Math.Max(1, _view.Height)))));

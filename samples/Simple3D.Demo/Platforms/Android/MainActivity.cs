@@ -19,6 +19,10 @@ public class MainActivity : MauiAppCompatActivity
             Environment.SetEnvironmentVariable("SIMPLE3D_LABEL_SYNC_PROBE", labelSync);
         if (Intent?.GetStringExtra("simple3d_pose_probe") is { } poseVideo)
             Environment.SetEnvironmentVariable("SIMPLE3D_POSE_PROBE", poseVideo);
+        if (Intent?.GetStringExtra("simple3d_mirror_video") is { } mirrorVideo)
+            Environment.SetEnvironmentVariable("SIMPLE3D_MIRROR_VIDEO", mirrorVideo);
+        if (Intent?.GetStringExtra("simple3d_mirror_landmarks") is { } mirrorLandmarks)
+            Environment.SetEnvironmentVariable("SIMPLE3D_MIRROR_LANDMARKS", mirrorLandmarks);
         if (Intent?.GetStringExtra("simple3d_camera_probe") is { } cameraProbe)
             Environment.SetEnvironmentVariable("SIMPLE3D_CAMERA_PROBE", cameraProbe);
         base.OnCreate(savedInstanceState);

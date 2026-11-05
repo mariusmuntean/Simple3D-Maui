@@ -107,3 +107,20 @@ Native probes render offscreen with the same backend/shaders, compare all galler
 To check label sync on the composited screen itself, launch `SIMPLE3D_LABEL_SYNC_PROBE=timer` (or `=frame`; on Android the `simple3d_label_sync_probe` intent extra). It orbits a magenta marker with a white label at the same anchor and logs `LABEL_SYNC_READY ... motion_px_per_frame=N`. Take screenshots from outside the app (`adb exec-out screencap -p`, `xcrun simctl io <device> screenshot`, `screencapture`) and run `python3 scripts/check-label-sync.py <N/2> shots/*.png`: the label-to-marker offset must vary by less than half a frame of motion. The library's probe counters and fault hooks compile only into Debug builds or builds with `EnableNativeRenderProbe=true`. The `--gpu-probe` scripts run both stages. Backgrounding and performance still need the manual checks below. Probe code is absent from ordinary Release demo builds. Never distribute a Release build with `EnableNativeRenderProbe` enabled.
 
 Before merging GPU changes, run native builds/probes on all three targets and manually exercise runtime switching, orbit/pinch/tap, selected animation, rotation/resizing and background/resume. For device performance, compare Software and Hardware on the same physical device in Release with matching scenes and render dimensions. The gallery shows the active backend so a fallback cannot masquerade as GPU performance.
+
+## Mirror (camera pose) validation
+
+No physical camera is needed. Prepare a test clip once: download Mixkit stock video 44414 (one person, full body; Mixkit license, so never commit it) and insert an empty segment to exercise losing and finding the person:
+
+```bash
+curl -L -o /tmp/44414.mp4 https://assets.mixkit.co/videos/44414/44414-360.mp4
+ffmpeg -i /tmp/44414.mp4 -filter_complex "[0:v]trim=0:14,setpts=PTS-STARTPTS[a];color=c=0x202428:s=640x360:r=25:d=3[g];[0:v]trim=14:30,setpts=PTS-STARTPTS[b];[a][g][b]concat=n=3:v=1:a=0,fps=25" -an -c:v libx264 -pix_fmt yuv420p /tmp/mirror-test.mp4
+swift scripts/extract-pose-landmarks.swift /tmp/mirror-test.mp4 > /tmp/mirror-test.jsonl
+```
+
+`tests/Fixtures/mirror-landmarks.jsonl.gz` holds the extracted Apple Vision landmarks of that clip. The Core tests replay them through tracking and retargeting. `dotnet run --project tests/Simple3D.Maui.Tests -c Release -- --render-mirror out 25` renders the posed character and prints CPU timings; `python3 scripts/mirror-contact-sheet.py /tmp/mirror-test.mp4 tests/Fixtures/mirror-landmarks.jsonl.gz out sheet.png` places each render beside its video frame and landmarks for review.
+
+On devices, after a Debug build:
+
+- `bash scripts/pose-probe.sh <maccatalyst|ios|android> /tmp/mirror-test.mp4` runs the platform detector over the clip and prints `POSE_FRAME` lines and `POSE_PROBE_PASS` with detection rate and latency. Mac Catalyst runs only in an unlocked desktop session (a locked screen gives the app no window).
+- The iOS simulator cannot run Apple's body-pose model ("Unable to setup request"). `bash scripts/mirror-video-check.sh <simulator-udid> /tmp/mirror-test.mp4 /tmp/mirror-test.jsonl out` opens the Mirror page with the clip instead of the camera and its recorded landmarks instead of detection, logs `MIRROR_STATE`/`MIRROR_STATS` and takes timed screenshots. The same page runs on Mac Catalyst and Android with live detection when `SIMPLE3D_MIRROR_VIDEO` (Android: intent extra) is set without landmarks.

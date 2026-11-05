@@ -9,10 +9,11 @@ namespace Simple3D.Maui;
 // All calls, including disposal, require the owning EGL context current on the calling thread.
 internal sealed unsafe class GlesRenderer : IDisposable
 {
-    private uint _program, _maskProgram, _screenProgram, _uniform, _vao, _fbo, _color, _mask, _depth;
+    private uint _program, _maskProgram, _skinnedProgram, _skinnedMaskProgram, _screenProgram, _uniform, _palette, _vao, _fbo, _color, _mask, _depth;
     private int _targetWidth, _targetHeight;
-    private readonly int _maxTextureSize, _uniformStride, _outlineLocation;
-    private byte[] _uniformData = [];
+    private readonly int _maxTextureSize, _uniformStride, _paletteStride, _outlineLocation;
+    private byte[] _uniformData = [], _paletteData = [];
+    private int[] _paletteOffsets = [];
     // One VAO per resident mesh: attribute layout is specified once at upload, not per draw.
     private readonly GpuResources<(uint Buffer, uint Vao), uint> _resources = new(
         mesh => { var (buffer, vao) = mesh; glDeleteVertexArrays(1, ref vao); glDeleteBuffers(1, ref buffer); },
@@ -20,6 +21,8 @@ internal sealed unsafe class GlesRenderer : IDisposable
     internal string Name { get; } = "";
     internal int GeometryUploads { get; private set; }
     internal int TextureUploads { get; private set; }
+    internal int PaletteUploads { get; private set; }
+    internal int PaletteUploadBytes { get; private set; }
     /// <summary>Always use the offscreen mask/outline composite. For validation that both paths match.</summary>
     internal bool ForceComposite { get; set; }
     /// <summary>Whether the last frame rendered straight to the window surface (no offscreen targets or fullscreen pass).</summary>
@@ -32,11 +35,16 @@ internal sealed unsafe class GlesRenderer : IDisposable
         {
             _program = Program(GlesShaders.GlslVertex, GlesShaders.GlslFragment);
             _maskProgram = Program(GlesShaders.GlslVertex, GlesShaders.WithDefine(GlesShaders.GlslFragment, GlesShaders.SelectionMaskDefine));
+            var skinned = GlesShaders.WithDefine(GlesShaders.GlslVertex, GlesShaders.SkinnedDefine);
+            _skinnedProgram = Program(skinned, GlesShaders.GlslFragment);
+            _skinnedMaskProgram = Program(skinned, GlesShaders.WithDefine(GlesShaders.GlslFragment, GlesShaders.SelectionMaskDefine));
             _screenProgram = Program(GlesShaders.GlslScreenVertex, GlesShaders.GlslScreenFragment);
-            glGenVertexArrays(1, out _vao); glGenBuffers(1, out _uniform);
-            foreach (var program in new[] { _program, _maskProgram })
+            glGenVertexArrays(1, out _vao); glGenBuffers(1, out _uniform); glGenBuffers(1, out _palette);
+            foreach (var program in new[] { _program, _maskProgram, _skinnedProgram, _skinnedMaskProgram })
             {
                 glUniformBlockBinding(program, glGetUniformBlockIndex(program, "Params"), 0);
+                if (program == _skinnedProgram || program == _skinnedMaskProgram)
+                    glUniformBlockBinding(program, glGetUniformBlockIndex(program, "Joints"), 1);
                 glUseProgram(program);
                 glUniform1i(glGetUniformLocation(program, "image"), 0);
             }
@@ -49,6 +57,7 @@ internal sealed unsafe class GlesRenderer : IDisposable
             glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, out var alignment);
             alignment = Math.Max(1, alignment);
             _uniformStride = (sizeof(GpuUniforms) + alignment - 1) / alignment * alignment;
+            _paletteStride = (GlesShaders.PaletteBytes + alignment - 1) / alignment * alignment;
             // Queried with the window surface current and the default framebuffer bound.
             glGetIntegerv(GL_DEPTH_BITS, out var depthBits);
             SupportsDirect = depthBits >= 16;
@@ -59,9 +68,10 @@ internal sealed unsafe class GlesRenderer : IDisposable
     /// <summary>Renders at width x height and presents to the window surface at outputWidth x outputHeight.</summary>
     internal void Render(GpuFrame frame, int width, int height, int outputWidth, int outputHeight)
     {
-        GeometryUploads = TextureUploads = 0;
+        GeometryUploads = TextureUploads = PaletteUploads = PaletteUploadBytes = 0;
         _resources.Prepare(frame);
         UploadUniforms(frame);
+        UploadPalettes(frame);
         // Without a visible selection there is nothing to outline: draw once into the window surface
         // instead of storing color+mask offscreen and reading them back in a fullscreen pass.
         var direct = !ForceComposite && SupportsDirect && frame.CanRenderDirect(width, height, outputWidth, outputHeight);
@@ -86,16 +96,19 @@ internal sealed unsafe class GlesRenderer : IDisposable
         glDepthMask(1); glClearBufferfv(GL_DEPTH, 0, &clearDepth);
         glEnable(GL_DEPTH_TEST); glDepthFunc(GL_LESS); glDisable(GL_BLEND);
         glFrontFace(GL_CCW); glCullFace(GL_BACK);
-        glUseProgram(direct ? _program : _maskProgram);
         glActiveTexture(GL_TEXTURE0);
         var items = frame.Geometry.Items;
-        uint boundTexture = uint.MaxValue;
+        uint boundTexture = uint.MaxValue, boundProgram = 0;
         var cullState = -1;
         for (var index = 0; index < items.Count; index++)
         {
             var item = items[index];
+            var program = item.Joints is null ? (direct ? _program : _maskProgram) : (direct ? _skinnedProgram : _skinnedMaskProgram);
+            if (program != boundProgram) { glUseProgram(program); boundProgram = program; }
             glBindVertexArray(Mesh(item.Geometry));
             glBindBufferRange(GL_UNIFORM_BUFFER, 0, _uniform, (nint)index * _uniformStride, sizeof(GpuUniforms));
+            if (item.Joints is not null)
+                glBindBufferRange(GL_UNIFORM_BUFFER, 1, _palette, _paletteOffsets[index], GlesShaders.PaletteBytes);
             var texture = Texture(GpuResources.TextureOf(item));
             if (texture != boundTexture) { glBindTexture(GL_TEXTURE_2D, texture); boundTexture = texture; }
             var cull = item.Shape.Material.DoubleSided ? 0 : 1;
@@ -148,6 +161,30 @@ internal sealed unsafe class GlesRenderer : IDisposable
             glBufferData(GL_UNIFORM_BUFFER, size, data, GL_STREAM_DRAW);
         }
     }
+    // Every skinned item's joint palette in one upload per frame. Each slot spans the whole declared
+    // block (the bound range must cover it); only the used joints are copied.
+    private void UploadPalettes(GpuFrame frame)
+    {
+        var items = frame.Geometry.Items;
+        if (_paletteOffsets.Length < items.Count) _paletteOffsets = new int[Math.Max(items.Count, _paletteOffsets.Length * 2)];
+        var size = 0;
+        for (var i = 0; i < items.Count; i++)
+            if (items[i].Joints is not null) { _paletteOffsets[i] = size; size += _paletteStride; }
+        if (size == 0) return;
+        if (_paletteData.Length < size) _paletteData = new byte[Math.Max(size, _paletteData.Length * 2)];
+        fixed (byte* data = _paletteData)
+        {
+            for (var i = 0; i < items.Count; i++)
+            {
+                if (items[i].Joints is not { } joints) continue;
+                var bytes = joints.Length * sizeof(System.Numerics.Matrix4x4);
+                fixed (System.Numerics.Matrix4x4* source = joints) Buffer.MemoryCopy(source, data + _paletteOffsets[i], bytes, bytes);
+                PaletteUploads++; PaletteUploadBytes += bytes;
+            }
+            glBindBuffer(GL_UNIFORM_BUFFER, _palette);
+            glBufferData(GL_UNIFORM_BUFFER, size, data, GL_STREAM_DRAW);
+        }
+    }
     private uint Mesh(GpuGeometry geometry)
     {
         if (_resources.Meshes.TryGetValue(geometry, out var mesh)) return mesh.Vao;
@@ -155,7 +192,9 @@ internal sealed unsafe class GlesRenderer : IDisposable
         glBindVertexArray(vao); glBindBuffer(GL_ARRAY_BUFFER, buffer);
         var vertices = geometry.Expand();
         fixed (float* p = vertices) glBufferData(GL_ARRAY_BUFFER, vertices.Length * sizeof(float), p, GL_STATIC_DRAW);
-        for (uint a = 0; a < 4; a++) { glEnableVertexAttribArray(a); glVertexAttribPointer(a, 4, GL_FLOAT, 0, GpuGeometry.FloatsPerVertex * sizeof(float), (nint)(a * 16)); }
+        // Skinned geometry appends joint indices and weights (attributes 4 and 5) to the rigid layout.
+        var attributes = geometry.IsSkinned ? 6u : 4u;
+        for (uint a = 0; a < attributes; a++) { glEnableVertexAttribArray(a); glVertexAttribPointer(a, 4, GL_FLOAT, 0, geometry.VertexStrideFloats * sizeof(float), (nint)(a * 16)); }
         GeometryUploads++;
         return vao;
     }
@@ -214,9 +253,9 @@ internal sealed unsafe class GlesRenderer : IDisposable
     public void Dispose()
     {
         _resources.Clear(); ReleaseTargets();
-        glDeleteBuffers(1, ref _uniform); glDeleteVertexArrays(1, ref _vao);
-        glDeleteProgram(_program); glDeleteProgram(_maskProgram); glDeleteProgram(_screenProgram);
-        _uniform = _vao = _program = _maskProgram = _screenProgram = 0;
+        glDeleteBuffers(1, ref _uniform); glDeleteBuffers(1, ref _palette); glDeleteVertexArrays(1, ref _vao);
+        glDeleteProgram(_program); glDeleteProgram(_maskProgram); glDeleteProgram(_skinnedProgram); glDeleteProgram(_skinnedMaskProgram); glDeleteProgram(_screenProgram);
+        _uniform = _palette = _vao = _program = _maskProgram = _skinnedProgram = _skinnedMaskProgram = _screenProgram = 0;
     }
 }
 #endif

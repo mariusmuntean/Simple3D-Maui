@@ -4,6 +4,9 @@ namespace Simple3D.Maui;
 internal static class GlesShaders
 {
     internal const string SelectionMaskDefine = "SELECTION_MASK";
+    internal const string SkinnedDefine = "SKINNED";
+    /// <summary>Joint matrices per skinned draw; the std140 block is 64 bytes per joint.</summary>
+    internal const int PaletteBytes = Simple3D.Core.Skeleton.MaximumJoints * 64;
     internal const string GlslVertex = """
         #version 300 es
         precision highp float;
@@ -11,6 +14,11 @@ internal static class GlesShaders
         layout(location=1) in vec4 normal;
         layout(location=2) in vec4 uv;
         layout(location=3) in vec4 color;
+        #ifdef SKINNED
+        layout(location=4) in vec4 jointIndices;
+        layout(location=5) in vec4 jointWeights;
+        layout(std140) uniform Joints { mat4 joints[128]; };
+        #endif
         layout(std140) uniform Params {
             mat4 world; mat4 vp; mat4 normals;
             vec4 lightAmbient; vec4 lightColor; vec4 tintLit; vec4 selection;
@@ -20,10 +28,16 @@ internal static class GlesShaders
         out vec3 backColor;
         flat out float selectedFlag;
         void main() {
-            vec4 p=world*position;
+            vec4 localPosition=position; vec3 localNormal=normal.xyz;
+        #ifdef SKINNED
+            ivec4 j=ivec4(jointIndices);
+            mat4 skin=joints[j.x]*jointWeights.x+joints[j.y]*jointWeights.y+joints[j.z]*jointWeights.z+joints[j.w]*jointWeights.w;
+            localPosition=skin*position; localNormal=(skin*vec4(normal.xyz,0)).xyz;
+        #endif
+            vec4 p=world*localPosition;
             gl_Position=vp*p;
             gl_Position.z=2.0*gl_Position.z-gl_Position.w;
-            vec3 n=normalize((normals*normal).xyz);
+            vec3 n=normalize((normals*vec4(localNormal,0)).xyz);
             vec3 litFront=vec3(lightAmbient.w)+lightColor.rgb*lightColor.w*max(0.0,dot(n,-lightAmbient.xyz));
             vec3 litBack=vec3(lightAmbient.w)+lightColor.rgb*lightColor.w*max(0.0,dot(-n,-lightAmbient.xyz));
             frontColor=color.rgb*tintLit.rgb*mix(vec3(1),litFront,tintLit.w);
