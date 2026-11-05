@@ -17,3 +17,7 @@ Read [architecture](site/architecture.md), [development](DEVELOPMENT.md) and [pa
 Documentation lives at https://mariusmuntean.github.io/Simple3D-Maui/. Build locally and publish through `scripts/publish-docs.sh`. Native hosted validation is manual to control Actions costs.
 
 Preview packages use version `0.2.0-preview.1`. Local packing and consumer validation do not imply NuGet.org publication. Follow the package checklist before publishing, and record tested platforms and configurations in release notes.
+
+## Keep the docs in sync
+
+Every change to the library's capabilities updates its docs page, the README's capability table and the changelog in the same commit. The README and the docs landing page lead with the Mirror showcase (`docs/site/images/mirror.gif`). Regenerate it with `dotnet run --project tests/Simple3D.Maui.Tests -c Release -- --render-showcase out` and then `python3 scripts/mirror-showcase.py out docs/site/images/mirror.gif`.
