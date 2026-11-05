@@ -168,7 +168,9 @@ public sealed class Shape
         if (Mesh is PosedGeometry posed && ReferenceEquals(posed.Skinned, target))
         {
             matched = true;
-            mesh = new PosedGeometry(posed.Skinned, posed.Pose, weights);
+            // Unchanged weights keep the node, so a steady face costs nothing downstream.
+            var same = posed.MorphWeights is null ? weights is null : weights is not null && posed.MorphWeights.AsSpan().SequenceEqual(weights);
+            if (!same) mesh = new PosedGeometry(posed.Skinned, posed.Pose, weights);
         }
         if (children is null && ReferenceEquals(mesh, Mesh)) return this;
         return new(mesh, Color, Position, Rotation, Size, Name, children is null ? Children : Array.AsReadOnly(children), Material, Geometry, _quaternion);

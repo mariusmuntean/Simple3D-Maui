@@ -202,8 +202,12 @@ internal static class GltfReaderTests
         Check(Leaves(changed).All(p => p.MorphWeights!.SequenceEqual([1f, 1f])), "expression sum clamps and binary threshold");
         changed = model.ApplyExpressions(changed, new Dictionary<string, float> { ["joy"] = 0 });
         Check(Leaves(changed).All(p => p.MorphWeights is null && ReferenceEquals(p.Pose, pose)), "zero intensity resets affected mesh weights");
+        changed = model.ApplyExpressions(model.ApplyExpressions(changed, new Dictionary<string, float> { ["joy"] = 1 }), new Dictionary<string, float> { ["blink"] = 1 });
+        Check(Leaves(changed).All(p => p.MorphWeights!.SequenceEqual([0f, 1f])), "expressions left out return to neutral");
+        changed = model.ApplyExpressions(changed, new Dictionary<string, float>());
+        Check(Leaves(changed).All(p => p.MorphWeights is null), "no expressions is the neutral face");
         Check(ReferenceEquals(changed, model.ApplyExpressions(changed, new Dictionary<string, float> { ["missing"] = 1 })), "unknown expressions ignored");
-        Check(ReferenceEquals(shape, model.ApplyExpressions(shape, new Dictionary<string, float> { ["joy"] = float.NaN })), "nonfinite intensity ignored");
+        Check(Leaves(model.ApplyExpressions(shape, new Dictionary<string, float> { ["joy"] = float.NaN })).All(p => p.MorphWeights is null), "nonfinite intensity ignored");
         // As MirrorStage places a character: an extra transformed group around the model.
         var placed = Shape.Group(shape).Named("Character").Scaled(.5f).Rotated(0, 30, 0).At(1, 2, 3);
         var wrapped = model.ApplyExpressions(placed, new Dictionary<string, float> { ["joy"] = 1, ["blink_l"] = 1 });

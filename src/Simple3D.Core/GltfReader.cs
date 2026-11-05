@@ -53,20 +53,25 @@ public sealed class GltfModel
 
     /// <summary>Blends named expressions into every node of <paramref name="shape"/> (at any depth) that uses a bound mesh,
     /// keeping the pose and transforms. Unknown names and nonfinite intensities are ignored.</summary>
-    /// <remarks>Intensities clamp to [0,1]; binary expressions snap at 0.5. Contributions sum and clamp per target. Replaces all
-    /// weights (including <c>mesh.weights</c> defaults) on meshes bound by the supplied expressions, so pass every expression each
-    /// frame; a zero intensity still resets its meshes. Other meshes keep their weights. Meshes absent from the shape are skipped.</remarks>
+    /// <remarks>The result shows exactly the supplied expressions: expressions left out return to neutral. Intensities clamp to
+    /// [0,1]; binary expressions snap at 0.5. Contributions sum and clamp per target. Every mesh bound by any of the model's
+    /// expressions gets new weights (replacing its <c>mesh.weights</c> defaults); other meshes keep theirs. Meshes absent from the
+    /// shape are skipped.</remarks>
     public Shape ApplyExpressions(Shape shape, IReadOnlyDictionary<string, float> intensities)
     {
         ArgumentNullException.ThrowIfNull(shape); ArgumentNullException.ThrowIfNull(intensities);
         var weights = new Dictionary<SkinnedMesh, float[]>();
+        // Start every expression-bound mesh from neutral, so omitted expressions don't linger from an earlier call.
+        foreach (var expression in Expressions.Values)
+            foreach (var (mesh, _, _) in expression.Binds)
+                if (!weights.ContainsKey(mesh)) weights[mesh] = new float[mesh.MorphTargets.Count];
         foreach (var (name, value) in intensities)
         {
             if (!float.IsFinite(value) || !Expressions.TryGetValue(name, out var expression)) continue;
             var intensity = expression.IsBinary ? (value > .5f ? 1f : 0f) : Math.Clamp(value, 0, 1);
             foreach (var (mesh, target, weight) in expression.Binds)
             {
-                if (!weights.TryGetValue(mesh, out var values)) weights[mesh] = values = new float[mesh.MorphTargets.Count];
+                var values = weights[mesh];
                 values[target] = Math.Min(1, values[target] + intensity * weight);
             }
         }

@@ -8,7 +8,8 @@ using Shape = Simple3D.Core.Shape;
 
 namespace Simple3D.Demo.Mirror;
 
-/// <summary>A 3D frog copies the person the camera sees. Guides the user from camera permission to a tracked full body.</summary>
+/// <summary>A 3D character copies the person the camera sees: body, head and face. Guides the user from camera permission
+/// to a tracked person, and lets them pick the character from a carousel.</summary>
 public sealed class MirrorPage : ContentPage
 {
     private enum Step { Intro, Starting, Guide, Live, Blocked }
@@ -18,7 +19,10 @@ public sealed class MirrorPage : ContentPage
     private readonly Border _previewFrame;
     private readonly View _intro, _guide, _blocked, _lostHint;
     private readonly Label _blockedText = Text("", 16), _status = Text("", 12, "#A9B8D4");
-    private readonly Button _blockedAction, _switchCamera, _chooseCharacter;
+    private readonly Button _blockedAction, _switchCamera;
+    private readonly View _characters;
+    private readonly Label _introCharacter = Text("", 15, "#FFD27A", bold: true);
+    private readonly List<(MirrorModel Model, Border Chip)> _chips = [];
     private MirrorModel _model = MirrorModels.Find(Preferences.Default.Get<string?>("mirror.character", null));
     // The person's choice of camera; front by default, since people usually film themselves.
     private bool _frontCamera = Preferences.Default.Get("mirror.camera.front", true);
@@ -59,8 +63,7 @@ public sealed class MirrorPage : ContentPage
             StrokeThickness = 0, Content = _preview,
             StrokeShape = new RoundRectangle { CornerRadius = 0 }
         };
-        _intro = Card("Mirror", "Your camera lets a 3D frog copy your moves in real time.\nVideo stays on this device.",
-            ("Start", Start), ("Back", Close));
+        _intro = Intro();
         _guidePill = Pill("", top: true);
         _guide = Guide();
         _lostHint = Pill("Step back into the frame: whole body, waist up, or your face");
@@ -87,14 +90,7 @@ public sealed class MirrorPage : ContentPage
         };
         SemanticProperties.SetDescription(_switchCamera, "Switch between the front and back camera");
         _switchCamera.Clicked += (_, _) => SwitchCamera();
-        _chooseCharacter = new Button
-        {
-            Text = "☺", FontSize = 20, WidthRequest = 44, HeightRequest = 44, CornerRadius = 22, Padding = 0,
-            BackgroundColor = Color.FromRgba(8, 12, 22, 170), TextColor = Colors.White,
-            HorizontalOptions = LayoutOptions.Start, VerticalOptions = LayoutOptions.Start, Margin = new Thickness(120, 16, 0, 0)
-        };
-        SemanticProperties.SetDescription(_chooseCharacter, "Choose the character");
-        _chooseCharacter.Clicked += async (_, _) => await ChooseCharacterAsync();
+        _characters = Carousel();
         _status.HorizontalOptions = LayoutOptions.End; _status.VerticalOptions = LayoutOptions.End;
         _status.Margin = new Thickness(0, 0, 16, 12); _status.InputTransparent = true;
         _zoomPill = new Border
@@ -103,7 +99,7 @@ public sealed class MirrorPage : ContentPage
             HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Start,
             BackgroundColor = Color.FromRgba(8, 12, 22, 200), StrokeShape = new RoundRectangle { CornerRadius = 14 }, Content = _zoomText
         };
-        var root = new Grid { Children = { _view, _previewFrame, _guide, _lostHint, _intro, _blocked, close, _switchCamera, _chooseCharacter, _zoomPill, _status } };
+        var root = new Grid { Children = { _view, _previewFrame, _guide, _lostHint, _characters, _intro, _blocked, close, _switchCamera, _zoomPill, _status } };
         // Pinch anywhere to zoom the camera, for example to frame someone standing far away.
         var pinch = new PinchGestureRecognizer();
         pinch.PinchUpdated += OnPinch;
@@ -127,15 +123,13 @@ public sealed class MirrorPage : ContentPage
         UpdateLayout();
     }
 
-    // Swaps the character without stopping the camera; the new one appears once the person is tracked again.
-    private async Task ChooseCharacterAsync()
+    // Swaps the character without stopping the camera: the stage animates the change while tracking carries on.
+    private async Task ChooseCharacterAsync(MirrorModel model)
     {
-        var names = MirrorModels.All.Select(m => $"{m.Name} · {m.Tracks}").ToArray();
-        var choice = await DisplayActionSheetAsync("Character", "Cancel", null, names);
-        var index = Array.IndexOf(names, choice);
-        if (index < 0 || MirrorModels.All[index] == _model) return;
-        _model = MirrorModels.All[index];
+        if (model == _model) return;
+        _model = model;
         Preferences.Default.Set("mirror.character", _model.File);
+        HighlightCharacter();
         try
         {
             // Parse and decode off the UI thread first, so the swap animation itself never waits on loading.
@@ -306,12 +300,17 @@ public sealed class MirrorPage : ContentPage
         // Switching cameras restarts capture without bringing back the intro.
         _intro.IsVisible = step is Step.Intro || step == Step.Starting && !_switching;
         _switchCamera.IsVisible = !IsRequested && step is Step.Guide or Step.Live;
-        _chooseCharacter.IsVisible = step is Step.Guide or Step.Live;
+        _characters.IsVisible = step is Step.Guide or Step.Live;
         _intro.Opacity = step == Step.Starting ? .6 : 1;
         _blocked.IsVisible = step == Step.Blocked;
         _guide.IsVisible = step == Step.Guide;
         _lostHint.IsVisible = false;
+        // Pose rate, detection latency and frame time are for developers, not for the people using the app.
+#if DEBUG
         _status.IsVisible = step is Step.Guide or Step.Live;
+#else
+        _status.IsVisible = false;
+#endif
         _preview.IsVisible = step is Step.Guide or Step.Live;
         // Full-screen viewfinder while searching; a small inset while the frog performs.
         var live = step == Step.Live;
@@ -401,6 +400,92 @@ public sealed class MirrorPage : ContentPage
         if (_step is Step.Guide or Step.Live) Show(Step.Intro);
     }
 
+    private View Intro()
+    {
+        static View Way(string icon, string title, string detail) => new HorizontalStackLayout
+        {
+            Spacing = 14,
+            Children =
+            {
+                new Border
+                {
+                    WidthRequest = 40, HeightRequest = 40, BackgroundColor = Color.FromRgba(76, 123, 217, 60), StrokeThickness = 0,
+                    StrokeShape = new RoundRectangle { CornerRadius = 12 },
+                    Content = new Label { Text = icon, FontSize = 20, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center }
+                },
+                new VerticalStackLayout { VerticalOptions = LayoutOptions.Center, Children = { Text(title, 16, bold: true), Text(detail, 13, "#A9B8D4") } }
+            }
+        };
+        HighlightCharacter();
+        var stack = new VerticalStackLayout
+        {
+            Spacing = 14,
+            Children =
+            {
+                Text("Mirror", 32, bold: true),
+                Text("Move, and a 3D character moves with you: arms, legs, torso, head and face, live from your camera.", 16, "#C7D3EA"),
+                Way("🧍", "Whole body", "Step back until head to feet are in view"),
+                Way("🙋", "Waist up", "Arms, torso and head"),
+                Way("🙂", "Face", "Come close: mouth, eyes, smile and head"),
+                _introCharacter,
+                PrimaryButton("Start camera", Start),
+                SecondaryButton("Back", Close),
+                Text("Everything runs on this device. Nothing is recorded or sent.", 12, "#7F8FAF", center: true),
+            }
+        };
+        return new ScrollView
+        {
+            VerticalOptions = LayoutOptions.Center,
+            Content = new Border
+            {
+                Margin = 24, Padding = 24, MaximumWidthRequest = 440, BackgroundColor = Color.FromRgba(14, 22, 38, 235),
+                Stroke = Color.FromRgba(255, 255, 255, 30), StrokeShape = new RoundRectangle { CornerRadius = 24 }, Content = stack
+            }
+        };
+    }
+
+    // A strip of character thumbnails along the bottom; the chosen one is outlined.
+    private View Carousel()
+    {
+        var row = new HorizontalStackLayout { Spacing = 10, Padding = new Thickness(16, 0) };
+        foreach (var model in MirrorModels.All)
+        {
+            var image = new Image { WidthRequest = 56, HeightRequest = 56, Aspect = Aspect.AspectFill, Source = Thumbnail(model) };
+            var chip = new Border
+            {
+                Padding = 3, StrokeThickness = 2.5, BackgroundColor = Color.FromRgba(8, 12, 22, 190),
+                StrokeShape = new RoundRectangle { CornerRadius = 18 }, Content = new Border { StrokeThickness = 0, StrokeShape = new RoundRectangle { CornerRadius = 15 }, Content = image }
+            };
+            SemanticProperties.SetDescription(chip, model.Name);
+            var tap = new TapGestureRecognizer();
+            tap.Tapped += async (_, _) => await ChooseCharacterAsync(model);
+            chip.GestureRecognizers.Add(tap);
+            _chips.Add((model, chip));
+            row.Add(chip);
+        }
+        HighlightCharacter();
+        return new ScrollView
+        {
+            Orientation = ScrollOrientation.Horizontal, HorizontalScrollBarVisibility = ScrollBarVisibility.Never,
+            HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.End, Margin = new Thickness(0, 0, 0, 22), Content = row
+        };
+    }
+
+    private void HighlightCharacter()
+    {
+        _introCharacter.Text = $"Your character: {_model.Name} · change it any time";
+        foreach (var (model, chip) in _chips)
+        {
+            var chosen = model == _model;
+            chip.Stroke = chosen ? Color.FromArgb("#FFD27A") : Color.FromRgba(255, 255, 255, 40);
+            chip.Scale = chosen ? 1.08 : 1;
+        }
+    }
+
+    // Thumbnails are rendered from each model (see docs/DEVELOPMENT.md) and bundled as raw assets.
+    private static ImageSource Thumbnail(MirrorModel model) =>
+        ImageSource.FromStream(async _ => await FileSystem.OpenAppPackageFileAsync("mirror/" + System.IO.Path.ChangeExtension(model.File, ".png")));
+
     private View Guide()
     {
         // A translucent standing figure shows how much of the person should be in frame.
@@ -411,7 +496,7 @@ public sealed class MirrorPage : ContentPage
                 "Q67,196 61,196 Q55,196 55,190 L52,124 L48,124 L45,190 Q45,196 39,196 Q33,196 32,190 L28,112 L28,60 L21,101 Q20,107 15,107 " +
                 "Q9,106 10,100 L18,46 Q20,36 30,36 Z")!,
             Aspect = Stretch.Uniform, Fill = Color.FromRgba(255, 255, 255, 22), Stroke = Color.FromRgba(255, 255, 255, 200),
-            StrokeThickness = 2, StrokeDashArray = [4, 3], Margin = new Thickness(0, 120, 0, 70), InputTransparent = true
+            StrokeThickness = 2, StrokeDashArray = [4, 3], Margin = new Thickness(0, 128, 0, 104), InputTransparent = true
         };
         return new Grid
         {
@@ -420,21 +505,9 @@ public sealed class MirrorPage : ContentPage
         };
     }
 
-    private static View Card(string title, string body, params (string Text, Action Action)[] buttons)
-    {
-        var stack = new VerticalStackLayout { Spacing = 14, Children = { Text(title, 30, bold: true), Text(body, 16, "#C7D3EA") } };
-        for (var i = 0; i < buttons.Length; i++)
-            stack.Add(i == 0 ? PrimaryButton(buttons[i].Text, buttons[i].Action) : SecondaryButton(buttons[i].Text, buttons[i].Action));
-        return new Border
-        {
-            VerticalOptions = LayoutOptions.Center, Margin = 24, Padding = 24, BackgroundColor = Color.FromRgba(14, 22, 38, 235),
-            Stroke = Color.FromRgba(255, 255, 255, 30), StrokeShape = new RoundRectangle { CornerRadius = 24 }, Content = stack
-        };
-    }
-
     private static View Pill(string text, bool top = false) => new Border
     {
-        InputTransparent = true, Padding = new Thickness(16, 10), Margin = new Thickness(24, top ? 72 : 0, 24, top ? 0 : 40),
+        InputTransparent = true, Padding = new Thickness(16, 10), Margin = new Thickness(24, top ? 72 : 0, 24, top ? 0 : 108),
         HorizontalOptions = LayoutOptions.Center, VerticalOptions = top ? LayoutOptions.Start : LayoutOptions.End,
         BackgroundColor = Color.FromRgba(8, 12, 22, 200), Stroke = Color.FromRgba(255, 255, 255, 40), StrokeShape = new RoundRectangle { CornerRadius = 18 },
         Content = Text(text, 15, center: true)

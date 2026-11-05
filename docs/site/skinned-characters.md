@@ -50,7 +50,7 @@ var face = new Dictionary<string, float> { ["joy"] = .8f, ["a"] = mouthOpen, ["b
 scene.Replace(current, current = character.Model.ApplyExpressions(current, face));
 ```
 
-`GltfModel.Expressions` is keyed by lowercase VRM 0.x preset (`joy`, `angry`, `sorrow`, `fun`, `a`…`o`, `blink`, `blink_l`, `blink_r`, `lookup`…) or the custom name; VRM 1.0 presets keep their names and also answer to the VRM 0.x one (`happy`→`joy`, `aa`→`a`, `blinkLeft`→`blink_l`…). `ApplyExpressions` sums intensity × bind weight per target, clamps to [0,1], keeps pose and transforms, ignores unknown names, and replaces every weight of the meshes it touches, so pass the whole face each frame. Which presets exist depends on the model.
+`GltfModel.Expressions` is keyed by lowercase VRM 0.x preset (`joy`, `angry`, `sorrow`, `fun`, `a`…`o`, `blink`, `blink_l`, `blink_r`, `lookup`…) or the custom name; VRM 1.0 presets keep their names and also answer to the VRM 0.x one (`happy`→`joy`, `aa`→`a`, `blinkLeft`→`blink_l`…). `ApplyExpressions` sums intensity × bind weight per target, clamps to [0,1], keeps pose and transforms, ignores unknown names, and shows exactly the expressions you pass: any you leave out return to neutral. Which presets exist depends on the model.
 
 ## Rendering cost
 
