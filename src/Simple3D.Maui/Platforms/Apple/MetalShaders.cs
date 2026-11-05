@@ -7,11 +7,12 @@ internal static class MetalShaders
         #include <metal_stdlib>
         using namespace metal;
         struct Vertex { float4 position, normal, uv, color; };
+        struct SkinnedVertex { Vertex rigid; float4 joints, weights; };
         struct Params { float4x4 world, vp, normals; float4 lightAmbient, lightColor, tintLit, selection; };
         struct Varying { float4 position [[position]]; float2 uv; float3 frontColor, backColor; float selected [[flat]]; };
         struct Output { float4 color [[color(0)]]; float4 mask [[color(1)]]; };
-        vertex Varying sceneVertex(const device Vertex* vertices [[buffer(0)]], constant Params& p [[buffer(1)]], uint id [[vertex_id]]) {
-            Vertex v=vertices[id]; Varying o;
+        static Varying transformVertex(Vertex v, constant Params& p) {
+            Varying o;
             o.position=p.vp*p.world*v.position;
             float3 n=normalize((p.normals*v.normal).xyz);
             float3 f=float3(p.lightAmbient.w)+p.lightColor.rgb*p.lightColor.w*max(0.0,dot(n,-p.lightAmbient.xyz));
@@ -19,6 +20,16 @@ internal static class MetalShaders
             o.frontColor=v.color.rgb*p.tintLit.rgb*mix(float3(1),f,p.tintLit.w);
             o.backColor=v.color.rgb*p.tintLit.rgb*mix(float3(1),b,p.tintLit.w);
             o.uv=float2(v.uv.x,1-v.uv.y); o.selected=p.selection.x; return o;
+        }
+        vertex Varying sceneVertex(const device Vertex* vertices [[buffer(0)]], constant Params& p [[buffer(1)]], uint id [[vertex_id]]) {
+            return transformVertex(vertices[id],p);
+        }
+        vertex Varying skinnedVertex(const device SkinnedVertex* vertices [[buffer(0)]], constant Params& p [[buffer(1)]],
+            constant float4x4* joints [[buffer(2)]], uint id [[vertex_id]]) {
+            SkinnedVertex s=vertices[id]; uint4 j=uint4(s.joints);
+            float4x4 skin=joints[j.x]*s.weights.x+joints[j.y]*s.weights.y+joints[j.z]*s.weights.z+joints[j.w]*s.weights.w;
+            Vertex v=s.rigid; v.position=skin*v.position; v.normal=float4((skin*float4(v.normal.xyz,0)).xyz,0);
+            return transformVertex(v,p);
         }
         static float4 shade(Varying v, bool front, texture2d<float> image, sampler s) {
             return float4(clamp((front?v.frontColor:v.backColor)*image.sample(s,v.uv).rgb,0.0,1.0),1);

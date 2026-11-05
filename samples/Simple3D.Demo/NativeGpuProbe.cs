@@ -44,7 +44,7 @@ internal static class NativeGpuProbe
             var pixels=new uint[size*size];
             new ReadOnlySpan<uint>((void*)readback.Contents,size*size).CopyTo(pixels);
             return pixels;
-        },()=>renderer.LastFrameDirect);
+        },()=>renderer.LastFrameDirect,()=> (renderer.GeometryUploads,renderer.TextureUploads,renderer.PaletteUploads,renderer.PaletteUploadBytes));
 #else
         var display=EGL14.EglGetDisplay(EGL14.EglDefaultDisplay);
         if(display is null||!EGL14.EglInitialize(display,new int[2],0,new int[2],0))throw new InvalidOperationException("Probe EGL initialization failed.");
@@ -64,7 +64,7 @@ internal static class NativeGpuProbe
                 renderer.Render(new(prepared,scene,camera,options.Selected,NativeGpuValidation.Background,options.OutlineRadius),size,size,size,size);
                 if(options.SkipReadback){Gles.glFinish();return Array.Empty<uint>();}
                 return renderer.ReadPixels(size,size);
-            },()=>renderer.LastFrameDirect);
+            },()=>renderer.LastFrameDirect,()=> (renderer.GeometryUploads,renderer.TextureUploads,renderer.PaletteUploads,renderer.PaletteUploadBytes));
         }
         finally
         {
