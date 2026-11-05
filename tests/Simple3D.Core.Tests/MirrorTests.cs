@@ -40,8 +40,55 @@ internal static class MirrorTests
         return (new Skeleton(joints), bones);
     }
 
+    // Apple Vision face measurements of Mixkit clips 46379 (neutral, wide-open mouth, eyes closed, talking) and 43831
+    // (smiling, laughing, surprised), every second frame, back to back.
+    private static void Faces()
+    {
+        var faces = Fixture("face-landmarks").Select(frame => frame.Face).OfType<FaceFrame>().ToArray();
+        Check(faces.Length >= 200, $"face fixture needs detected faces, got {faces.Length}");
+        foreach (var face in faces)
+        {
+            Check(new[] { face.Yaw, face.Pitch, face.Roll }.All(a => float.IsFinite(a) && MathF.Abs(a) < MathF.PI), "face angles must be finite radians");
+            Check(new[] { face.MouthOpen, face.Smile, face.BlinkLeft, face.BlinkRight }.All(v => v is >= 0 and <= 1), "face expressions must be in [0,1]");
+            Check(face.Brows is >= -1 and <= 1, "brows must be in [-1,1]");
+        }
+        // Each expression spans most of its range across the clips, and neutral moments read close to 0.
+        foreach (var (name, values) in new (string, float[])[] { ("mouth", [.. faces.Select(f => f.MouthOpen)]), ("smile", [.. faces.Select(f => f.Smile)]),
+            ("brows", [.. faces.Select(f => f.Brows)]), ("blink left", [.. faces.Select(f => f.BlinkLeft)]), ("blink right", [.. faces.Select(f => f.BlinkRight)]) })
+        {
+            Array.Sort(values);
+            float low = values[values.Length / 20], high = values[values.Length * 19 / 20];
+            Check(high - low > .6f && MathF.Abs(low) < .7f, $"{name} must vary from about neutral: 5th percentile {low:0.00}, 95th {high:0.00}");
+        }
+        Check(faces.Count(f => f.BlinkLeft > .7f && f.BlinkRight > .7f) >= 3, "closed eyes must read as blinks on both sides");
+
+        // The geometry ignores face size, position and roll, and maps sides to the person's own eyes.
+        static Vector2[] Eye(float x, float opening) => [new(x - .15f, 0), new(x - .05f, opening * .15f), new(x + .05f, opening * .15f),
+            new(x + .15f, 0), new(x + .05f, -opening * .15f), new(x - .05f, -opening * .15f)];
+        static FaceLandmarks Face(float opening = .35f, float rightEyeOpening = .35f, float gap = 0, float mouthWidth = .7f, float brow = .26f) => new(
+            Eye(-.5f, opening), Eye(.5f, rightEyeOpening), [new(-.6f, brow), new(-.4f, brow)], [new(.4f, brow), new(.6f, brow)],
+            new(-mouthWidth / 2, -1.1f), new(mouthWidth / 2, -1.1f), [new(-.1f, -1.1f), new(.1f, -1.1f)], [new(-.1f, -1.1f - gap), new(.1f, -1.1f - gap)]);
+        static FaceLandmarks Move(FaceLandmarks f, float angle, float scale, Vector2 offset)
+        {
+            var m = Matrix3x2.CreateRotation(angle) * Matrix3x2.CreateScale(scale) * Matrix3x2.CreateTranslation(offset);
+            Vector2[] T(Vector2[] p) => [.. p.Select(v => Vector2.Transform(v, m))];
+            return new(T(f.LeftEye), T(f.RightEye), T(f.LeftBrow), T(f.RightBrow), Vector2.Transform(f.LeftMouthCorner, m),
+                Vector2.Transform(f.RightMouthCorner, m), T(f.UpperInnerLip), T(f.LowerInnerLip));
+        }
+        var neutral = FaceGeometry.Measure(Face(), 0, 0, 0);
+        Check(neutral is { MouthOpen: 0, Smile: 0, BlinkLeft: 0, BlinkRight: 0 } && MathF.Abs(neutral.Brows) < .01f, $"neutral face: {neutral}");
+        var moved = FaceGeometry.Measure(Move(Face(gap: .3f, mouthWidth: .9f, brow: .31f), .4f, 250, new(640, 360)), 0, 0, 0);
+        var still = FaceGeometry.Measure(Face(gap: .3f, mouthWidth: .9f, brow: .31f), 0, 0, 0);
+        Check(MathF.Abs(moved.MouthOpen - still.MouthOpen) + MathF.Abs(moved.Smile - still.Smile) + MathF.Abs(moved.Brows - still.Brows) < .01f
+            && still is { MouthOpen: > .6f, Smile: > .5f, Brows: > .4f }, $"rolled, scaled face: {moved} vs {still}");
+        var wink = FaceGeometry.Measure(Face(rightEyeOpening: .05f), 0, 0, 0);
+        Check(wink is { BlinkLeft: 1, BlinkRight: 0 }, $"the eye on the image's right is the person's left: {wink}");
+        Console.WriteLine($"PASS mirror faces: {faces.Length} recorded faces span every expression; geometry ignores size and roll");
+    }
+
     internal static void Run()
     {
+        Faces();
         var frames = Fixture();
 
         // Tracking states follow the clip: acquire quickly, lose during the empty gap, reacquire after it.

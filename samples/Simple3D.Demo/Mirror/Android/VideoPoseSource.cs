@@ -72,7 +72,7 @@ public sealed class VideoPoseSource(string path, bool loop = false, IReadOnlyLis
                         var elapsed = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
                         token.ThrowIfCancellationRequested();
                         ImageReady?.Invoke(bitmap);
-                        Publish(frame, elapsed);
+                        Publish(frame, elapsed, detector?.LastFaceMilliseconds ?? 0);
                     }
                     finally
                     {

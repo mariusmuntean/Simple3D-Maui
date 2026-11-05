@@ -8,6 +8,7 @@ public abstract class PoseSource : IPoseSource
     public event Action<PoseFrame>? FrameAnalyzed;
     public event Action<Exception>? Failed;
     public event Action<double>? DetectionMeasured;
+    public event Action<double>? FaceDetectionMeasured;
     public Task Completion { get; protected set; } = Task.CompletedTask;
     public abstract bool IsMirrored { get; }
     public abstract Task StartAsync();
@@ -18,9 +19,10 @@ public abstract class PoseSource : IPoseSource
     /// <summary>Camera zoom (crops what the detector sees too), clamped to [1, <see cref="MaximumZoom"/>]. Set on the UI thread.</summary>
     public virtual float Zoom { get => 1; set { } }
 
-    protected void Publish(PoseFrame frame, double detectMilliseconds)
+    protected void Publish(PoseFrame frame, double detectMilliseconds, double faceMilliseconds = 0)
     {
         DetectionMeasured?.Invoke(detectMilliseconds);
+        FaceDetectionMeasured?.Invoke(faceMilliseconds);
         FrameAnalyzed?.Invoke(frame);
     }
 
