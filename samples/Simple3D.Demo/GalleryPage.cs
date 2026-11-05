@@ -20,9 +20,8 @@ public sealed class GalleryPage : ContentPage
     private int _hudFrames;
     private long _hudStarted;
     private DemoScene? _current;
-    private IDispatcherTimer? _animationTimer;
+    private readonly FrameClock _animationClock = new();
     private double _animationSeconds;
-    private long _lastAnimationTick;
 
     public GalleryPage()
     {
@@ -229,32 +228,27 @@ public sealed class GalleryPage : ContentPage
 
     private void ToggleAnimation()
     {
-        if (_animationTimer?.IsRunning == true) { StopAnimation(); return; }
+        if (_animationClock.IsRunning) { StopAnimation(); return; }
         if (_current is null) return;
-        _animationTimer ??= Dispatcher.CreateTimer();
-        _animationTimer.Interval = TimeSpan.FromMilliseconds(1000d / 60);
-        _animationTimer.Tick -= AdvanceAnimation;
-        _animationTimer.Tick += AdvanceAnimation;
-        _lastAnimationTick = Stopwatch.GetTimestamp();
+        // Once per display refresh, at the screen's real rate.
+        _animationClock.Tick -= AdvanceAnimation;
+        _animationClock.Tick += AdvanceAnimation;
         _view.MaximumRenderDimension = 768;
         _animationButton.Text = "Pause";
-        _animationTimer.Start();
+        _animationClock.Start();
     }
 
-    private void AdvanceAnimation(object? sender, EventArgs args)
+    private void AdvanceAnimation(TimeSpan elapsed, TimeSpan delta)
     {
-        if (_animationTimer?.IsRunning != true) return;
         if (_current is null) { StopAnimation(); return; }
-        var now = Stopwatch.GetTimestamp();
-        var seconds = Math.Min(Stopwatch.GetElapsedTime(_lastAnimationTick, now).TotalSeconds, .1);
-        _lastAnimationTick = now;
-        _animationSeconds += seconds;
+        // A long pause (backgrounding, a slow frame) must not make the animation jump.
+        _animationSeconds += Math.Min(delta.TotalSeconds, .1);
         _current.Animate((float)_animationSeconds);
     }
 
     internal void StopAnimation()
     {
-        _animationTimer?.Stop();
+        _animationClock.Stop();
         _view.MaximumRenderDimension = DepthRenderer.MaximumDimension;
         _animationButton.Text = "Animate";
     }

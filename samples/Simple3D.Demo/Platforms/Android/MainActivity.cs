@@ -8,6 +8,22 @@ namespace Simple3D.Demo;
                            ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize | ConfigChanges.Density)]
 public class MainActivity : MauiAppCompatActivity
 {
+    protected override void OnPostCreate(Android.OS.Bundle? savedInstanceState)
+    {
+        base.OnPostCreate(savedInstanceState);
+        // Android may default a window to 60 Hz on high-refresh screens: ask for the fastest mode at the current resolution.
+#pragma warning disable CA1422 // WindowManager.DefaultDisplay: the replacement, Context.Display, needs API 30.
+        var display = OperatingSystem.IsAndroidVersionAtLeast(30) ? Display : WindowManager?.DefaultDisplay;
+#pragma warning restore CA1422
+        if (!OperatingSystem.IsAndroidVersionAtLeast(23) || display?.GetMode() is not { } current || Window?.Attributes is not { } attributes) return;
+        var fastest = display.GetSupportedModes()?
+            .Where(m => m.PhysicalWidth == current.PhysicalWidth && m.PhysicalHeight == current.PhysicalHeight)
+            .MaxBy(m => m.RefreshRate);
+        if (fastest is null || fastest.ModeId == current.ModeId) return;
+        attributes.PreferredDisplayModeId = fastest.ModeId;
+        Window.Attributes = attributes;
+    }
+
 #if DEBUG || NATIVE_RENDER_PROBE
     protected override void OnCreate(Android.OS.Bundle? savedInstanceState)
     {

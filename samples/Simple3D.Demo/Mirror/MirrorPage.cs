@@ -41,7 +41,7 @@ public sealed class MirrorPage : ContentPage
     private Task? _loading;
     private Step _step;
     private PoseFrame? _pending;
-    private IDispatcherTimer? _timer;
+    private readonly FrameClock _clock = new();
     private long _started, _lastFrame;
     private TimeSpan _lastTimestamp;
     private int _generation;
@@ -185,11 +185,10 @@ public sealed class MirrorPage : ContentPage
             await source.StartAsync();
             if (!Current()) return;
             _started = _lastFrame = Stopwatch.GetTimestamp();
-            _timer ??= Dispatcher.CreateTimer();
-            // Display rate: the fireflies and character swaps animate smoothly; poses still arrive at the camera's rate.
-            _timer.Interval = TimeSpan.FromMilliseconds(1000d / 60);
-            _timer.Tick -= Animate; _timer.Tick += Animate;
-            _timer.Start();
+            // The display's own rate (60, 120 Hz or more): fireflies and character swaps animate smoothly; poses still
+            // arrive at the camera's rate.
+            _clock.Tick -= Animate; _clock.Tick += Animate;
+            _clock.Start();
             _switching = false;
             Show(Step.Guide);
             Log($"MIRROR_START source={(IsRequested ? "video" : "camera")}");
@@ -278,7 +277,7 @@ public sealed class MirrorPage : ContentPage
         }
     }
 
-    private void Animate(object? sender, EventArgs e)
+    private void Animate(TimeSpan elapsed, TimeSpan delta)
     {
         if (_session is null || _source is null) return;
         var seconds = Stopwatch.GetElapsedTime(_started).TotalSeconds;
@@ -288,9 +287,9 @@ public sealed class MirrorPage : ContentPage
         var silence = Stopwatch.GetElapsedTime(_lastFrame);
         if (_step == Step.Live && silence > TimeSpan.FromSeconds(2))
             _session.Apply(new PoseFrame(_lastTimestamp + silence, 1, 1, null), _source.IsMirrored);
-        // About once a second: pose rate, detection latency, renderer and how closely the limbs follow.
-        if ((int)(seconds * 60) % 60 != 0 || seconds < 1) return;
-        var line = $"{_frames / seconds:0} poses/s · detect {_detectMilliseconds:0} ms · {_view.ActiveRenderingBackend} {_view.LastFrameMilliseconds:0.0} ms";
+        // About once a second: pose rate, detection latency and renderer.
+        if ((int)seconds == (int)(seconds - delta.TotalSeconds) || seconds < 1) return;
+        var line = $"{_frames / seconds:0} poses/s · detect {_detectMilliseconds:0} ms · {_view.ActiveRenderingBackend} {_view.LastFrameMilliseconds:0.0} ms · {_clock.RefreshRate:0} Hz";
         _status.Text = line;
         if (_step == Step.Live) Log($"MIRROR_STATS t={seconds:0.0} analyzed={_frames} posed={_poses} detect_ms={_detectMilliseconds:0.0} render_ms={_view.LastFrameMilliseconds:0.0} backend={_view.ActiveRenderingBackend}");
     }
@@ -339,7 +338,7 @@ public sealed class MirrorPage : ContentPage
     private void Stop()
     {
         _generation++;
-        _timer?.Stop();
+        _clock.Stop();
         _pending = null;
         if (_source is not { } source) return;
         _source = null;
