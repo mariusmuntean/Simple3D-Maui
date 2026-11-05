@@ -1,0 +1,286 @@
+using System.Numerics;
+
+namespace Simple3D.Core;
+
+/// <summary>One joint of a <see cref="Skeleton"/>: its parent and rest transform relative to that parent.</summary>
+/// <param name="Name">Joint name, unique within its skeleton.</param>
+/// <param name="Parent">Index of the parent joint, or -1 for a root. Parents precede their children.</param>
+/// <param name="Translation">Rest translation relative to the parent.</param>
+/// <param name="Rotation">Rest rotation relative to the parent.</param>
+/// <param name="Scale">Rest scale relative to the parent.</param>
+/// <param name="InverseBind">Transforms mesh coordinates into this joint's space at bind time.</param>
+public readonly record struct Joint(string Name, int Parent, Vector3 Translation, Quaternion Rotation, Vector3 Scale, Matrix4x4 InverseBind)
+{
+    internal Matrix4x4 Local(Quaternion rotation) =>
+        Matrix4x4.CreateScale(Scale) * Matrix4x4.CreateFromQuaternion(rotation) * Matrix4x4.CreateTranslation(Translation);
+}
+
+/// <summary>An immutable joint hierarchy shared by skinned meshes and their poses.</summary>
+public sealed class Skeleton
+{
+    /// <summary>Maximum number of joints; native renderers upload one matrix per joint each frame.</summary>
+    public const int MaximumJoints = 128;
+    private readonly Dictionary<string, int> _byName;
+
+    /// <summary>Joints ordered so that every parent precedes its children.</summary>
+    public IReadOnlyList<Joint> Joints { get; }
+    /// <summary>Transform applied above the root joints, for example from nodes that are not joints.</summary>
+    public Matrix4x4 RootTransform { get; }
+    /// <summary>The pose with every joint at its rest rotation.</summary>
+    public SkeletonPose RestPose { get; }
+
+    /// <summary>Copies and validates joints: unique names, parents before children, finite transforms and positive scales.</summary>
+    public Skeleton(IEnumerable<Joint> joints, Matrix4x4? rootTransform = null)
+    {
+        ArgumentNullException.ThrowIfNull(joints);
+        var copy = joints.Take(MaximumJoints + 1).ToArray();
+        if (copy.Length is 0 or > MaximumJoints) throw new ArgumentException($"A skeleton needs 1 to {MaximumJoints} joints.", nameof(joints));
+        _byName = new(StringComparer.Ordinal);
+        for (var i = 0; i < copy.Length; i++)
+        {
+            var joint = copy[i];
+            if (string.IsNullOrEmpty(joint.Name) || !_byName.TryAdd(joint.Name, i)) throw new ArgumentException("Joint names must be unique and nonempty.", nameof(joints));
+            if (joint.Parent < -1 || joint.Parent >= i) throw new ArgumentException("Joint parents must precede their children.", nameof(joints));
+            Validation.Vector(joint.Translation, nameof(joints));
+            Validation.Vector(joint.Scale, nameof(joints));
+            if (joint.Scale.X <= 0 || joint.Scale.Y <= 0 || joint.Scale.Z <= 0) throw new ArgumentOutOfRangeException(nameof(joints), "Joint scales must be positive.");
+            copy[i] = joint with { Rotation = Normalized(joint.Rotation, nameof(joints)) };
+            if (!Finite(joint.InverseBind)) throw new ArgumentOutOfRangeException(nameof(joints), "Inverse bind matrices must be finite.");
+        }
+        var root = rootTransform ?? Matrix4x4.Identity;
+        if (!Finite(root)) throw new ArgumentOutOfRangeException(nameof(rootTransform));
+        Joints = Array.AsReadOnly(copy);
+        RootTransform = root;
+        RestPose = new SkeletonPose(this, copy.Select(j => j.Rotation).ToArray(), Vector3.Zero);
+    }
+
+    /// <summary>Returns the index of a named joint, or -1.</summary>
+    public int IndexOf(string name) => _byName.TryGetValue(name, out var index) ? index : -1;
+
+    internal static Quaternion Normalized(Quaternion q, string name)
+    {
+        if (!float.IsFinite(q.X) || !float.IsFinite(q.Y) || !float.IsFinite(q.Z) || !float.IsFinite(q.W)) throw new ArgumentOutOfRangeException(name);
+        var length = q.Length();
+        if (length < 1e-6f) throw new ArgumentOutOfRangeException(name, "Rotations must be nonzero quaternions.");
+        return Quaternion.Normalize(q);
+    }
+
+    internal static bool Finite(Matrix4x4 m) =>
+        float.IsFinite(m.M11) && float.IsFinite(m.M12) && float.IsFinite(m.M13) && float.IsFinite(m.M14) &&
+        float.IsFinite(m.M21) && float.IsFinite(m.M22) && float.IsFinite(m.M23) && float.IsFinite(m.M24) &&
+        float.IsFinite(m.M31) && float.IsFinite(m.M32) && float.IsFinite(m.M33) && float.IsFinite(m.M34) &&
+        float.IsFinite(m.M41) && float.IsFinite(m.M42) && float.IsFinite(m.M43) && float.IsFinite(m.M44);
+}
+
+/// <summary>An immutable pose: one local rotation per joint plus an offset added to the root joints' rest translation.</summary>
+public sealed class SkeletonPose
+{
+    private readonly Quaternion[] _rotations;
+    private Matrix4x4[]? _world, _skinning;
+
+    /// <summary>The posed skeleton.</summary>
+    public Skeleton Skeleton { get; }
+    /// <summary>Local joint rotations, relative to each parent.</summary>
+    public IReadOnlyList<Quaternion> Rotations { get; }
+    /// <summary>Offset added to the translation of root joints.</summary>
+    public Vector3 RootOffset { get; }
+
+    internal SkeletonPose(Skeleton skeleton, Quaternion[] rotations, Vector3 rootOffset)
+    {
+        Skeleton = skeleton;
+        _rotations = rotations;
+        Rotations = Array.AsReadOnly(rotations);
+        RootOffset = rootOffset;
+    }
+
+    /// <summary>Creates a pose from one local rotation per joint. Rotations are copied and normalized.</summary>
+    public static SkeletonPose Create(Skeleton skeleton, ReadOnlySpan<Quaternion> rotations, Vector3 rootOffset = default)
+    {
+        ArgumentNullException.ThrowIfNull(skeleton);
+        if (rotations.Length != skeleton.Joints.Count) throw new ArgumentException("Supply one rotation per joint.", nameof(rotations));
+        Validation.Vector(rootOffset, nameof(rootOffset));
+        var copy = new Quaternion[rotations.Length];
+        for (var i = 0; i < copy.Length; i++) copy[i] = Skeleton.Normalized(rotations[i], nameof(rotations));
+        return new(skeleton, copy, rootOffset);
+    }
+
+    /// <summary>Joint transforms in the skinned mesh's coordinate system, including <see cref="Skeleton.RootTransform"/>.</summary>
+    public IReadOnlyList<Matrix4x4> WorldTransforms => _world ??= ComputeWorld();
+
+    /// <summary>Per-joint skinning matrices: inverse bind followed by the posed joint transform.</summary>
+    internal Matrix4x4[] SkinningMatrices
+    {
+        get
+        {
+            if (_skinning is { } cached) return cached;
+            var world = _world ??= ComputeWorld();
+            var result = new Matrix4x4[world.Length];
+            for (var i = 0; i < result.Length; i++) result[i] = Skeleton.Joints[i].InverseBind * world[i];
+            return _skinning = result;
+        }
+    }
+
+    private Matrix4x4[] ComputeWorld()
+    {
+        var joints = Skeleton.Joints;
+        var world = new Matrix4x4[joints.Count];
+        for (var i = 0; i < world.Length; i++)
+        {
+            var joint = joints[i];
+            var local = joint.Local(_rotations[i]);
+            if (joint.Parent < 0)
+            {
+                local.Translation += RootOffset;
+                world[i] = local * Skeleton.RootTransform;
+            }
+            else world[i] = local * world[joint.Parent];
+        }
+        return world;
+    }
+}
+
+/// <summary>Up to four joint influences of one vertex. Weights are normalized when the skinned mesh is created.</summary>
+/// <param name="Joints">Joint indices, packed as X, Y, Z and W.</param>
+/// <param name="Weights">Nonnegative weights matching <paramref name="Joints"/>.</param>
+public readonly record struct VertexInfluence(Int4 Joints, Vector4 Weights);
+
+/// <summary>Four joint indices.</summary>
+public readonly record struct Int4(int X, int Y, int Z, int W)
+{
+    internal int this[int i] => i switch { 0 => X, 1 => Y, 2 => Z, _ => W };
+}
+
+/// <summary>Immutable bind-pose geometry deformed by a skeleton.</summary>
+public sealed class SkinnedMesh
+{
+    /// <summary>Geometry in its bind pose.</summary>
+    public Mesh Mesh { get; }
+    /// <summary>The skeleton that deforms the mesh.</summary>
+    public Skeleton Skeleton { get; }
+    /// <summary>One influence per mesh vertex.</summary>
+    public IReadOnlyList<VertexInfluence> Influences { get; }
+    internal Vector4[] Weights { get; }
+    internal Int4[] JointIndices { get; }
+    // Per joint: bind-space bounds of the vertices it influences, for conservative posed bounds.
+    internal (Vector3 Min, Vector3 Max)[] JointBounds { get; }
+
+    /// <summary>Validates one influence per vertex: joint indices inside the skeleton and a positive weight sum.</summary>
+    public SkinnedMesh(Mesh mesh, Skeleton skeleton, IEnumerable<VertexInfluence> influences)
+    {
+        ArgumentNullException.ThrowIfNull(mesh);
+        ArgumentNullException.ThrowIfNull(skeleton);
+        ArgumentNullException.ThrowIfNull(influences);
+        var copy = influences.Take(mesh.Vertices.Count + 1).ToArray();
+        if (copy.Length != mesh.Vertices.Count) throw new ArgumentException("Supply one influence per vertex.", nameof(influences));
+        var count = skeleton.Joints.Count;
+        Weights = new Vector4[copy.Length];
+        JointIndices = new Int4[copy.Length];
+        JointBounds = Enumerable.Repeat((new Vector3(float.PositiveInfinity), new Vector3(float.NegativeInfinity)), count).ToArray();
+        for (var v = 0; v < copy.Length; v++)
+        {
+            var (joints, weights) = copy[v];
+            if (!float.IsFinite(weights.X) || !float.IsFinite(weights.Y) || !float.IsFinite(weights.Z) || !float.IsFinite(weights.W) ||
+                weights.X < 0 || weights.Y < 0 || weights.Z < 0 || weights.W < 0)
+                throw new ArgumentOutOfRangeException(nameof(influences), "Weights must be finite and nonnegative.");
+            var sum = weights.X + weights.Y + weights.Z + weights.W;
+            if (!(sum > 0)) throw new ArgumentOutOfRangeException(nameof(influences), "Each vertex needs a positive weight.");
+            weights /= sum;
+            for (var k = 0; k < 4; k++)
+            {
+                var weight = k switch { 0 => weights.X, 1 => weights.Y, 2 => weights.Z, _ => weights.W };
+                var joint = joints[k];
+                // Unused slots may hold any index (glTF commonly repeats 0); only weighted slots must be valid.
+                if (weight == 0) { joints = Set(joints, k, 0); continue; }
+                if ((uint)joint >= (uint)count) throw new ArgumentOutOfRangeException(nameof(influences), "Joint index outside skeleton.");
+                ref var bounds = ref JointBounds[joint];
+                bounds = (Vector3.Min(bounds.Item1, mesh.Vertices[v]), Vector3.Max(bounds.Item2, mesh.Vertices[v]));
+            }
+            copy[v] = new(joints, weights);
+            Weights[v] = weights;
+            JointIndices[v] = joints;
+        }
+        Mesh = mesh;
+        Skeleton = skeleton;
+        Influences = Array.AsReadOnly(copy);
+    }
+
+    private static Int4 Set(Int4 value, int index, int joint) => index switch
+    {
+        0 => value with { X = joint }, 1 => value with { Y = joint }, 2 => value with { Z = joint }, _ => value with { W = joint }
+    };
+
+    /// <summary>Conservative bounds of the posed mesh: each joint's bind-space vertex bounds transformed by its skinning matrix.</summary>
+    internal (Vector3 Min, Vector3 Max) PosedBounds(SkeletonPose pose)
+    {
+        var matrices = pose.SkinningMatrices;
+        var min = new Vector3(float.PositiveInfinity);
+        var max = new Vector3(float.NegativeInfinity);
+        for (var j = 0; j < JointBounds.Length; j++)
+        {
+            var (lo, hi) = JointBounds[j];
+            if (lo.X > hi.X) continue;
+            for (var c = 0; c < 8; c++)
+            {
+                var p = Vector3.Transform(new Vector3((c & 1) == 0 ? lo.X : hi.X, (c & 2) == 0 ? lo.Y : hi.Y, (c & 4) == 0 ? lo.Z : hi.Z), matrices[j]);
+                min = Vector3.Min(min, p); max = Vector3.Max(max, p);
+            }
+        }
+        return (min, max);
+    }
+
+    /// <summary>CPU skinning of positions and, when present, normals.</summary>
+    internal (Vector3[] Positions, Vector3[]? Normals) Deform(SkeletonPose pose)
+    {
+        var matrices = pose.SkinningMatrices;
+        var source = Mesh.Vertices;
+        var sourceNormals = Mesh.Normals;
+        var positions = new Vector3[source.Count];
+        var normals = sourceNormals is null ? null : new Vector3[source.Count];
+        for (var v = 0; v < positions.Length; v++)
+        {
+            var m = Blend(matrices, JointIndices[v], Weights[v]);
+            positions[v] = Vector3.Transform(source[v], m);
+            if (normals is not null)
+            {
+                var n = Vector3.TransformNormal(sourceNormals![v], m);
+                var length = n.Length();
+                normals[v] = length > 0 && float.IsFinite(length) ? n / length : sourceNormals[v];
+            }
+        }
+        return (positions, normals);
+    }
+
+    private static Matrix4x4 Blend(Matrix4x4[] matrices, Int4 joints, Vector4 weights)
+    {
+        var m = matrices[joints.X] * weights.X;
+        if (weights.Y > 0) m += matrices[joints.Y] * weights.Y;
+        if (weights.Z > 0) m += matrices[joints.Z] * weights.Z;
+        if (weights.W > 0) m += matrices[joints.W] * weights.W;
+        return m;
+    }
+}
+
+// Lazily skinned geometry of one posed shape. Count never triggers skinning, so budgets stay cheap.
+internal sealed class PosedGeometry(SkinnedMesh skinned, SkeletonPose pose) : IReadOnlyList<Triangle3>
+{
+    private (Vector3[] Positions, Vector3[]? Normals)? _deformed;
+    internal SkinnedMesh Skinned { get; } = skinned;
+    internal SkeletonPose Pose { get; } = pose;
+    private (Vector3[] Positions, Vector3[]? Normals) Deformed => _deformed ??= Skinned.Deform(Pose);
+    internal IReadOnlyList<Vector3>? Normals => Skinned.Mesh.Normals is null ? null : Deformed.Normals;
+    public int Count => Skinned.Mesh.TriangleCount;
+    public Triangle3 this[int index]
+    {
+        get
+        {
+            var p = Deformed.Positions;
+            var i = Skinned.Mesh.Indices;
+            return new(p[i[index * 3]], p[i[index * 3 + 1]], p[i[index * 3 + 2]]);
+        }
+    }
+    public IEnumerator<Triangle3> GetEnumerator()
+    {
+        for (var i = 0; i < Count; i++) yield return this[i];
+    }
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+}

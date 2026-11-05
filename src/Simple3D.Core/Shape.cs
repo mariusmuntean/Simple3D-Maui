@@ -91,8 +91,53 @@ public sealed class Shape
         if (material.Texture is not null && geometry is null) geometry = PrimitiveTextures.Get(Mesh);
         if (material.Texture is not null && geometry?.TextureCoordinates is null)
             throw new ArgumentException("Textured shapes require mesh texture coordinates.", nameof(material));
-        return new(geometry?.Triangles ?? Mesh, material.Color, Position, Rotation, Size, Name, Children, material, geometry);
+        var triangles = Mesh is PosedGeometry ? Mesh : geometry?.Triangles ?? Mesh;
+        return new(triangles, material.Color, Position, Rotation, Size, Name, Children, material, geometry);
     }
+    /// <summary>Creates an instance of skinned geometry in its skeleton's rest pose.</summary>
+    public static Shape FromSkinnedMesh(SkinnedMesh mesh, Material? material = null)
+    {
+        ArgumentNullException.ThrowIfNull(mesh);
+        material ??= new Material();
+        if (material.Texture is not null && mesh.Mesh.TextureCoordinates is null)
+            throw new ArgumentException("Textured shapes require mesh texture coordinates.", nameof(material));
+        return new(new PosedGeometry(mesh, mesh.Skeleton.RestPose), material.Color, Vector3.Zero, Vector3.Zero, Vector3.One,
+            material: material, geometry: mesh.Mesh);
+    }
+    /// <summary>Skinned geometry of this node, or null.</summary>
+    public SkinnedMesh? SkinnedMesh => (Mesh as PosedGeometry)?.Skinned;
+    /// <summary>Current pose of this node's skinned geometry, or null.</summary>
+    public SkeletonPose? Pose => (Mesh as PosedGeometry)?.Pose;
+    /// <summary>Returns a copy in which this node and every descendant skinned by the pose's skeleton use the pose. Throws when none does.</summary>
+    public Shape WithPose(SkeletonPose pose)
+    {
+        ArgumentNullException.ThrowIfNull(pose);
+        var matched = false;
+        var posed = Posed(pose, ref matched);
+        if (!matched) throw new ArgumentException("No skinned geometry in this shape uses the pose's skeleton.", nameof(pose));
+        return posed;
+    }
+    private Shape Posed(SkeletonPose pose, ref bool matched)
+    {
+        Shape[]? children = null;
+        for (var i = 0; i < Children.Count; i++)
+        {
+            var child = Children[i].Posed(pose, ref matched);
+            if (ReferenceEquals(child, Children[i])) continue;
+            children ??= Children.ToArray();
+            children[i] = child;
+        }
+        var mesh = Mesh;
+        if (Mesh is PosedGeometry posed && ReferenceEquals(posed.Skinned.Skeleton, pose.Skeleton))
+        {
+            matched = true;
+            if (!ReferenceEquals(posed.Pose, pose)) mesh = new PosedGeometry(posed.Skinned, pose);
+        }
+        if (children is null && ReferenceEquals(mesh, Mesh)) return this;
+        return new(mesh, Color, Position, Rotation, Size, Name, children is null ? Children : Array.AsReadOnly(children), Material, Geometry);
+    }
+    // Lighting normals: skinned shapes use posed normals.
+    internal IReadOnlyList<Vector3>? ShadingNormals => Mesh is PosedGeometry posed ? posed.Normals : Geometry?.Normals;
     /// <summary>Creates an instance sharing an immutable indexed mesh.</summary>
     public static Shape FromMesh(Mesh mesh, Material? material = null)
     {

@@ -6,6 +6,7 @@ if (args.Length > 0 && args[0] == "--render-images")
     return RenderImages.Run(args[1..]);
 
 GpuSceneTests.Run();
+SkinningTests.Run();
 
 var tests = new (string Name, Action Run)[]
 {
