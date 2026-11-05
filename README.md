@@ -8,7 +8,7 @@ A 3D scene control with software and native GPU rendering for .NET 10 MAUI on iO
 
 ![Mirror: a tracked person and the character copying them](docs/site/images/mirror.gif)
 
-*The gallery's **Mirror** scene: the phone's camera tracks a person's body and face on the device (Apple Vision or Google ML Kit), and a skinned VRM character copies them, including squats, presses, blinks, a talking mouth, head tilt and turning around. The left side shows the tracked landmarks; the GIF is rendered from recorded landmarks, so no video footage is redistributed.*
+*The gallery's **Mirror** scene: the camera tracks a person's body and face on the device (Apple Vision or Google ML Kit), and a skinned VRM character copies them: talking, smiling and blinking, arms and torso, whole-body squats. Real people, real tracking: public-domain videos by NASA/JSC and the CDC; they do not endorse this project.*
 
 | What the library does | Where |
 | --- | --- |

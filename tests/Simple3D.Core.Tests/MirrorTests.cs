@@ -298,9 +298,7 @@ internal static class MirrorFaceTests
 
     private static void Run(MirrorModel bundled)
     {
-        using var asset = File.OpenRead(Path.Combine(AppContext.BaseDirectory, "Assets", bundled.File));
-        var model = GltfReader.Read(asset);
-        var character = MirrorCharacter.FromVrm(model, model.CreateShape(), bundled.Face);
+        var (model, character) = Load(bundled);
         var face = character.Face;
         var ((headMin, headMax), _) = character.HeadBounds()!.Value;
         var headHeight = headMax.Y - headMin.Y;
@@ -350,8 +348,15 @@ internal static class MirrorFaceTests
             $"tilt r={Correlation(girl, s => s.FaceRoll, s => s.HeadRoll):0.00}, turn r={Correlation(laugh, s => s.FaceYaw, s => s.HeadYaw):0.00}, nod r={Correlation(laugh, s => s.FacePitch, s => s.HeadPitch):0.00}");
     }
 
+    internal static (GltfModel Model, MirrorCharacter Character) Load(MirrorModel bundled)
+    {
+        using var asset = File.OpenRead(Path.Combine(AppContext.BaseDirectory, "Assets", bundled.File));
+        var model = GltfReader.Read(asset);
+        return (model, MirrorCharacter.FromVrm(model, model.CreateShape(), bundled.Face));
+    }
+
     // Vertices (per mesh) that the named expressions move by more than 0.5% of the head height at full intensity.
-    private static Dictionary<SkinnedMesh, int[]> Moved(GltfModel model, IEnumerable<string> expressions, float headHeight)
+    internal static Dictionary<SkinnedMesh, int[]> Moved(GltfModel model, IEnumerable<string> expressions, float headHeight)
     {
         var moved = new Dictionary<SkinnedMesh, HashSet<int>>();
         foreach (var name in expressions)
@@ -366,7 +371,7 @@ internal static class MirrorFaceTests
     }
 
     // A both-eyes blink split into the character's left (+X) and right eye.
-    private static (Dictionary<SkinnedMesh, int[]>, Dictionary<SkinnedMesh, int[]>) Split(Dictionary<SkinnedMesh, int[]> eyes) =>
+    internal static (Dictionary<SkinnedMesh, int[]>, Dictionary<SkinnedMesh, int[]>) Split(Dictionary<SkinnedMesh, int[]> eyes) =>
         (eyes.ToDictionary(e => e.Key, e => e.Value.Where(v => e.Key.Mesh.Vertices[v].X > 0).ToArray()),
          eyes.ToDictionary(e => e.Key, e => e.Value.Where(v => e.Key.Mesh.Vertices[v].X <= 0).ToArray()));
 
@@ -380,30 +385,38 @@ internal static class MirrorFaceTests
     }
 
     // The largest distance any of the vertices moved.
-    private static float Displacement(Sample s, Dictionary<SkinnedMesh, int[]> vertices) =>
+    internal static float Displacement(Sample s, Dictionary<SkinnedMesh, int[]> vertices) =>
         vertices.SelectMany(m => m.Value.Select(v => Offset(s, m.Key, v).Length())).DefaultIfEmpty().Max();
 
     // How far an eye closed: the eyelid's travel over its travel when the model's blink is fully on, which closes the eye
     // (see the grids in docs/site/images/mirror-faces-*.png). A model whose blink only half-closes fails visually, not here.
-    private static float Closure(Sample s, Dictionary<SkinnedMesh, int[]> eye, float full) =>
+    internal static float Closure(Sample s, Dictionary<SkinnedMesh, int[]> eye, float full) =>
         eye.SelectMany(m => m.Value.Select(v => MathF.Abs(Offset(s, m.Key, v).Y))).DefaultIfEmpty().Max() / full;
 
     // The eyelid's vertical travel with the eye's blink expression fully on.
-    private static float Travel(GltfModel model, string expression, Dictionary<SkinnedMesh, int[]> eye) =>
+    internal static float Travel(GltfModel model, string expression, Dictionary<SkinnedMesh, int[]> eye) =>
         eye.SelectMany(m => m.Value.Select(v => MathF.Abs(model.Expressions[expression].Binds.Where(b => b.Mesh == m.Key)
             .Aggregate(0f, (y, b) => y + m.Key.MorphTargets[b.Target].PositionDeltas[v].Y * b.Weight)))).Max();
 
-    private sealed record Sample(double Time, Dictionary<SkinnedMesh, float[]> Weights, float FaceBlink, float FaceYaw, float FacePitch, float FaceRoll, float HeadYaw, float HeadPitch, float HeadRoll);
+    internal sealed record Sample(double Time, Dictionary<SkinnedMesh, float[]> Weights, float FaceBlink, float FaceYaw, float FacePitch, float FaceRoll, float HeadYaw, float HeadPitch, float HeadRoll)
+    {
+        internal PoseFrame Frame { get; init; } = null!;
+    }
 
-    private static List<Sample> Replay(MirrorCharacter character, string fixture)
+    internal static List<Sample> Replay(MirrorCharacter character, string fixture, bool useFrameTiming = false)
     {
         var session = new MirrorSession(character);
         var bones = character.HumanoidBones;
         var samples = new List<Sample>();
-        foreach (var frame in MirrorTests.Fixture(fixture))
+        var frames = MirrorTests.Fixture(fixture);
+        for (var i = 0; i < frames.Count; i++)
         {
+            var frame = frames[i];
             session.Apply(frame, mirrored: false);
-            for (var i = 0; i < 4; i++) session.Present(TimeSpan.FromSeconds(1 / 100d));
+            if (useFrameTiming)
+                PresentFrame(session, frames, i);
+            else
+                for (var tick = 0; tick < 4; tick++) session.Present(TimeSpan.FromSeconds(1 / 100d));
             if (session.Tracker.State != TrackingState.Tracking || session.Tracker.Face is not { } face) continue;
             var leaves = Leaves(session.Stage.CharacterShape).Where(l => l.Pose is not null).ToList();
             var world = leaves[0].Pose!.WorldTransforms;
@@ -418,13 +431,29 @@ internal static class MirrorFaceTests
             foreach (var leaf in leaves)
                 if (leaf.SkinnedMesh is { } mesh && leaf.MorphWeights is { } w) weights[mesh] = w.ToArray();
             samples.Add(new(frame.Timestamp.TotalSeconds, weights, (face.BlinkLeft + face.BlinkRight) / 2, face.Yaw, face.Pitch, face.Roll,
-                MathF.Atan2(forward.X, forward.Z), MathF.Asin(Math.Clamp(forward.Y, -1, 1)), MathF.Atan2(-up.X, up.Y)));
+                MathF.Atan2(forward.X, forward.Z), MathF.Asin(Math.Clamp(forward.Y, -1, 1)), MathF.Atan2(-up.X, up.Y)) { Frame = frame });
         }
         return samples;
-        static IEnumerable<Shape> Leaves(Shape s) => s.Children.Count == 0 ? [s] : s.Children.SelectMany(Leaves);
     }
 
-    private static float Correlation(IReadOnlyList<Sample> s, Func<Sample, float> a, Func<Sample, float> b)
+    internal static void PresentFrame(MirrorSession session, IReadOnlyList<PoseFrame> frames, int index)
+    {
+        // The camera supplies targets; the display eases toward each one until the next camera frame.
+        // Give the final target the preceding frame's interval when there is no next timestamp.
+        var remaining = index + 1 < frames.Count ? frames[index + 1].Timestamp - frames[index].Timestamp
+            : index > 0 ? frames[index].Timestamp - frames[index - 1].Timestamp : TimeSpan.Zero;
+        var step = TimeSpan.FromSeconds(1 / 120d);
+        while (remaining > TimeSpan.Zero)
+        {
+            var elapsed = remaining < step ? remaining : step;
+            session.Present(elapsed);
+            remaining -= elapsed;
+        }
+    }
+
+    internal static IEnumerable<Shape> Leaves(Shape s) => s.Children.Count == 0 ? [s] : s.Children.SelectMany(Leaves);
+
+    internal static float Correlation<T>(IReadOnlyList<T> s, Func<T, float> a, Func<T, float> b)
     {
         double ma = s.Average(a), mb = s.Average(b), ab = 0, aa = 0, bb = 0;
         foreach (var x in s) { var da = a(x) - ma; var db = b(x) - mb; ab += da * db; aa += da * da; bb += db * db; }

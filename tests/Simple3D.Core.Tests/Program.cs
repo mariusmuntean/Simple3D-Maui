@@ -9,6 +9,7 @@ GpuSceneTests.Run();
 SkinningTests.Run();
 MirrorTests.Run();
 MirrorFaceTests.Run();
+MirrorRealPeopleTests.Run();
 GltfReaderTests.Run();
 
 var tests = new (string Name, Action Run)[]

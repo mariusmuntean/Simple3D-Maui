@@ -166,18 +166,21 @@ internal static class MirrorRender
         stage.Camera.Zoom(stage.Camera.Distance / (half / MathF.Tan(stage.Camera.FieldOfView / 2) + depth / 2));
     }
 
-    /// <summary>Renders the showcase: three recorded performances, each driving a different character, with animated swaps.
-    /// Writes frame-NNNN.png at 15 fps plus manifest.txt ("frame fixture seconds" per line) for the skeleton panel.</summary>
+    /// <summary>Renders the showcase: three real people (public-domain NASA and CDC videos, see tests/Fixtures/SOURCES.md), each
+    /// driving a different character, with animated swaps. Writes frame-NNNN.png at 15 fps plus manifest.txt ("frame fixture
+    /// seconds model" per line), which scripts/mirror-showcase.py pairs with the matching video frames.</summary>
     internal static int Showcase(string output)
     {
         Directory.CreateDirectory(output);
         (string Fixture, double From, double To, string Model)[] scenes =
-            [("mirror-landmarks", 5.2, 10.4, "cat.vrm"), ("face-46379", 2.6, 8.6, "juanita.vrm"), ("turning-landmarks", 6.0, 11.0, "froggy.vrm")];
+            [("face-nasa-menon", 3.8, 9.8, "juanita.vrm"), ("upper-cdc-press", 19.8, 24.8, "cosmicbot.vrm"), ("body-cdc-squat", 2.5, 7.5, "cat.vrm")];
         var renderer = new DepthRenderer();
         var session = new MirrorSession(Character(scenes[0].Model));
         var manifest = new List<string>();
         var index = 0;
         var clock = 0.0;
+        // The body scenes ease back from the face close-up to the stage's own framing.
+        var (stageTarget, stageDistance) = (session.Stage.Camera.Target, session.Stage.Camera.Distance);
         foreach (var (fixture, from, to, model) in scenes)
         {
             var frames = Frames(fixture);
@@ -196,11 +199,12 @@ internal static class MirrorRender
                 clock += 1 / 15.0;
                 session.Stage.Animate((float)clock);
                 // The face scene eases in to head and shoulders once the swap has played, so the face reads at GIF size.
-                if (fixture.StartsWith("face") && !session.Stage.IsSwapping)
+                if (!session.Stage.IsSwapping)
                 {
+                    var face = fixture.StartsWith("face");
                     var camera = session.Stage.Camera;
-                    camera.Target = Vector3.Lerp(camera.Target, new Vector3(0, session.Stage.Character.Height * .82f, 0), .15f);
-                    camera.Zoom(MathF.Pow(camera.Distance / 1.7f, .15f));
+                    camera.Target = Vector3.Lerp(camera.Target, face ? new Vector3(0, session.Stage.Character.Height * .82f, 0) : stageTarget, .15f);
+                    camera.Zoom(MathF.Pow(camera.Distance / (face ? 1.7f : stageDistance * .8f), .15f));
                 }
                 var image = renderer.Render(session.Stage.Scene, session.Stage.Camera, 540, 720, 0xFF0E1A2B);
                 using var bitmap = new SKBitmap(new SKImageInfo(image.Width, image.Height, SKColorType.Bgra8888, SKAlphaType.Opaque));

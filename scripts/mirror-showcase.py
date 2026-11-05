@@ -1,26 +1,27 @@
-"""Builds the Mirror showcase GIF: the tracked person as a glowing skeleton (from recorded landmarks, so no video footage
-is redistributed) next to the character that copies them.
+"""Builds the Mirror showcase GIF: a real person (public-domain NASA and CDC videos) next to the character that copies them.
 
     dotnet run --project tests/Simple3D.Maui.Tests -c Release -- --render-showcase out
-    python3 scripts/mirror-showcase.py out docs/site/images/mirror.gif
+    python3 scripts/mirror-showcase.py out docs/site/images/mirror.gif [video-cache-dir]
 
-Requires Pillow and ffmpeg.
+The videos are downloaded once into the cache directory and trimmed to the segments the landmark fixtures were extracted
+from (tests/Fixtures/SOURCES.md), so fixture time t is video time t. Requires Pillow and ffmpeg.
 """
-import gzip, json, math, os, subprocess, sys, tempfile
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+import gzip, json, os, subprocess, sys, tempfile, urllib.request
+from PIL import Image, ImageDraw, ImageFont
 
-BONES = [(1, 3), (3, 5), (2, 4), (4, 6), (1, 2), (7, 8), (1, 7), (2, 8), (7, 9), (9, 11), (8, 10), (10, 12)]
-LEFT = {1, 3, 5, 7, 9, 11}
-CAPTIONS = {"mirror-landmarks": "Whole body: squats and presses", "face-46379": "Head and face: mouth, eyes, head tilt",
-            "turning-landmarks": "Turning around: front, side and back"}
+# fixture: (source URL, start s, end s, crop "w:h:x:y" or None, credit)
+SOURCES = {
+    "face-nasa-menon": ("https://images-assets.nasa.gov/video/jsc2025m000153_NASA_Astronaut_Candidate_Anna_Menon_Resource_Reel/"
+                        "jsc2025m000153_NASA_Astronaut_Candidate_Anna_Menon_Resource_Reel~orig.mp4", 83.2, 125.2, "600:600:660:0", "Video: NASA/JSC"),
+    "upper-cdc-press": ("https://upload.wikimedia.org/wikipedia/commons/b/b9/Muscle_Strengthening_at_Home_-_Overhead_Press.webm",
+                        0.2, 37.8, None, "Video: CDC"),
+    "body-cdc-squat": ("https://upload.wikimedia.org/wikipedia/commons/a/ae/Muscle_Strengthening_at_Home_-_Half_squat.webm",
+                       16.6, 35.9, None, "Video: CDC"),
+}
+CAPTIONS = {"face-nasa-menon": "Face: mouth, each eye, smile, head", "upper-cdc-press": "Waist up: arms and torso",
+            "body-cdc-squat": "Whole body: squats"}
+NAMES = {"cat.vrm": "Chubby Tubby Cat", "juanita.vrm": "Juanita", "cosmicbot.vrm": "CosmicBot", "froggy.vrm": "Froggy"}
 BACKGROUND = (14, 26, 43)
-
-def load(fixture):
-    with gzip.open(os.path.join(os.path.dirname(__file__), "..", "tests", "Fixtures", fixture + ".jsonl.gz"), "rt") as f:
-        return [json.loads(line) for line in f]
-
-def nearest(frames, t):
-    return min(frames, key=lambda f: abs(f["t"] - t))
 
 def font(size):
     for path in ["/System/Library/Fonts/SFNS.ttf", "/System/Library/Fonts/Helvetica.ttc", "/Library/Fonts/Arial.ttf"]:
@@ -28,84 +29,78 @@ def font(size):
             return ImageFont.truetype(path, size)
     return ImageFont.load_default()
 
-NAMES = {"cat.vrm": "Chubby Tubby Cat", "juanita.vrm": "Juanita", "cosmicbot.vrm": "CosmicBot", "froggy.vrm": "Froggy"}
+def fixture(name):
+    with gzip.open(os.path.join(os.path.dirname(__file__), "..", "tests", "Fixtures", name + ".jsonl.gz"), "rt") as f:
+        return [json.loads(line) for line in f]
 
-def region(frames, start, end):
-    """Bounds (in image-height units) of every confident landmark in a time range: the panel zooms to where the person moves."""
-    xs, ys = [], []
-    for f in frames:
-        if start <= f["t"] <= end and f.get("lm"):
-            aspect = f["w"] / f["h"]
-            for x, y, c in f["lm"]:
-                if c > .3: xs.append(x * aspect); ys.append(y)
-    return (min(xs), min(ys), max(xs), max(ys)) if xs else (0, 0, 1, 1)
+def video(cache, name):
+    """The trimmed (and cropped) segment of the source video, downloaded and cut once."""
+    url, start, end, crop, _ = SOURCES[name]
+    os.makedirs(cache, exist_ok=True)
+    trimmed = os.path.join(cache, name + ".mp4")
+    if not os.path.exists(trimmed):
+        source = os.path.join(cache, name + ".source" + os.path.splitext(url)[1])
+        if not os.path.exists(source):
+            request = urllib.request.Request(url, headers={"User-Agent": "Simple3D-showcase/1.0"})
+            with urllib.request.urlopen(request) as response, open(source, "wb") as out:
+                out.write(response.read())
+        filters = ["-vf", "crop=" + crop] if crop else []
+        subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-ss", str(start), "-to", str(end), "-i", source, *filters,
+                        "-an", "-c:v", "libx264", "-crf", "16", trimmed], check=True)
+    return trimmed
 
-def skeleton(frame, size, bounds):
+def frames(path, size):
+    """Every frame of a video as RGB images with their times, decoded once."""
+    probe = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height,r_frame_rate",
+                            "-of", "csv=p=0", path], capture_output=True, text=True, check=True).stdout.strip().split(",")
+    w, h = int(probe[0]), int(probe[1]); num, den = map(float, probe[2].split("/"))
+    raw = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", path, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True, check=True).stdout
+    n = len(raw) // (w * h * 3)
+    return [(i * den / num, Image.frombytes("RGB", (w, h), raw[i * w * h * 3:(i + 1) * w * h * 3])) for i in range(n)]
+
+def person_center(recorded, start, end):
+    """Horizontal center of the person over the scene, as a share of image width (0.5 without body landmarks)."""
+    xs = [x for f in recorded if start <= f["t"] <= end and f.get("lm") for x, y, c in f["lm"] if c > .3]
+    return sum(xs) / len(xs) if xs else .5
+
+def cover(image, size, center_x):
+    """Scales the image to fill the panel, keeping the person centered horizontally."""
     w, h = size
-    glow = Image.new("RGB", size, BACKGROUND)
-    d = ImageDraw.Draw(glow)
-    aspect = frame["w"] / frame["h"]
-    x0, y0, x1, y1 = bounds
-    # Zoom to the area the person moves in (with room for the head above the shoulders), centered in the panel.
-    y0 -= .25 * (y1 - y0) + .05
-    scale = min(w * .82 / max(x1 - x0, .05), h * .8 / max(y1 - y0, .05))
-    ox, oy = w / 2 - (x0 + x1) / 2 * scale, h * .52 - (y0 + y1) / 2 * scale
-    lm = frame.get("lm")
-    def p(i): return (ox + lm[i][0] * aspect * scale, oy + lm[i][1] * scale)
-    if lm:
-        for a, b in BONES:
-            if lm[a][2] > .3 and lm[b][2] > .3:
-                color = (255, 140, 90) if a in LEFT and b in LEFT else (90, 200, 255) if a not in LEFT and b not in LEFT else (235, 235, 245)
-                d.line([p(a), p(b)], fill=color, width=9)
-        for i in range(1, 13):
-            if lm[i][2] > .3:
-                x, y = p(i); d.ellipse([x - 7, y - 7, x + 7, y + 7], fill=(255, 255, 255))
-    face = frame.get("face")
-    if face:
-        yaw, pitch, roll, mouth, smile, brows, blink_l, blink_r = face
-        if lm and lm[0][2] > .3 and lm[1][2] > .3 and lm[2][2] > .3:
-            # Head sized from the shoulders: large in close-ups, small for a whole body.
-            cx, cy = p(0); r = .42 * math.dist(p(1), p(2))
-        else:
-            cx, cy, r = w / 2, h * .42, .3 * min(w, h)
-        d.ellipse([cx - r, cy - r * 1.15, cx + r, cy + r * 1.15], outline=(255, 214, 120), width=5)
-        tilt = -roll
-        def rot(x, y): return (cx + x * math.cos(tilt) - y * math.sin(tilt) + yaw * r * .6, cy + x * math.sin(tilt) + y * math.cos(tilt) - pitch * r * .5)
-        for side, blink in ((-1, blink_r), (1, blink_l)):  # the person's right eye appears on the image's left
-            ex, ey = rot(side * r * .38, -r * .2)
-            open_ = max(.08, 1 - blink) * r * .16
-            d.ellipse([ex - r * .16, ey - open_, ex + r * .16, ey + open_], fill=(255, 255, 255))
-        mx, my = rot(0, r * .45)
-        mw, mh = r * (.32 + .18 * smile), max(3, r * .5 * mouth)
-        d.ellipse([mx - mw, my - mh, mx + mw, my + mh], outline=(255, 214, 120), width=4, fill=(60, 20, 30) if mouth > .15 else None)
-    blurred = glow.filter(ImageFilter.GaussianBlur(10))
-    return Image.blend(blurred, glow, .65)
+    scale = max(w / image.width, h / image.height)
+    resized = image.resize((round(image.width * scale), round(image.height * scale)), Image.LANCZOS)
+    left = min(max(0, round(center_x * resized.width - w / 2)), resized.width - w)
+    top = (resized.height - h) // 2
+    return resized.crop((left, top, left + w, top + h))
 
-def main(render_dir, gif):
+def main(render_dir, gif, cache):
     manifest = [line.split() for line in open(os.path.join(render_dir, "manifest.txt"))]
-    fixtures = {f: load(f) for f in {m[1] for m in manifest}}
-    times = {}
-    for _, fixture, t, _ in manifest: times.setdefault(fixture, []).append(float(t))
-    bounds = {f: region(fixtures[f], min(ts), max(ts)) for f, ts in times.items()}
-    title, caption = font(30), font(24)
+    spans = {}
+    for _, name, t, _ in manifest:
+        lo, hi = spans.get(name, (1e9, -1e9)); spans[name] = (min(lo, float(t)), max(hi, float(t)))
+    centers = {name: person_center(fixture(name), *span) for name, span in spans.items()}
+    decoded = {name: frames(video(cache, name), None) for name in spans}
+    title, caption, small = font(30), font(24), font(17)
     with tempfile.TemporaryDirectory() as tmp:
-        for index, fixture, t, model in manifest:
+        for index, name, t, model in manifest:
             render = Image.open(os.path.join(render_dir, f"frame-{int(index):04d}.png")).convert("RGB")
-            panel = skeleton(nearest(fixtures[fixture], float(t)), render.size, bounds[fixture])
+            _, still = min(decoded[name], key=lambda f: abs(f[0] - float(t)))
+            person = cover(still, render.size, centers[name])
             out = Image.new("RGB", (render.width * 2, render.height), BACKGROUND)
-            out.paste(panel, (0, 0)); out.paste(render, (render.width, 0))
+            out.paste(person, (0, 0)); out.paste(render, (render.width, 0))
             d = ImageDraw.Draw(out)
-            d.text((24, 20), "Simple3D  ·  Mirror", font=title, fill=(255, 255, 255))
+            d.rounded_rectangle([14, 14, 304, 62], 14, fill=(8, 12, 22))
+            d.text((28, 22), "Simple3D  ·  Mirror", font=title, fill=(255, 255, 255))
             d.text((render.width + 24, 24), NAMES.get(model, model), font=caption, fill=(169, 184, 212))
-            text = CAPTIONS.get(fixture, "")
+            d.text((16, out.height - 98), SOURCES[name][4], font=small, fill=(255, 255, 255), stroke_width=2, stroke_fill=(0, 0, 0))
+            text = CAPTIONS.get(name, "")
             tw = d.textlength(text, font=caption)
             d.rounded_rectangle([out.width / 2 - tw / 2 - 18, out.height - 64, out.width / 2 + tw / 2 + 18, out.height - 22], 16, fill=(8, 12, 22))
             d.text((out.width / 2 - tw / 2, out.height - 58), text, font=caption, fill=(255, 255, 255))
             out.save(os.path.join(tmp, f"{int(index):04d}.png"))
         subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-framerate", "15", "-i", os.path.join(tmp, "%04d.png"), "-filter_complex",
-                        "fps=12,scale=640:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=96:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle",
+                        "fps=10,scale=600:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=96:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle",
                         gif], check=True)
     print(f"{gif}: {os.path.getsize(gif) // 1024} KB")
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2])
+    main(sys.argv[1], sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else os.path.join(tempfile.gettempdir(), "simple3d-showcase"))

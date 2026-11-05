@@ -30,24 +30,49 @@ The [gallery page](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samp
 
 ![Mirror: a tracked person and the character copying them](images/mirror.gif)
 
-The gallery's **Mirror ✦** button opens a full-screen scene in which a character copies the person the camera sees, in portrait or landscape (landscape leaves room for outstretched arms).
+The gallery's **Mirror ✦** button opens a full-screen scene in which a character copies the person the camera sees, in portrait or landscape. Everything runs on the device; nothing is recorded or sent.
 
-- **Guided start.** It asks for the camera, then shows a silhouette until someone is in frame: their whole body, from the waist up, or just their head for face tracking. Whatever is out of frame holds still; legs out of frame keep the character standing.
-- **Body.** Limbs follow the landmark directions, with depth estimated from foreshortening; the spine curves for bows and side bends; turning around shows the character's back; arms stay outside the torso and go behind it when the hand is hidden.
-- **Face and head.** Mouth, each eye, smile and frown drive the model's VRM expressions; the head turns, nods and tilts with the person's.
-- **Smooth.** Detectors deliver poses at camera rate (25–30 Hz); the shown pose eases toward each at the display's rate (`FrameClock`, up to 240 Hz).
-- **Choices.** ☺ picks one of five CC0 characters (animated swap), ⇄ switches cameras, pinching zooms the camera. When the person leaves, the character holds its pose and a hint asks them back; haptics mark both moments. Video stays on the device.
+1. **Start.** The intro explains the three framings, then asks for the camera.
+2. **Get in frame.** A silhouette shows where to stand: whole body, waist up, or just the face for close-up face tracking.
+3. **Play.** The character appears and copies the person. Tap a thumbnail to switch characters, ⇄ to switch cameras, pinch to zoom. If the person leaves, a hint asks them back; haptics mark both moments.
+
+What it follows:
+
+- **Body:** arms, legs, torso bend and lean, turning toward or away from the camera (the back shows when they turn around). Arms stay outside the torso and pass behind it when a hand is hidden.
+- **Face:** mouth, each eye, smile and frown, through each character's own face table, so a wide-open mouth looks wide open on every model.
+- **Head:** turn, nod and tilt.
+- **Smoothness:** poses arrive at camera rate (25–30 Hz) and are eased at the display's rate (`FrameClock`, up to 240 Hz). The whole pipeline costs about 0.03 ms of CPU per displayed frame.
+
+| Cat | Juanita | CosmicBot | Froggy |
+| --- | --- | --- | --- |
+| ![Cat expressions](images/mirror-faces-cat.png) | ![Juanita expressions](images/mirror-faces-juanita.png) | ![CosmicBot expressions](images/mirror-faces-cosmicbot.png) | ![Froggy expressions](images/mirror-faces-froggy.png) |
+
+*Each character's neutral face, open mouth, left and right blink, smile and frown (Froggy blinks with both eyes and has no smile or frown).*
+
+### Tested on real people
+
+The tests replay Apple Vision landmarks from public-domain videos of real people through the full pipeline and every character ([sources](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/tests/Fixtures/SOURCES.md)):
+
+| Video | Checks |
+| --- | --- |
+| NASA astronaut candidate Anna Menon talking (NASA/JSC) | Mouth follows hers (r = 0.91) and opens 7–15% of head height on every character; blinks close the eyes; head turn follows (r = 0.89) |
+| Medical officer Sudha in an interview (NIOSH/CDC) | Head tilt and turn follow (r = 0.81, 0.88) |
+| Half squats, filmed at an angle (CDC) | Tracked in every frame; hips drop with hers; knees bend 60–114° at the bottom; the character turns to her angle |
+| Seated overhead press (CDC) | Hands above the head whenever hers are, and below it whenever hers are lowered, in every frame |
+
+The people shown do not endorse this project.
 
 | Piece | Source |
 | --- | --- |
 | Tracking states, smoothing, face calibration | [PoseTracker.cs](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Mirror/PoseTracker.cs) |
 | Landmarks → humanoid bone rotations | [HumanoidRetargeter.cs](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Mirror/HumanoidRetargeter.cs) |
 | Face measurements | [FaceGeometry.cs](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Mirror/FaceGeometry.cs) |
+| Per-character face tables | [MirrorFace.cs](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Mirror/MirrorFace.cs), [MirrorModels.cs](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Mirror/MirrorModels.cs) |
 | Pose easing and expressions | [MirrorSession.cs](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Mirror/MirrorSession.cs) |
 | Pond stage, character placement, swaps | [MirrorStage.cs](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Mirror/MirrorStage.cs) |
 | Camera, detectors and page | [Simple3D.Demo/Mirror](https://github.com/mariusmuntean/Simple3D-Maui/tree/main/samples/Simple3D.Demo/Mirror) |
 
-To reproduce it in your app, load a VRM with `GltfLoader`, wrap it with `MirrorCharacter.FromVrm`, feed `PoseFrame`s from your detector into `MirrorSession.Apply`, and call `MirrorSession.Present` from a `FrameClock` tick; the shared folder has no MAUI or platform dependencies. Detection runs on the device: Apple Vision is built into iOS and macOS; on Android, ML Kit's accurate pose and face models arrive with their NuGet packages. Detectors report 2D landmarks, so motion straight toward the camera is approximate. The characters are CC0 VRMs from ToxSam and Polygonal Mind's 100Avatars; see [skinned characters](skinned-characters.md). The GIF is rendered from recorded landmarks with `--render-showcase` and `scripts/mirror-showcase.py`.
+To reproduce it in your app, load a VRM with `GltfLoader`, wrap it with `MirrorCharacter.FromVrm` (optionally with a `MirrorFace` table), feed `PoseFrame`s from your detector into `MirrorSession.Apply`, and call `MirrorSession.Present` from a `FrameClock` tick; the shared folder has no MAUI or platform dependencies. Detection runs on the device: Apple Vision is built into iOS and macOS; on Android, ML Kit's accurate pose and face models arrive with their NuGet packages. Detectors report 2D landmarks, so motion straight toward the camera is approximate. The characters are CC0 VRMs from ToxSam and Polygonal Mind's 100Avatars; see [skinned characters](skinned-characters.md). The GIF is rendered from the recorded landmarks with `--render-showcase` and paired with the source videos by `scripts/mirror-showcase.py`.
 
 ## Render without MAUI
 

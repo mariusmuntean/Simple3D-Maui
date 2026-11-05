@@ -6,7 +6,7 @@ Simple3D draws opaque, depth-aware scenes on iOS, Android, and Mac Catalyst, nat
 
 ![Mirror: a tracked person and the character copying them](images/mirror.gif)
 
-The gallery's [Mirror scene](examples.md#mirror) shows what this adds up to: the camera tracks a person's body and face on the device, and a skinned VRM character copies squats and presses, blinks and a talking mouth, head tilts and turns.
+The gallery's [Mirror scene](examples.md#mirror) shows what this adds up to: the camera tracks a person's body and face on the device, and a skinned VRM character copies a talking, smiling face, arms and torso, and whole-body squats. The GIF shows real people from public-domain NASA/JSC and CDC videos, who do not endorse this project.
 
 ![Equipment scene with a motor, imported textured controller, base plate and arrow](images/Equipment.png)
 

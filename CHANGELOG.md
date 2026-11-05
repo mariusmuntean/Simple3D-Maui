@@ -4,9 +4,9 @@
 
 - Skinned meshes: `Skeleton`, `SkeletonPose`, `SkinnedMesh`, `Shape.FromSkinnedMesh`, `Shape.WithPose` and `SkeletonPose.Blend`. Metal and GLES skin in the vertex shader (one joint palette upload per pose); software rendering, picking and bounds skin on the CPU.
 - `GltfReader` (Core) and `GltfLoader` (MAUI) load binary glTF 2.0 and VRM: meshes, base color materials, node hierarchy, skins and the VRM humanoid bone map.
-- Morph targets (CPU, Metal, GLES) and VRM expressions: `MorphTarget`, `Shape.WithMorphWeights`, `GltfModel.Expressions`, `GltfModel.ApplyExpressions`.
+- Morph targets (CPU, Metal, GLES) and VRM expressions: `MorphTarget`, `Shape.WithMorphWeights`, `GltfModel.Expressions`, `GltfModel.ApplyExpressions` (shows exactly the expressions passed; omitted ones return to neutral, and unchanged weights keep their nodes).
 - `FrameClock` (MAUI) ticks at the display's refresh rate (capped at 240 Hz) for smooth animation.
-- Gallery: the Mirror scene, in which a chosen VRM character copies the body, face and head the camera sees (Apple Vision / Google ML Kit), in portrait or landscape, with guided framing (whole body, waist up or face), camera switching, pinch zoom, animated character swaps and haptics.
+- Gallery: the Mirror scene (four characters with per-character face tables, a thumbnail picker, tests on public-domain videos of real people), in which a chosen VRM character copies the body, face and head the camera sees (Apple Vision / Google ML Kit), in portrait or landscape, with guided framing (whole body, waist up or face), camera switching, pinch zoom, animated character swaps and haptics.
 - Add Auto/Software/Hardware rendering modes, native Metal and GLES3 backends, active-backend diagnostics and strict hardware failure reporting.
 - Cache native geometry/textures, depth-test opaque surfaces, and composite visible selection masks.
 - Add gallery backend controls, portable GPU preparation tests, headless GLES comparisons/performance probes and opt-in native GPU probes.

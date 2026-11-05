@@ -28,6 +28,10 @@ public sealed class HumanoidRetargeter
     private const float DepthGain = .8f;
     private const float LengthMemory = .995f;
     private const float FacingSmoothing = .35f;
+    // Per analyzed frame: about two seconds at the camera's 25–30 Hz.
+    private const float HeldYawRate = .02f;
+    // A face held turned beyond this (about 20°) means the whole person stands at an angle.
+    private const float AngledStance = .35f;
     private const float PelvisShare = .25f;
     private const float OccludedConfidence = .5f;
     private const float TwistRelax = .05f;
@@ -41,7 +45,7 @@ public sealed class HumanoidRetargeter
     private const int SideVotes = 3;
     private readonly int _spineTop;
     private Vector2 _shoulderSpan, _hipSpan;
-    private float _facing, _frontWidth, _turnSign = 1, _torsoLength;
+    private float _facing, _frontWidth, _turnSign = 1, _torsoLength, _heldYaw;
 
     private readonly Skeleton _skeleton;
     private readonly Quaternion _toView, _fromView;
@@ -129,7 +133,7 @@ public sealed class HumanoidRetargeter
     public void Reset()
     {
         ForgetLengths();
-        _facing = 0; _turnSign = 1;
+        _facing = 0; _turnSign = 1; _heldYaw = 0;
         _skeleton.RestPose.Rotations.ToArray().CopyTo(_held, 0);
         Array.Fill(_side, 1f);
         Array.Clear(_sideVotes);
@@ -186,7 +190,7 @@ public sealed class HumanoidRetargeter
             hipCenter = shoulderCenter - up * _torsoLength;
             side = 2 * shoulders;
         }
-        var facing = Facing(landmarks, P(BodyJoint.Nose) - shoulderCenter, _torsoLength, side);
+        var facing = Facing(landmarks, P(BodyJoint.Nose) - shoulderCenter, _torsoLength, side, face);
         _lastMirrored = mirrored;
         _shoulderSpan = shoulderCenter; _hipSpan = hipCenter;
         // The upper body turns about the vertical axis, bows about its own side-to-side axis, then leans within the image
@@ -292,11 +296,17 @@ public sealed class HumanoidRetargeter
     // Detectors label joints anatomically, so a person seen from behind has their left side on the image
     // left: the signed left-to-right width over its front-on maximum gives the cosine. The nose, visible
     // only from the front or side, tells which way the person turned; seen from behind, the last turn holds.
-    private float Facing(IReadOnlyList<Landmark> landmarks, Vector2 noseOffset, float torsoLength, Vector2 side)
+    // The front-on width is the widest seen, corrected by the face's yaw held over a couple of seconds: someone who stays at
+    // three-quarters (a fitness video filmed at an angle) never shows it, but their face says how far they are turned. A
+    // glance aside while talking barely moves the held yaw, and a face turned less than AngledStance is ignored.
+    private float Facing(IReadOnlyList<Landmark> landmarks, Vector2 noseOffset, float torsoLength, Vector2 side, FaceFrame? face)
     {
         if (torsoLength < 1e-4f) return _facing;
         var ratio = side.X / torsoLength;
-        _frontWidth = MathF.Max(MathF.Max(_frontWidth * LengthMemory, MathF.Abs(ratio)), .2f);
+        if (face is not null) _heldYaw += (face.Yaw - _heldYaw) * HeldYawRate;
+        // Only a clearly angled stance: near front-on, the width's noise would make the turn jitter.
+        var frontOn = MathF.Abs(ratio) / (MathF.Abs(_heldYaw) > AngledStance ? MathF.Max(MathF.Cos(_heldYaw), .5f) : 1);
+        _frontWidth = MathF.Max(MathF.Max(_frontWidth * LengthMemory, frontOn), .2f);
         var cos = Math.Clamp(ratio / _frontWidth, -1, 1);
         // Only while the face is toward the camera: ML Kit estimates a nose position even from behind.
         if (cos > .2f && landmarks[(int)BodyJoint.Nose].Confidence >= MinimumConfidence && MathF.Abs(noseOffset.X) > .02f * torsoLength)
