@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tokens, icons and copy</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#FF8A3D}a:hover{color:#FFC08F}
+</style>
+</helmet>
+<div style="width: 1280px; height: 1300px; box-sizing: border-box; padding: 48px; background: #0A0908; color: #F7F1EC; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 40px">
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px">
+    <section style="display: flex; flex-direction: column; gap: 14px">
+      <h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 22px">Color</h2>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+        <div style="display: flex; flex-direction: column; gap: 4px"><div style="height: 48px; border-radius: 12px; background: #0A0908; border: 1px solid #2E2723"></div><span style="font-size: 13px; font-weight: 600">Canvas</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #A89C93">#0A0908</span></div>
+        <div style="display: flex; flex-direction: column; gap: 4px"><div style="height: 48px; border-radius: 12px; background: #151210; border: 1px solid #2E2723"></div><span style="font-size: 13px; font-weight: 600">Surface</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #A89C93">#151210 · line #2E2723</span></div>
+        <div style="display: flex; flex-direction: column; gap: 4px"><div style="height: 48px; border-radius: 12px; background: #F7F1EC"></div><span style="font-size: 13px; font-weight: 600">Text</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #A89C93">#F7F1EC · muted #A89C93</span></div>
+        <div style="display: flex; flex-direction: column; gap: 4px"><div style="height: 48px; border-radius: 12px; background: linear-gradient(180deg, #FFA45E 0%, #FF7A2A 100%); box-shadow: 0 0 24px rgba(255,138,61,.45)"></div><span style="font-size: 13px; font-weight: 600">Ember · GPU, action</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #A89C93">#FF8A3D · on #2B1203</span></div>
+        <div style="display: flex; flex-direction: column; gap: 4px"><div style="height: 48px; border-radius: 12px; background: #3A1C0A; border: 1px solid #FF8A3D"></div><span style="font-size: 13px; font-weight: 600">Ember tint · selected</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #A89C93">#3A1C0A · text #FFC08F</span></div>
+        <div style="display: flex; flex-direction: column; gap: 4px"><div style="height: 48px; border-radius: 12px; background: #7CB7FF"></div><span style="font-size: 13px; font-weight: 600">Ice · software fallback</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #A89C93">#7CB7FF · panel #0E1A2A</span></div>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: #A89C93; line-height: 1.5">Ember glows while the GPU draws and marks the one main action per screen. Ice marks software fallback. They differ in lightness too, so state reads without color. Gradients appear only in the glow behind 3D content and on primary buttons.</p>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 14px">
+      <h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 22px">Type</h2>
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: 18px; background: #151210; border: 1px solid #2E2723">
+        <div style="display: flex; flex-direction: column"><span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 32px">Mirror</span><span style="font-size: 12px; color: #A89C93">Display · Space Grotesk 600 · 26–32</span></div>
+        <div style="display: flex; flex-direction: column"><span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 18px">Gantry Crane</span><span style="font-size: 12px; color: #A89C93">Title · Space Grotesk 600 · 18–22</span></div>
+        <div style="display: flex; flex-direction: column"><span style="font-weight: 600; font-size: 15px">Animate</span><span style="font-size: 12px; color: #A89C93">Label · Inter 600 · 13–16</span></div>
+        <div style="display: flex; flex-direction: column"><span style="font-size: 14px; color: #D6CBC2">Nested groups with a shoulder and an elbow joint.</span><span style="font-size: 12px; color: #A89C93">Body · Inter 400 · 13–15</span></div>
+        <div style="display: flex; flex-direction: column"><span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #FF8A3D">05 · Linked motion</span><span style="font-size: 12px; color: #A89C93">Data &amp; tags · JetBrains Mono 11–12</span></div>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: #A89C93; line-height: 1.5">Radii 14 / 20 / 24 / 28 · 4 px spacing grid · every control at least 44 px.</p>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 14px">
+      <h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 22px">App icon</h2>
+      <div style="display: flex; gap: 20px; align-items: center">
+        <div style="width: 128px; height: 128px; flex: none; border-radius: 30px; background: radial-gradient(90% 90% at 50% 40%, #3A1A08 0%, #0A0908 75%); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 40px rgba(255,138,61,.25)">
+          <svg width="92" height="92" viewBox="0 0 128 128" role="img" aria-label="Proposed app icon" style="filter: drop-shadow(0 0 14px rgba(255,138,61,.6))"><path d="M64 22 100 43 64 64 28 43z" fill="#FFC08F"></path><path d="M28 43 64 64v41L28 84z" fill="#FF8A3D"></path><path d="M100 43 64 64v41l36-21z" fill="#C2541A"></path></svg>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <div style="width: 60px; height: 60px; border-radius: 15px; background: radial-gradient(90% 90% at 50% 40%, #3A1A08 0%, #0A0908 75%); display: flex; align-items: center; justify-content: center"><svg width="42" height="42" viewBox="0 0 128 128" aria-hidden="true"><path d="M64 22 100 43 64 64 28 43z" fill="#FFC08F"></path><path d="M28 43 64 64v41L28 84z" fill="#FF8A3D"></path><path d="M100 43 64 64v41l36-21z" fill="#C2541A"></path></svg></div>
+          <span style="font-size: 12px; color: #A89C93; line-height: 1.4">Same cube as today, lit warm.<br>Background and splash color #0A0908.</span>
+        </div>
+      </div>
+
+      <h3 style="margin: 8px 0 0; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 16px">Renderer chip</h3>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px">
+        <span style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border-radius: 22px; background: #151210; border: 1px solid #2E2723; font-size: 13px; font-weight: 500"><span style="width: 8px; height: 8px; border-radius: 4px; background: #FF8A3D; box-shadow: 0 0 10px #FF8A3D"></span>GPU</span>
+        <span style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border-radius: 22px; background: #151210; border: 1px solid #24405E; color: #D6E8FF; font-size: 13px; font-weight: 500"><span style="width: 8px; height: 8px; border-radius: 4px; background: #7CB7FF"></span>CPU</span>
+        <span style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border-radius: 22px; background: #151210; border: 1px dashed #6A5D54; color: #D6CBC2; font-size: 13px; font-weight: 500"><span style="width: 8px; height: 8px; border-radius: 4px; border: 1.5px solid #A89C93; box-sizing: border-box"></span>Starting</span>
+      </div>
+    </section>
+  </div>
+
+  <section style="display: flex; flex-direction: column; gap: 14px">
+    <h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 22px">Icons <span style="font-family: Inter, sans-serif; font-weight: 400; font-size: 14px; color: #A89C93; margin-left: 8px">2 px stroke, round caps, 24 px grid. They replace the text glyphs and emoji in the app.</span></h2>
+    <div style="display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 10px">
+      <div style="height: 84px; border-radius: 14px; background: #151210; border: 1px solid #2E2723; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F7F1EC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg><span style="font-size: 11px; color: #A89C93">Back</span></div>
+      <div style="height: 84px; border-radius: 14px; background: #151210; border: 1px solid #2E2723; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F7F1EC" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg><span style="font-size: 11px; color: #A89C93">Close (was ✕)</span></div>
+      <div style="height: 84px; border-radius: 14px; background: #151210; border: 1px solid #2E2723; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F7F1EC" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg><span style="font-size: 11px; color: #A89C93">Zoom in (+)</span></div>
+      <div style="height: 84px; border-radius: 14px; background: #151210; border: 1px solid #2E2723; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F7F1EC" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg><span style="font-size: 11px; color: #A89C93">Zoom out (−)</span></div>
+      <div style="height: 84px; border-radius: 14px; background: #151210; border: 1px solid #2E2723; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F7F1EC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path></svg><span style="font-size: 11px; color: #A89C93">Fit</span></div>
+      <div style="height: 84px; border-radius: 14px; background: #151210; border: 1px solid #2E2723; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F7F1EC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5"></path></svg><span style="font-size: 11px; color: #A89C93">Reset</span></div>
+      <div style="height: 84px; border-radius: 14px; background: #151210; border: 1px solid #2E2723; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"><svg width="22" height="22" viewBox="0 0 24 24" fill="#F7F1EC" aria-hidden="true"><path d="M7 5v14l12-7z"></path></svg><span style="font-size: 11px; color: #A89C93">Animate</span></div>
+      <div style="height: 84px; border-radius: 14px; background: #151210; border: 1px solid #2E2723; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"><svg width="22" height="22" viewBox="0 0 24 24" fill="#F7F1EC" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"></rect><rect x="14" y="5" width="4" height="14" rx="1"></rect></svg><span style="font-size: 11px; color: #A89C93">Pause</span></div>
+      <div style="height: 84px; border-radius: 14px; background: #151210; border: 1px solid #2E2723; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F7F1EC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"></path></svg><span style="font-size: 11px; color: #A89C93">Frame stats</span></div>
+      <div style="height: 84px; border-radius: 14px; background: #151210; border: 1px solid #2E2723; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FF8A3D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"></path></svg><span style="font-size: 11px; color: #A89C93">Auto</span></div>
+      <div style="height: 84px; border-radius: 14px; background: #151210; border: 1px solid #2E2723; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F7F1EC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="3"></rect><rect x="9" y="9" width="6" height="6"></rect><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"></path></svg><span style="font-size: 11px; color: #A89C93">Hardware</span></div>
+      <div style="height: 84px; border-radius: 14px; background: #151210; border: 1px solid #2E2723; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F7F1EC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8M12 16v4"></path></svg><span style="font-size: 11px; color: #A89C93">Software</span></div>
+      <div style="height: 84px; border-radius: 14px; background: #151210; border: 1px solid #2E2723; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F7F1EC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg><span style="font-size: 11px; color: #A89C93">Start camera</span></div>
+      <div style="height: 84px; border-radius: 14px; background: #151210; border: 1px solid #2E2723; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F7F1EC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7h-9a5 5 0 0 0 0 10h1M17 4l3 3-3 3M4 17h9a5 5 0 0 0 0-10h-1M7 20l-3-3 3-3"></path></svg><span style="font-size: 11px; color: #A89C93">Switch (was ⇄)</span></div>
+      <div style="height: 84px; border-radius: 14px; background: #151210; border: 1px solid #2E2723; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F7F1EC" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4" r="2"></circle><path d="M8 9h8M12 9v6M12 15l-3 7M12 15l3 7M8 9l-2 5M16 9l2 5"></path></svg><span style="font-size: 11px; color: #A89C93">Body (was 🧍)</span></div>
+      <div style="height: 84px; border-radius: 14px; background: #151210; border: 1px solid #2E2723; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F7F1EC" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="6" r="3"></circle><path d="M5 21v-5a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v5"></path></svg><span style="font-size: 11px; color: #A89C93">Waist up (🙋)</span></div>
+      <div style="height: 84px; border-radius: 14px; background: #151210; border: 1px solid #2E2723; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F7F1EC" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9 10h.01M15 10h.01M8.5 14.5a4.5 4.5 0 0 0 7 0"></path></svg><span style="font-size: 11px; color: #A89C93">Face (was 🙂)</span></div>
+      <div style="height: 84px; border-radius: 14px; background: #151210; border: 1px solid #2E2723; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F7F1EC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg><span style="font-size: 11px; color: #A89C93">Open (was ✦)</span></div>
+      <div style="height: 84px; border-radius: 14px; background: #151210; border: 1px solid #2E2723; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F7F1EC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg><span style="font-size: 11px; color: #A89C93">Private</span></div>
+      <div style="height: 84px; border-radius: 14px; background: #151210; border: 1px solid #2E2723; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7CB7FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg><span style="font-size: 11px; color: #A89C93">Fallback</span></div>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 14px">
+    <h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 22px">Copy, old → new</h2>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 32px; row-gap: 8px; font-size: 13px; line-height: 1.4">
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid #2E2723"><span style="color: #A89C93">Mirror ✦ (button)</span><span>Mirror card: “Move, and a 3D character moves with you.”</span></div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid #2E2723"><span style="color: #A89C93">Auto | Software | Hardware + “Hardware: Metal / …”</span><span>Chip “GPU” / “CPU”, sheet “Drawing now”</span></div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid #2E2723"><span style="color: #A89C93">−  Fit  Reset  +</span><span>Icon rail: Zoom in, Zoom out, Fit, Reset</span></div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid #2E2723"><span style="color: #A89C93">Shading: smooth / flat</span><span>Shading  Smooth | Flat</span></div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid #2E2723"><span style="color: #A89C93">Light: from right / left</span><span>Light from  Left | Right</span></div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid #2E2723"><span style="color: #A89C93">Selected: Moving bridge / Tap an object to inspect it</span><span>Chip “Selected · Moving bridge”; hint lives in the gallery</span></div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid #2E2723"><span style="color: #A89C93">Drag to orbit · Pinch to zoom · Tap to select · Animate the scene</span><span>Drag to orbit · pinch to zoom · tap to select</span></div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid #2E2723"><span style="color: #A89C93">Four-line frame stats box</span><span>“idle” / “[n] fps” pill, tap for details</span></div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid #2E2723"><span style="color: #A89C93">Your character: Chubby Tubby Cat · change it any time</span><span>Character · Chubby Tubby Cat</span></div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid #2E2723"><span style="color: #A89C93">Everything runs on this device. Nothing is recorded or sent.</span><span>Runs on this device. Nothing is recorded or sent.</span></div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid #2E2723"><span style="color: #A89C93">Get into the frame: your whole body, from the waist up, or just your head for face tracking</span><span>Get into the frame: whole body, waist up, or just your head for face tracking</span></div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid #2E2723"><span style="color: #A89C93">Mirror needs the camera… (no title)</span><span>Title “Camera is off” above the same message</span></div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1300}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

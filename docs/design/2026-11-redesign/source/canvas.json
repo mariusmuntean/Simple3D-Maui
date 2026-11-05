@@ -1,0 +1,34 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-11-05T22:40:00Z"},
+  "title": "Simple3D Gallery Redesign",
+  "launch": {"view": "canvas"},
+  "pages": [],
+  "boards": {
+    "Splash.dc.html": {"x": 0, "y": 0, "w": 390, "h": 844, "title": "1 · Splash", "radius": 40},
+    "Main.dc.html": {"x": 470, "y": 0, "w": 390, "h": 844, "title": "2 · Gallery", "radius": 40},
+    "Renderer.dc.html": {"x": 940, "y": 0, "w": 390, "h": 844, "title": "3 · Renderer sheet", "radius": 40},
+    "Fallback.dc.html": {"x": 1410, "y": 0, "w": 390, "h": 844, "title": "4 · GPU fallback banner", "radius": 40},
+    "Equipment.dc.html": {"x": 0, "y": 1264, "w": 390, "h": 844, "title": "5 · Equipment", "radius": 40},
+    "Telemetry.dc.html": {"x": 470, "y": 1264, "w": 390, "h": 844, "title": "6 · Telemetry", "radius": 40},
+    "Surface.dc.html": {"x": 940, "y": 1264, "w": 390, "h": 844, "title": "7 · Surface + frame stats open", "radius": 40},
+    "RobotArm.dc.html": {"x": 1410, "y": 1264, "w": 390, "h": 844, "title": "8 · Robot Arm", "radius": 40},
+    "Viewer.dc.html": {"x": 1880, "y": 1264, "w": 390, "h": 844, "title": "9 · Gantry Crane", "radius": 40},
+    "MirrorIntro.dc.html": {"x": 0, "y": 2528, "w": 390, "h": 844, "title": "10 · Mirror intro", "radius": 40},
+    "MirrorGuide.dc.html": {"x": 470, "y": 2528, "w": 390, "h": 844, "title": "11 · Mirror: finding you", "radius": 40},
+    "MirrorLive.dc.html": {"x": 940, "y": 2528, "w": 390, "h": 844, "title": "12 · Mirror live", "radius": 40},
+    "MirrorLost.dc.html": {"x": 1410, "y": 2528, "w": 390, "h": 844, "title": "13 · Mirror: lost + zoom", "radius": 40},
+    "MirrorBlocked.dc.html": {"x": 1880, "y": 2528, "w": 390, "h": 844, "title": "14 · Mirror: no camera", "radius": 40},
+    "MirrorLandscape.dc.html": {"x": 2350, "y": 2528, "w": 844, "h": 390, "title": "15 · Mirror live, landscape", "radius": 40},
+    "Tablet.dc.html": {"x": 0, "y": 3792, "w": 1280, "h": 800, "title": "16 · Tablet & desktop", "expand": "fill"},
+    "System.dc.html": {"x": 1360, "y": 3792, "w": 1280, "h": 1300, "title": "17 · Tokens, icons, app icon, copy"}
+  },
+  "order": ["Splash.dc.html", "Main.dc.html", "Renderer.dc.html", "Fallback.dc.html", "Equipment.dc.html", "Telemetry.dc.html", "Surface.dc.html", "RobotArm.dc.html", "Viewer.dc.html", "MirrorIntro.dc.html", "MirrorGuide.dc.html", "MirrorLive.dc.html", "MirrorLost.dc.html", "MirrorBlocked.dc.html", "MirrorLandscape.dc.html", "Tablet.dc.html", "System.dc.html"],
+  "notes": {
+    "phones": {"x": 0, "y": -300, "text": "Launch, gallery and renderer menus", "kind": "title1", "maxW": 1800},
+    "scenes": {"x": 0, "y": 964, "text": "Every scene viewer", "kind": "title1", "maxW": 2270},
+    "mirror": {"x": 0, "y": 2228, "text": "Mirror: intro → finding you → live", "kind": "title1", "maxW": 3194},
+    "wide": {"x": 0, "y": 3492, "text": "Wide layout and design system", "kind": "title1", "maxW": 2640}
+  },
+  "designSystems": []
+}
