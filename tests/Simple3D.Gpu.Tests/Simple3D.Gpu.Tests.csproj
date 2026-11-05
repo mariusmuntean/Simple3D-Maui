@@ -3,12 +3,15 @@
     <OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsPackable>false</IsPackable>
+    <!-- Compiles the Android GLES renderer (guarded by ANDROID) for desktop Mesa. -->
+    <DefineConstants>$(DefineConstants);SIMPLE3D_GLES_TESTS</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Simple3D.Core/Simple3D.Core.csproj" />
     <Compile Include="../../src/Simple3D.Maui/Rendering/GpuFrame.cs" Link="GpuFrame.cs" />
-    <Compile Include="../../src/Simple3D.Maui/Rendering/Gles.cs" Link="Gles.cs" />
-    <Compile Include="../../src/Simple3D.Maui/Rendering/GlesRenderer.cs" Link="GlesRenderer.cs" />
+    <Compile Include="../../src/Simple3D.Maui/Platforms/Android/Gles.cs" Link="Gles.cs" />
+    <Compile Include="../../src/Simple3D.Maui/Platforms/Android/GlesRenderer.cs" Link="GlesRenderer.cs" />
+    <Compile Include="../../src/Simple3D.Maui/Platforms/Android/GlesShaders.cs" Link="GlesShaders.cs" />
     <Compile Include="../../src/Simple3D.Maui/Rendering/GpuResources.cs" Link="GpuResources.cs" />
     <Compile Include="../Shared/NativeGpuValidation.cs" Link="NativeGpuValidation.cs" />
     <Compile Include="../../samples/Simple3D.Shared/*.cs" Link="Samples/%(Filename)%(Extension)" />

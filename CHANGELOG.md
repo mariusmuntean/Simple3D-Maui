@@ -13,6 +13,7 @@
 - The label overlay is only composited and repainted in hardware mode while the scene has labels, once per GPU frame and in step with it.
 - Background GPU submissions on iOS and EGL context loss on Android no longer permanently disable hardware rendering.
 - Resident GPU meshes no longer keep their expanded CPU vertex copy; per-frame renderer bookkeeping no longer allocates.
+- Package: each platform's DLL contains only its own native renderer (GLES and its shaders only on Android, Metal only on iOS/Mac Catalyst), and both libraries are marked trimming/AOT compatible, so apps' Release builds remove unused library code.
 - Fix an iOS/Mac Catalyst UI freeze when the scene or camera changes while a Metal frame is drawing (for example from a `FrameSubmitted` handler); such changes now redraw on the next run-loop turn.
 - Add `SceneView.FrameSubmitted` and `LastFrameMilliseconds`/`LastFrameWidth`/`LastFrameHeight` for frame statistics. The gallery shows them in an FPS HUD and replaces the renderer picker with a segmented selector aligned with its status line.
 

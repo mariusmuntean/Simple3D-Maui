@@ -10,11 +10,22 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>package-icon.png</PackageIcon>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Trimming/AOT safe (analyzers enforce it): apps trim unused library code in their default Release builds. -->
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
   <!-- Diagnostic counters and fault-injection hooks for the gallery's native GPU probes. Packed Release builds omit them. -->
   <PropertyGroup Condition="'$(EnableNativeRenderProbe)' == 'true'">
     <DefineConstants>$(DefineConstants);NATIVE_RENDER_PROBE</DefineConstants>
   </PropertyGroup>
+  <!-- Each OS's DLL contains only its own native code: Android (EGL/GLES) and Apple (Metal) sources
+       are excluded from the other targets. This also covers the shader sources, whose '#' lines
+       cannot sit inside a C# #if block. -->
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'android'">
+    <Compile Remove="Platforms/Android/**" />
+  </ItemGroup>
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'ios' and $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'maccatalyst'">
+    <Compile Remove="Platforms/Apple/**" />
+  </ItemGroup>
   <ItemGroup>
     <!-- Only diagnostic builds of the gallery (native GPU probes) may use internals; packed Release builds keep the sample on the public API. -->
     <InternalsVisibleTo Include="Simple3D.Demo" Condition="'$(Configuration)' == 'Debug' or '$(EnableNativeRenderProbe)' == 'true'" />

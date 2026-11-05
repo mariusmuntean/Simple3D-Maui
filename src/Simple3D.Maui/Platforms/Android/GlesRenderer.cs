@@ -1,3 +1,5 @@
+// Android (and the desktop GLES tests, which link this file): never compiled into Apple builds.
+#if ANDROID || SIMPLE3D_GLES_TESTS
 using System.Runtime.InteropServices;
 using System.Text;
 using Simple3D.Core;
@@ -28,9 +30,9 @@ internal sealed unsafe class GlesRenderer : IDisposable
     {
         try
         {
-            _program = Program(GpuShaders.GlslVertex, GpuShaders.GlslFragment);
-            _maskProgram = Program(GpuShaders.GlslVertex, GpuShaders.WithDefine(GpuShaders.GlslFragment, GpuShaders.SelectionMaskDefine));
-            _screenProgram = Program(GpuShaders.GlslScreenVertex, GpuShaders.GlslScreenFragment);
+            _program = Program(GlesShaders.GlslVertex, GlesShaders.GlslFragment);
+            _maskProgram = Program(GlesShaders.GlslVertex, GlesShaders.WithDefine(GlesShaders.GlslFragment, GlesShaders.SelectionMaskDefine));
+            _screenProgram = Program(GlesShaders.GlslScreenVertex, GlesShaders.GlslScreenFragment);
             glGenVertexArrays(1, out _vao); glGenBuffers(1, out _uniform);
             foreach (var program in new[] { _program, _maskProgram })
             {
@@ -217,3 +219,4 @@ internal sealed unsafe class GlesRenderer : IDisposable
         _uniform = _vao = _program = _maskProgram = _screenProgram = 0;
     }
 }
+#endif

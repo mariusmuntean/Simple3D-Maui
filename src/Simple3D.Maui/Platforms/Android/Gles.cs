@@ -1,3 +1,5 @@
+// Android (and the desktop GLES tests, which link this file): never compiled into Apple builds.
+#if ANDROID || SIMPLE3D_GLES_TESTS
 using System.Runtime.InteropServices;
 namespace Simple3D.Maui;
 
@@ -50,8 +52,7 @@ internal static unsafe class Gles
     internal const int GL_RED = 0x1903;
     internal const int GL_DEPTH_BITS = 0x0D56;
 
-    // Android's library. Elsewhere a name the Apple linker does not map to a framework (the
-    // desktop GLES tests resolve it at runtime); GLES is never called on Apple platforms.
+    // Android's library; the desktop (Mesa) GLES tests load the versioned Linux name.
 #if ANDROID
     private const string Library = "libGLESv2.so";
 #else
@@ -112,3 +113,4 @@ internal static unsafe class Gles
     [DllImport(Library)] internal static extern uint glGetError();
     [DllImport(Library)] internal static extern nint glGetString(uint name);
 }
+#endif

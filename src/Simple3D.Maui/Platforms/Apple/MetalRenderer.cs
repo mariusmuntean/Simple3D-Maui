@@ -42,7 +42,7 @@ internal sealed unsafe class MetalRenderer : IDisposable
         {
             _queue = device.CreateCommandQueue(3) ?? throw new InvalidOperationException("Cannot create Metal command queue.");
             using var options = new MTLCompileOptions();
-            using var library = device.CreateLibrary(GpuShaders.Metal, options, out var error)
+            using var library = device.CreateLibrary(MetalShaders.Source, options, out var error)
                 ?? throw new InvalidOperationException("Metal shader compilation: " + error?.LocalizedDescription);
             _scenePipeline = Pipeline(library, "sceneVertex", "sceneFragment", mask: true, depth: true);
             _directPipeline = Pipeline(library, "sceneVertex", "sceneFragmentDirect", mask: false, depth: true);
