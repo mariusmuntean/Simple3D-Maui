@@ -34,6 +34,9 @@ public sealed class PoseTracker
     public event Action<TrackingState>? StateChanged;
     /// <summary>Smoothed landmarks of the most recent frame with visible shoulders; joints below the confidence threshold keep their last value.</summary>
     public IReadOnlyList<Landmark> Landmarks => _smoothed;
+    /// <summary>Smoothed face measurements of the most recent frame, or null when it had no face.</summary>
+    public FaceFrame? Face { get; private set; }
+    private readonly OneEuroFilter[] _faceFilters = Enumerable.Range(0, 8).Select(_ => new OneEuroFilter()).ToArray();
     /// <summary>Aspect ratio (width / height) of the analyzed images.</summary>
     public float ImageAspect { get; private set; } = 1;
 
@@ -55,7 +58,7 @@ public sealed class PoseTracker
         if (torso && (State == TrackingState.Tracking || next == TrackingState.Tracking))
         {
             // Reset smoothing on (re)acquisition so the first pose snaps instead of sliding from a stale one.
-            if (State != TrackingState.Tracking) foreach (var filter in _filters) filter.Reset();
+            if (State != TrackingState.Tracking) foreach (var filter in _filters.Concat(_faceFilters)) filter.Reset();
             Smooth(frame);
             updated = true;
         }
@@ -95,6 +98,17 @@ public sealed class PoseTracker
     {
         ImageAspect = frame.ImageHeight > 0 ? (float)frame.ImageWidth / frame.ImageHeight : 1;
         var seconds = frame.Timestamp.TotalSeconds;
+        if (frame.Face is not { } face)
+        {
+            // A face that disappears (for example when the person turns away) relaxes the expression instead of freezing it.
+            if (Face is not null) foreach (var filter in _faceFilters) filter.Reset();
+            Face = null;
+        }
+        else
+        {
+            float F(int i, float value) => _faceFilters[i].Filter(value, seconds);
+            Face = new(F(0, face.Yaw), F(1, face.Pitch), F(2, face.Roll), F(3, face.MouthOpen), F(4, face.Smile), F(5, face.Brows), F(6, face.BlinkLeft), F(7, face.BlinkRight));
+        }
         for (var i = 0; i < PoseFrame.JointCount; i++)
         {
             var landmark = frame.Landmarks![i];

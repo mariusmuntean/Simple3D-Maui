@@ -3,54 +3,82 @@ using Simple3D.Core;
 
 namespace Simple3D.Shared.Mirror;
 
-/// <summary>A night-time pond built from library primitives, with a character standing on a mossy island facing the camera.</summary>
+/// <summary>A posable humanoid character for the Mirror stage.</summary>
+/// <param name="Shape">The character in its rest pose, for example a loaded VRM model.</param>
+/// <param name="Skeleton">The skeleton that poses it.</param>
+/// <param name="HumanoidBones">VRM humanoid bone name → joint index.</param>
+/// <param name="FacesPositiveZ">Whether the model looks along +Z in its own space (VRM 1.0 does; VRM 0.x looks along -Z).</param>
+/// <param name="Height">Height on the stage in world units.</param>
+public sealed record MirrorCharacter(Shape Shape, Skeleton Skeleton, IReadOnlyDictionary<string, int> HumanoidBones, bool FacesPositiveZ, float Height = 1.6f)
+{
+    /// <summary>Applies facial expression intensities (VRM preset names such as "a", "joy", "blink_l", each in [0,1]) to a
+    /// posed character; null when the model has no expressions.</summary>
+    public Func<Shape, IReadOnlyDictionary<string, float>, Shape>? Express { get; init; }
+}
+
+/// <summary>A night-time pond built from library primitives, with characters standing side by side on a mossy island, facing the camera.</summary>
 public sealed class MirrorStage
 {
-    /// <summary>The character's height in world units after normalization.</summary>
-    public const float CharacterHeight = 1.6f;
     private const float IslandTop = 0;
-    private readonly Shape _character;
-    private Shape _placedCharacter;
+    private readonly Shape[] _placed;
     private readonly List<(Shape Shape, Vector3 Home, float Phase)> _fireflies = new();
 
     /// <summary>The scene to display.</summary>
     public Scene Scene { get; } = new() { AmbientLight = .46f, Light = new DirectionalLight(new(-.35f, -.75f, -.55f), 0xFFFFF1DC, .7f) };
-    /// <summary>A camera framing the character's whole body and the island.</summary>
-    public Camera Camera { get; } = new(4.6f, 0, .12f) { Target = new(0, CharacterHeight * .52f, 0) };
-    /// <summary>Rotation from the character's skeleton space to view space, for <see cref="HumanoidRetargeter"/>.</summary>
-    public Quaternion CharacterToView { get; }
+    /// <summary>A camera framing the characters' whole bodies and the island.</summary>
+    public Camera Camera { get; }
+    /// <summary>The characters, in stage order from left to right.</summary>
+    public IReadOnlyList<MirrorCharacter> Characters { get; }
+    /// <summary>Per character: rotation from its skeleton space to view space, for <see cref="HumanoidRetargeter"/>.</summary>
+    public IReadOnlyList<Quaternion> CharacterToView { get; }
 
-    /// <summary>Places a character, normalizing its height and turning it toward the camera.</summary>
-    /// <param name="character">The posable character (for example a loaded VRM model) in its rest pose.</param>
-    /// <param name="facesPositiveZ">Whether the model looks along +Z in its own space (VRM 1.0 does; VRM 0.x looks along -Z).</param>
-    public MirrorStage(Shape character, bool facesPositiveZ)
+    /// <summary>Places characters side by side, normalizing their heights and turning them toward the camera.</summary>
+    public MirrorStage(IReadOnlyList<MirrorCharacter> characters)
     {
-        ArgumentNullException.ThrowIfNull(character);
-        var bounds = new Scene().Add(character).GetBounds() ?? throw new ArgumentException("The character has no geometry.", nameof(character));
-        var scale = CharacterHeight / bounds.Size.Y;
-        var yaw = facesPositiveZ ? 0 : MathF.PI;
-        CharacterToView = Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw);
-        // Center the feet on the island; the retargeter keeps them grounded from here.
-        var feet = Vector3.Transform(new Vector3(bounds.Center.X, bounds.Min.Y, bounds.Center.Z) * scale, CharacterToView);
-        _character = Shape.Group(character).Named("Character").Scaled(scale).Rotated(0, yaw, 0).At(-feet.X, IslandTop - feet.Y, -feet.Z);
-        _placedCharacter = _character;
+        ArgumentNullException.ThrowIfNull(characters);
+        if (characters.Count is 0 or > 3) throw new ArgumentException("Place one to three characters.", nameof(characters));
+        Characters = characters;
+        _placed = new Shape[characters.Count];
+        var toView = new Quaternion[characters.Count];
+        for (var i = 0; i < characters.Count; i++)
+        {
+            var character = characters[i];
+            var bounds = new Scene().Add(character.Shape).GetBounds() ?? throw new ArgumentException("A character has no geometry.", nameof(characters));
+            var scale = character.Height / bounds.Size.Y;
+            var yaw = character.FacesPositiveZ ? 0 : MathF.PI;
+            toView[i] = Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw);
+            // Feet centered on their spot; spread along X, the outer ones a little back so stretched arms rarely meet.
+            var spot = characters.Count == 1 ? Vector3.Zero : new Vector3((i - (characters.Count - 1) / 2f) * 1.1f, 0, -.25f * MathF.Abs(i - (characters.Count - 1) / 2f));
+            var feet = Vector3.Transform(new Vector3(bounds.Center.X, bounds.Min.Y, bounds.Center.Z) * scale, toView[i]);
+            _placed[i] = Shape.Group(character.Shape).Named("Character").Scaled(scale).Rotated(0, yaw, 0)
+                .At(spot.X - feet.X, IslandTop - feet.Y, spot.Z - feet.Z);
+        }
+        CharacterToView = Array.AsReadOnly(toView);
+        var tallest = characters.Max(c => c.Height);
+        Camera = new(characters.Count == 1 ? 4.6f : 5.6f, 0, .12f) { Target = new(0, tallest * .52f, 0) };
         BuildPond();
     }
 
-    /// <summary>Shows or hides the character.</summary>
-    public void ShowCharacter(bool visible)
+    /// <summary>Shows or hides the characters.</summary>
+    public void ShowCharacters(bool visible)
     {
-        var present = Scene.Shapes.Contains(_placedCharacter);
-        if (visible && !present) Scene.Add(_placedCharacter);
-        else if (!visible && present) Scene.Remove(_placedCharacter);
+        foreach (var placed in _placed)
+        {
+            var present = Scene.Shapes.Contains(placed);
+            if (visible && !present) Scene.Add(placed);
+            else if (!visible && present) Scene.Remove(placed);
+        }
     }
 
-    /// <summary>Applies a pose to the character (shown or not).</summary>
-    public void Pose(SkeletonPose pose)
+    /// <summary>Replaces character <paramref name="index"/> with <paramref name="change"/> of its current shape (shown or not).</summary>
+    public void Update(int index, Func<Shape, Shape> change)
     {
-        var next = _placedCharacter.WithPose(pose);
-        if (!Scene.Replace(_placedCharacter, next) && Scene.Shapes.Contains(_placedCharacter)) return;
-        _placedCharacter = next;
+        ArgumentNullException.ThrowIfNull(change);
+        var current = _placed[index];
+        var next = change(current);
+        if (ReferenceEquals(next, current)) return;
+        Scene.Replace(current, next);
+        _placed[index] = next;
     }
 
     /// <summary>Animates the ambient scenery: drifting fireflies and bobbing lily pads.</summary>
