@@ -108,6 +108,22 @@ public sealed class SkeletonPose
         return new(skeleton, copy, rootOffset);
     }
 
+    /// <summary>Blends two poses of the same skeleton: each joint rotation is spherically interpolated and the root offset
+    /// linearly, so <paramref name="amount"/> 0 gives <paramref name="from"/> and 1 gives <paramref name="to"/>. Use it to
+    /// crossfade animations or to ease toward a tracked pose.</summary>
+    public static SkeletonPose Blend(SkeletonPose from, SkeletonPose to, float amount)
+    {
+        ArgumentNullException.ThrowIfNull(from); ArgumentNullException.ThrowIfNull(to);
+        if (!ReferenceEquals(from.Skeleton, to.Skeleton)) throw new ArgumentException("Both poses must use the same skeleton.", nameof(to));
+        if (!float.IsFinite(amount)) throw new ArgumentOutOfRangeException(nameof(amount));
+        amount = Math.Clamp(amount, 0, 1);
+        if (amount == 0) return from;
+        if (amount == 1) return to;
+        var rotations = new Quaternion[from._rotations.Length];
+        for (var i = 0; i < rotations.Length; i++) rotations[i] = Quaternion.Normalize(Quaternion.Slerp(from._rotations[i], to._rotations[i], amount));
+        return new(from.Skeleton, rotations, Vector3.Lerp(from.RootOffset, to.RootOffset, amount));
+    }
+
     /// <summary>Joint transforms in the skinned mesh's coordinate system, including <see cref="Skeleton.RootTransform"/>.</summary>
     public IReadOnlyList<Matrix4x4> WorldTransforms => _worldView ??= Array.AsReadOnly(_world ??= ComputeWorld());
 

@@ -37,6 +37,12 @@ internal static class SkinningTests
         var (skinned, skeleton) = Bar();
         var rest = Shape.FromSkinnedMesh(skinned).Named("bar");
         Check(ReferenceEquals(rest.Pose, skeleton.RestPose) && rest.TriangleCount == skinned.Mesh.TriangleCount, "rest pose shape");
+        // Blending eases each joint along the shortest arc and the root linearly; the ends return the inputs.
+        var target = SkeletonPose.Create(skeleton, [Quaternion.Identity, Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI / 2)], new(2, 0, 0));
+        var half = SkeletonPose.Blend(skeleton.RestPose, target, .5f);
+        Check(MathF.Abs(2 * MathF.Acos(MathF.Min(1, MathF.Abs(half.Rotations[1].W))) - MathF.PI / 4) < 1e-4f && half.RootOffset == new Vector3(1, 0, 0), "half blend");
+        Check(ReferenceEquals(SkeletonPose.Blend(skeleton.RestPose, target, 0), skeleton.RestPose) && ReferenceEquals(SkeletonPose.Blend(skeleton.RestPose, target, 7), target), "blend ends");
+        try { SkeletonPose.Blend(skeleton.RestPose, Bar().Skeleton.RestPose, .5f); throw new Exception("blended poses of different skeletons"); } catch (ArgumentException) { }
         var restTop = rest.Mesh.Max(t => MathF.Max(t.A.Y, MathF.Max(t.B.Y, t.C.Y)));
         Check(MathF.Abs(restTop - 2) < 1e-5f, "rest pose must reproduce bind geometry");
 

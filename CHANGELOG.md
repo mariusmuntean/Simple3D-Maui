@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Skinned meshes: `Skeleton`, `SkeletonPose`, `SkinnedMesh`, `Shape.FromSkinnedMesh` and `Shape.WithPose`. Metal and GLES skin in the vertex shader (one joint palette upload per pose); software rendering, picking and bounds skin on the CPU.
+- Skinned meshes: `Skeleton`, `SkeletonPose`, `SkinnedMesh`, `Shape.FromSkinnedMesh`, `Shape.WithPose` and `SkeletonPose.Blend`. Metal and GLES skin in the vertex shader (one joint palette upload per pose); software rendering, picking and bounds skin on the CPU.
 - `GltfReader` (Core) and `GltfLoader` (MAUI) load binary glTF 2.0 and VRM: meshes, base color materials, node hierarchy, skins and the VRM humanoid bone map.
 - Morph targets (CPU, Metal, GLES) and VRM expressions: `MorphTarget`, `Shape.WithMorphWeights`, `GltfModel.Expressions`, `GltfModel.ApplyExpressions`.
 - `FrameClock` (MAUI) ticks at the display's refresh rate (capped at 240 Hz) for smooth animation.

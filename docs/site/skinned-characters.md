@@ -39,7 +39,7 @@ var waved = character.Shape.WithPose(SkeletonPose.Create(skeleton, rotations));
 scene.Replace(character.Shape, waved);
 ```
 
-Poses and shapes are immutable like the rest of the scene: `WithPose` returns a copy, updating every skinned descendant that uses the pose's skeleton, and `Scene.Replace` redraws. `SkeletonPose.WorldTransforms` gives joint transforms, for example to attach a prop to a hand.
+Poses and shapes are immutable like the rest of the scene: `WithPose` returns a copy, updating every skinned descendant that uses the pose's skeleton, and `Scene.Replace` redraws. `SkeletonPose.WorldTransforms` gives joint transforms, for example to attach a prop to a hand. `SkeletonPose.Blend(from, to, amount)` crossfades two poses of the same skeleton, for example to ease toward a tracked pose each displayed frame.
 
 ## Expressions and morph targets
 
