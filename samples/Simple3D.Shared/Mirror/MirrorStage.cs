@@ -25,7 +25,11 @@ public sealed record MirrorCharacter(Shape Shape, Skeleton Skeleton, IReadOnlyDi
         var rest = skeleton.RestPose.WorldTransforms;
         var facesPositiveZ = !(bones.TryGetValue("leftFoot", out var foot) && bones.TryGetValue("leftToes", out var toes)) ||
             rest[toes].Translation.Z > rest[foot].Translation.Z;
-        return new(shape, skeleton, bones, facesPositiveZ, height) { TorsoRadius = EstimateTorsoRadius(shape, skeleton, bones) };
+        return new(shape, skeleton, bones, facesPositiveZ, height)
+        {
+            TorsoRadius = EstimateTorsoRadius(shape, skeleton, bones),
+            Express = model.Expressions.Count == 0 ? null : model.ApplyExpressions,
+        };
     }
 
     // Distance from the spine axis that most torso vertices lie within, in the rest pose.

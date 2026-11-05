@@ -18,7 +18,8 @@ public sealed class MirrorPage : ContentPage
     private readonly Border _previewFrame;
     private readonly View _intro, _guide, _blocked, _lostHint;
     private readonly Label _blockedText = Text("", 16), _status = Text("", 12, "#A9B8D4");
-    private readonly Button _blockedAction, _switchCamera;
+    private readonly Button _blockedAction, _switchCamera, _chooseCharacter;
+    private MirrorModel _model = MirrorModels.Find(Preferences.Default.Get<string?>("mirror.character", null));
     // The person's choice of camera; front by default, since people usually film themselves.
     private bool _frontCamera = Preferences.Default.Get("mirror.camera.front", true);
     private bool _switching;
@@ -84,6 +85,14 @@ public sealed class MirrorPage : ContentPage
         };
         SemanticProperties.SetDescription(_switchCamera, "Switch between the front and back camera");
         _switchCamera.Clicked += (_, _) => SwitchCamera();
+        _chooseCharacter = new Button
+        {
+            Text = "☺", FontSize = 20, WidthRequest = 44, HeightRequest = 44, CornerRadius = 22, Padding = 0,
+            BackgroundColor = Color.FromRgba(8, 12, 22, 170), TextColor = Colors.White,
+            HorizontalOptions = LayoutOptions.Start, VerticalOptions = LayoutOptions.Start, Margin = new Thickness(120, 16, 0, 0)
+        };
+        SemanticProperties.SetDescription(_chooseCharacter, "Choose the character");
+        _chooseCharacter.Clicked += async (_, _) => await ChooseCharacterAsync();
         _status.HorizontalOptions = LayoutOptions.End; _status.VerticalOptions = LayoutOptions.End;
         _status.Margin = new Thickness(0, 0, 16, 12); _status.InputTransparent = true;
         _zoomPill = new Border
@@ -92,7 +101,7 @@ public sealed class MirrorPage : ContentPage
             HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Start,
             BackgroundColor = Color.FromRgba(8, 12, 22, 200), StrokeShape = new RoundRectangle { CornerRadius = 14 }, Content = _zoomText
         };
-        var root = new Grid { Children = { _view, _previewFrame, _guide, _lostHint, _intro, _blocked, close, _switchCamera, _zoomPill, _status } };
+        var root = new Grid { Children = { _view, _previewFrame, _guide, _lostHint, _intro, _blocked, close, _switchCamera, _chooseCharacter, _zoomPill, _status } };
         // Pinch anywhere to zoom the camera, for example to frame someone standing far away.
         var pinch = new PinchGestureRecognizer();
         pinch.PinchUpdated += OnPinch;
@@ -105,11 +114,31 @@ public sealed class MirrorPage : ContentPage
 
     private async Task LoadAsync()
     {
-        // Decoding the models and their textures takes a moment; keep it off the UI thread.
-        _session = new MirrorSession(await Character("cat.vrm"));
-        _session.StateChanged += OnTrackingChanged;
-        _view.Scene = _session.Stage.Scene;
-        _view.Camera = _session.Stage.Camera;
+        // Decoding the model and its textures takes a moment; keep it off the UI thread.
+        var session = new MirrorSession(await Character(_model.File));
+        if (_session is { } previous) previous.StateChanged -= OnTrackingChanged;
+        _session = session;
+        session.StateChanged += OnTrackingChanged;
+        _view.Scene = session.Stage.Scene;
+        _view.Camera = session.Stage.Camera;
+    }
+
+    // Swaps the character without stopping the camera; the new one appears once the person is tracked again.
+    private async Task ChooseCharacterAsync()
+    {
+        var names = MirrorModels.All.Select(m => $"{m.Name} · {m.Tracks}").ToArray();
+        var choice = await DisplayActionSheetAsync("Character", "Cancel", null, names);
+        var index = Array.IndexOf(names, choice);
+        if (index < 0 || MirrorModels.All[index] == _model) return;
+        _model = MirrorModels.All[index];
+        Preferences.Default.Set("mirror.character", _model.File);
+        try
+        {
+            await (_loading = LoadAsync());
+            _session!.Reset();
+            if (_step == Step.Live) Show(Step.Guide);
+        }
+        catch (Exception error) { Block($"The character couldn't load: {error.Message}", settings: false); }
     }
 
     private static async Task<MirrorCharacter> Character(string file)
@@ -270,6 +299,7 @@ public sealed class MirrorPage : ContentPage
         // Switching cameras restarts capture without bringing back the intro.
         _intro.IsVisible = step is Step.Intro || step == Step.Starting && !_switching;
         _switchCamera.IsVisible = !IsRequested && step is Step.Guide or Step.Live;
+        _chooseCharacter.IsVisible = step is Step.Guide or Step.Live;
         _intro.Opacity = step == Step.Starting ? .6 : 1;
         _blocked.IsVisible = step == Step.Blocked;
         _guide.IsVisible = step == Step.Guide;
