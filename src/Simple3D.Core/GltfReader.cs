@@ -146,7 +146,8 @@ public static class GltfReader
         if (offset < 0 || offset > bytes.Length - 8) throw Error("Truncated GLB chunk header.");
         var span = bytes.AsSpan(offset);
         var length = BinaryPrimitives.ReadUInt32LittleEndian(span);
-        if (length % 4 != 0 || length > bytes.Length - offset - 8 || BinaryPrimitives.ReadUInt32LittleEndian(span[4..]) != type)
+        // The spec pads chunks to 4 bytes, but some exporters (for example some VRM tools) do not; reads here are unaligned anyway.
+        if (length > bytes.Length - offset - 8 || BinaryPrimitives.ReadUInt32LittleEndian(span[4..]) != type)
             throw Error("Invalid GLB chunk type or length.");
         return (int)length;
     }

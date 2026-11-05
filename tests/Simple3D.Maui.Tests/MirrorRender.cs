@@ -6,7 +6,7 @@ using SkiaSharp;
 using System.Diagnostics;
 
 /// <summary>Renders the Mirror character driven by recorded landmarks, for visual review next to the source video.</summary>
-/// <remarks><c>dotnet run --project tests/Simple3D.Maui.Tests -c Release -- --render-mirror out [every-nth-frame] [fixture-name]</c>
+/// <remarks><c>dotnet run --project tests/Simple3D.Maui.Tests -c Release -- --render-mirror out [every-nth-frame] [fixture-name] [model.vrm]</c>
 /// writes <c>frame-NNNN.png</c> for every nth analyzed frame plus <c>timeline.txt</c> with tracking states.</remarks>
 internal static class MirrorRender
 {
@@ -16,7 +16,7 @@ internal static class MirrorRender
         var every = args.Length > 1 ? int.Parse(args[1]) : 5;
         var fixture = args.Length > 2 ? args[2] : "mirror-landmarks";
         Directory.CreateDirectory(output);
-        var character = Character("cat.vrm");
+        var character = Character(args.Length > 3 ? args[3] : "cat.vrm");
         Console.WriteLine($"MIRROR_CHARACTER faces {(character.FacesPositiveZ ? "+Z" : "-Z")}, torso radius {character.TorsoRadius:0.000}");
         var session = new MirrorSession(character);
         var renderer = new DepthRenderer();
@@ -77,6 +77,19 @@ internal static class MirrorRender
             File.WriteAllBytes(Path.Combine(output, $"swap-{shot++:00}.png"), png.ToArray());
         }
         Console.WriteLine($"MIRROR_SWAP frames={shot} swapping={session.Stage.IsSwapping} output={Path.GetFullPath(output)}");
+        return 0;
+    }
+
+    /// <summary>Renders a character in its rest pose on the stage, to check which way it faces.</summary>
+    internal static int Rest(string output, string model)
+    {
+        var stage = new MirrorStage(Character(model));
+        stage.ShowCharacter(true);
+        var image = new DepthRenderer().Render(stage.Scene, stage.Camera, 360, 640, 0xFF0E1A2B);
+        using var bitmap = new SKBitmap(new SKImageInfo(image.Width, image.Height, SKColorType.Bgra8888, SKAlphaType.Opaque));
+        System.Runtime.InteropServices.MemoryMarshal.AsBytes(image.Pixels.Span).CopyTo(bitmap.GetPixelSpan());
+        using var png = bitmap.Encode(SKEncodedImageFormat.Png, 90);
+        File.WriteAllBytes(output, png.ToArray());
         return 0;
     }
 

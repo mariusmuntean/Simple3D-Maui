@@ -14,6 +14,9 @@ public static class MirrorModels
     public static IReadOnlyList<MirrorModel> All { get; } =
     [
         new("Chubby Tubby Cat", "cat.vrm", "mouth, each eye, smile, frown, head", "ToxSam, CC0"),
+        new("Juanita", "juanita.vrm", "mouth, each eye, smile, frown, head", "Polygonal Mind (100Avatars R3), CC0"),
+        new("WeirdCat", "weirdcat.vrm", "mouth, each eye, smile, frown, head", "Polygonal Mind (100Avatars R3), CC0"),
+        new("CosmicBot", "cosmicbot.vrm", "mouth, each eye, smile, frown, head", "Polygonal Mind (100Avatars R3), CC0"),
         new("Froggy", "froggy.vrm", "mouth, blinks, head", "Polygonal Mind (100Avatars), CC0"),
     ];
 
