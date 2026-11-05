@@ -72,6 +72,19 @@ internal static class SkinningTests
         var restFrame = new DepthRenderer().Render(new Scene().Add(rest), camera, 120, 120);
         Check(restFrame.Pick((int)tip.X, (int)tip.Y) is null, "rest pose must not cover the posed tip");
 
+        // Morph targets: offsets blend before skinning, survive pose changes and stay inside posed bounds.
+        var lift = new MorphTarget("lift", skinned.Mesh.Vertices.Select(v => v.Y == 2 ? new Vector3(0, .5f, 0) : Vector3.Zero));
+        var morphing = new SkinnedMesh(skinned.Mesh, skeleton, skinned.Influences, [lift]);
+        var morphShape = Shape.FromSkinnedMesh(morphing);
+        var lifted = morphShape.WithMorphWeights(morphing, [1f]);
+        Check(MathF.Abs(lifted.Mesh.Max(t => MathF.Max(t.A.Y, MathF.Max(t.B.Y, t.C.Y))) - 2.5f) < 1e-4f, "full morph weight lifts the top ring");
+        Check(lifted.WithPose(bend).MorphWeights is [1f] && lifted.WithPose(bend).WithMorphWeights(morphing, [0f]).MorphWeights is null, "pose keeps weights; zero weights clear them");
+        var (mlo, mhi) = morphing.PosedBounds(bend);
+        foreach (var t in lifted.WithPose(bend).Mesh)
+            foreach (var p in new[] { t.A, t.B, t.C })
+                Check(p.X >= mlo.X - 1e-4f && p.Y >= mlo.Y - 1e-4f && p.X <= mhi.X + 1e-4f && p.Y <= mhi.Y + 1e-4f, "morphed posed bounds");
+        try { morphShape.WithMorphWeights(morphing, [1.5f]); throw new Exception("weight above 1 accepted"); } catch (ArgumentOutOfRangeException) { }
+
         // Huge finite weights normalize instead of overflowing to zero.
         var huge = new SkinnedMesh(skinned.Mesh, skeleton, skinned.Influences.Select(i => i with { Weights = i.Weights * 3e38f }));
         Check(huge.Influences.All(i => MathF.Abs(i.Weights.X + i.Weights.Y + i.Weights.Z + i.Weights.W - 1) < 1e-5f), "overflow-safe weight normalization");

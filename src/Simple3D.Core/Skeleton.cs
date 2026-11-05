@@ -154,6 +154,39 @@ public readonly record struct Int4(int X, int Y, int Z, int W)
     internal int this[int i] => i switch { 0 => X, 1 => Y, 2 => Z, _ => W };
 }
 
+/// <summary>A blend shape: per-vertex offsets added to bind-pose geometry, scaled by a weight in [0,1].</summary>
+public sealed class MorphTarget
+{
+    /// <summary>Optional name, for example a VRM expression's target.</summary>
+    public string? Name { get; }
+    /// <summary>Position offset of every vertex.</summary>
+    public IReadOnlyList<Vector3> PositionDeltas { get; }
+    /// <summary>Optional normal offset of every vertex.</summary>
+    public IReadOnlyList<Vector3>? NormalDeltas { get; }
+    // Vertices this target moves, so blending skips the untouched majority.
+    internal int[] Affected { get; }
+
+    /// <summary>Copies finite offsets; normal offsets, when present, must match the position count.</summary>
+    public MorphTarget(string? name, IEnumerable<Vector3> positionDeltas, IEnumerable<Vector3>? normalDeltas = null)
+    {
+        ArgumentNullException.ThrowIfNull(positionDeltas);
+        var positions = positionDeltas.Take(Mesh.MaximumElements + 1).ToArray();
+        if (positions.Length > Mesh.MaximumElements) throw new ArgumentException("Too many morph offsets.", nameof(positionDeltas));
+        foreach (var d in positions) Validation.Vector(d, nameof(positionDeltas));
+        Vector3[]? normals = null;
+        if (normalDeltas is not null)
+        {
+            normals = normalDeltas.Take(positions.Length + 1).ToArray();
+            if (normals.Length != positions.Length) throw new ArgumentException("Supply one normal offset per position offset.", nameof(normalDeltas));
+            foreach (var d in normals) Validation.Vector(d, nameof(normalDeltas));
+        }
+        Name = name;
+        PositionDeltas = Array.AsReadOnly(positions);
+        NormalDeltas = normals is null ? null : Array.AsReadOnly(normals);
+        Affected = Enumerable.Range(0, positions.Length).Where(i => positions[i] != Vector3.Zero || (normals?[i] ?? Vector3.Zero) != Vector3.Zero).ToArray();
+    }
+}
+
 /// <summary>Immutable bind-pose geometry deformed by a skeleton.</summary>
 public sealed class SkinnedMesh
 {
@@ -163,19 +196,37 @@ public sealed class SkinnedMesh
     public Skeleton Skeleton { get; }
     /// <summary>One influence per mesh vertex.</summary>
     public IReadOnlyList<VertexInfluence> Influences { get; }
+    /// <summary>Blend shapes applied before skinning; empty when the mesh has none.</summary>
+    public IReadOnlyList<MorphTarget> MorphTargets { get; }
+    /// <summary>Maximum number of morph targets per mesh.</summary>
+    public const int MaximumMorphTargets = 64;
     internal Vector4[] Weights { get; }
     internal Int4[] JointIndices { get; }
     // Per joint: bind-space bounds of the vertices it influences, for conservative posed bounds.
     internal (Vector3 Min, Vector3 Max)[] JointBounds { get; }
 
-    /// <summary>Validates one influence per vertex: joint indices inside the skeleton and a positive weight sum.</summary>
-    public SkinnedMesh(Mesh mesh, Skeleton skeleton, IEnumerable<VertexInfluence> influences)
+    /// <summary>Validates one influence per vertex: joint indices inside the skeleton and a positive weight sum.
+    /// Morph targets, if any, need one offset per vertex.</summary>
+    public SkinnedMesh(Mesh mesh, Skeleton skeleton, IEnumerable<VertexInfluence> influences, IEnumerable<MorphTarget>? morphTargets = null)
     {
         ArgumentNullException.ThrowIfNull(mesh);
         ArgumentNullException.ThrowIfNull(skeleton);
         ArgumentNullException.ThrowIfNull(influences);
         var copy = influences.Take(mesh.Vertices.Count + 1).ToArray();
         if (copy.Length != mesh.Vertices.Count) throw new ArgumentException("Supply one influence per vertex.", nameof(influences));
+        var targets = morphTargets?.Take(MaximumMorphTargets + 1).ToArray() ?? [];
+        if (targets.Length > MaximumMorphTargets) throw new ArgumentException($"At most {MaximumMorphTargets} morph targets.", nameof(morphTargets));
+        if (targets.Any(t => t is null || t.PositionDeltas.Count != mesh.Vertices.Count))
+            throw new ArgumentException("Each morph target needs one offset per vertex.", nameof(morphTargets));
+        // With weights in [0,1], a vertex stays inside its bind position plus every target's negative or positive offsets.
+        var low = mesh.Vertices.ToArray(); var high = mesh.Vertices.ToArray();
+        foreach (var target in targets)
+            foreach (var v in target.Affected)
+            {
+                var d = target.PositionDeltas[v];
+                low[v] += Vector3.Min(d, Vector3.Zero); high[v] += Vector3.Max(d, Vector3.Zero);
+            }
+        MorphTargets = Array.AsReadOnly(targets);
         var count = skeleton.Joints.Count;
         Weights = new Vector4[copy.Length];
         JointIndices = new Int4[copy.Length];
@@ -199,7 +250,7 @@ public sealed class SkinnedMesh
                 if (weight == 0) { joints = Set(joints, k, 0); continue; }
                 if ((uint)joint >= (uint)count) throw new ArgumentOutOfRangeException(nameof(influences), "Joint index outside skeleton.");
                 ref var bounds = ref JointBounds[joint];
-                bounds = (Vector3.Min(bounds.Item1, mesh.Vertices[v]), Vector3.Max(bounds.Item2, mesh.Vertices[v]));
+                bounds = (Vector3.Min(bounds.Item1, low[v]), Vector3.Max(bounds.Item2, high[v]));
             }
             copy[v] = new(joints, weights);
             Weights[v] = weights;
@@ -235,22 +286,39 @@ public sealed class SkinnedMesh
     }
 
     /// <summary>CPU skinning of positions and, when present, normals.</summary>
-    internal (Vector3[] Positions, Vector3[]? Normals) Deform(SkeletonPose pose)
+    internal (Vector3[] Positions, Vector3[]? Normals) Deform(SkeletonPose pose, float[]? morphWeights)
     {
         var matrices = pose.SkinningMatrices;
         var source = Mesh.Vertices;
         var sourceNormals = Mesh.Normals;
+        Vector3[]? morphed = null, morphedNormals = null;
+        if (morphWeights is not null)
+            for (var t = 0; t < MorphTargets.Count; t++)
+            {
+                var weight = morphWeights[t];
+                if (weight == 0) continue;
+                var target = MorphTargets[t];
+                morphed ??= source.ToArray();
+                if (sourceNormals is not null && target.NormalDeltas is not null) morphedNormals ??= sourceNormals.ToArray();
+                foreach (var v in target.Affected)
+                {
+                    morphed[v] += target.PositionDeltas[v] * weight;
+                    if (morphedNormals is not null && target.NormalDeltas is not null) morphedNormals[v] += target.NormalDeltas[v] * weight;
+                }
+            }
+        IReadOnlyList<Vector3> basePositions = morphed ?? source;
+        var baseNormals = (IReadOnlyList<Vector3>?)morphedNormals ?? sourceNormals;
         var positions = new Vector3[source.Count];
-        var normals = sourceNormals is null ? null : new Vector3[source.Count];
+        var normals = baseNormals is null ? null : new Vector3[source.Count];
         for (var v = 0; v < positions.Length; v++)
         {
             var m = Blend(matrices, JointIndices[v], Weights[v]);
-            positions[v] = Vector3.Transform(source[v], m);
+            positions[v] = Vector3.Transform(basePositions[v], m);
             if (normals is not null)
             {
-                var n = Vector3.TransformNormal(sourceNormals![v], m);
+                var n = Vector3.TransformNormal(baseNormals![v], m);
                 var length = n.Length();
-                normals[v] = length > 0 && float.IsFinite(length) ? n / length : sourceNormals[v];
+                normals[v] = length > 0 && float.IsFinite(length) ? n / length : sourceNormals![v];
             }
         }
         return (positions, normals);
@@ -267,19 +335,21 @@ public sealed class SkinnedMesh
 }
 
 // Lazily skinned geometry of one posed shape. Count never triggers skinning, so budgets stay cheap.
-internal sealed class PosedGeometry(SkinnedMesh skinned, SkeletonPose pose) : IReadOnlyList<Triangle3>
+internal sealed class PosedGeometry(SkinnedMesh skinned, SkeletonPose pose, float[]? morphWeights = null) : IReadOnlyList<Triangle3>
 {
     private sealed record Result(Vector3[] Positions, Vector3[]? Normals);
     // A reference published atomically: concurrent readers (say, picking during a software render) never see a torn value.
     private Result? _deformed;
     internal SkinnedMesh Skinned { get; } = skinned;
     internal SkeletonPose Pose { get; } = pose;
+    /// <summary>One weight per morph target, or null when all are zero.</summary>
+    internal float[]? MorphWeights { get; } = morphWeights;
     private Result Deformed
     {
         get
         {
             if (Volatile.Read(ref _deformed) is { } cached) return cached;
-            var (positions, normals) = Skinned.Deform(Pose);
+            var (positions, normals) = Skinned.Deform(Pose, MorphWeights);
             return Interlocked.CompareExchange(ref _deformed, new(positions, normals), null) ?? _deformed!;
         }
     }

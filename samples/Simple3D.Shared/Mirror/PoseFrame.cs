@@ -13,6 +13,17 @@ public enum BodyJoint
 /// <param name="Confidence">Detector confidence in [0,1]; 0 when the joint was not found.</param>
 public readonly record struct Landmark(float X, float Y, float Confidence);
 
+/// <summary>Face measurements from 2D face landmarks, in the upright, unmirrored image. Unless noted, values are in [0,1].</summary>
+/// <param name="Yaw">Head turn in radians; positive when the face turns toward the image's right edge.</param>
+/// <param name="Pitch">Head nod in radians; positive when looking up.</param>
+/// <param name="Roll">Head tilt in radians; positive when the top of the head tilts toward the image's left edge.</param>
+/// <param name="MouthOpen">0 closed, 1 wide open.</param>
+/// <param name="Smile">0 neutral, 1 broad smile.</param>
+/// <param name="Brows">In [-1,1]: positive raised (surprise), negative lowered (frown), 0 neutral.</param>
+/// <param name="BlinkLeft">The person's own left eye: 0 open, 1 closed.</param>
+/// <param name="BlinkRight">The person's own right eye: 0 open, 1 closed.</param>
+public sealed record FaceFrame(float Yaw, float Pitch, float Roll, float MouthOpen, float Smile, float Brows, float BlinkLeft, float BlinkRight);
+
 /// <summary>One analyzed image. <see cref="Landmarks"/> is indexed by <see cref="BodyJoint"/>, or null when no person was found.</summary>
 /// <param name="Timestamp">Capture time of the image, monotonic within one source.</param>
 /// <param name="ImageWidth">Upright image width in pixels.</param>
@@ -22,6 +33,8 @@ public sealed record PoseFrame(TimeSpan Timestamp, int ImageWidth, int ImageHeig
 {
     /// <summary>Number of landmarks per frame.</summary>
     public const int JointCount = 13;
+    /// <summary>The most prominent person's face, when face tracking ran and found one.</summary>
+    public FaceFrame? Face { get; init; }
     /// <summary>The landmark of one joint.</summary>
     public Landmark this[BodyJoint joint] => Landmarks is { } values ? values[(int)joint] : default;
 }

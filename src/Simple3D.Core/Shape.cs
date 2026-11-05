@@ -133,7 +133,41 @@ public sealed class Shape
         if (Mesh is PosedGeometry posed && ReferenceEquals(posed.Skinned.Skeleton, pose.Skeleton))
         {
             matched = true;
-            if (!ReferenceEquals(posed.Pose, pose)) mesh = new PosedGeometry(posed.Skinned, pose);
+            if (!ReferenceEquals(posed.Pose, pose)) mesh = new PosedGeometry(posed.Skinned, pose, posed.MorphWeights);
+        }
+        if (children is null && ReferenceEquals(mesh, Mesh)) return this;
+        return new(mesh, Color, Position, Rotation, Size, Name, children is null ? Children : Array.AsReadOnly(children), Material, Geometry, _quaternion);
+    }
+    /// <summary>Current morph target weights of this node's skinned geometry, or null when it has none set.</summary>
+    public IReadOnlyList<float>? MorphWeights => (Mesh as PosedGeometry)?.MorphWeights is { } weights ? Array.AsReadOnly(weights) : null;
+    /// <summary>Returns a copy in which every node using <paramref name="mesh"/> blends its morph targets with <paramref name="weights"/>
+    /// (one per target, each in [0,1]). Throws when no node uses the mesh.</summary>
+    public Shape WithMorphWeights(SkinnedMesh mesh, ReadOnlySpan<float> weights)
+    {
+        ArgumentNullException.ThrowIfNull(mesh);
+        if (weights.Length != mesh.MorphTargets.Count) throw new ArgumentException("Supply one weight per morph target.", nameof(weights));
+        foreach (var w in weights) Validation.UnitInterval(w, nameof(weights));
+        var copy = weights.ToArray();
+        var matched = false;
+        var result = Morphed(mesh, copy.All(w => w == 0) ? null : copy, ref matched);
+        if (!matched) throw new ArgumentException("No node in this shape uses the mesh.", nameof(mesh));
+        return result;
+    }
+    private Shape Morphed(SkinnedMesh target, float[]? weights, ref bool matched)
+    {
+        Shape[]? children = null;
+        for (var i = 0; i < Children.Count; i++)
+        {
+            var child = Children[i].Morphed(target, weights, ref matched);
+            if (ReferenceEquals(child, Children[i])) continue;
+            children ??= Children.ToArray();
+            children[i] = child;
+        }
+        var mesh = Mesh;
+        if (Mesh is PosedGeometry posed && ReferenceEquals(posed.Skinned, target))
+        {
+            matched = true;
+            mesh = new PosedGeometry(posed.Skinned, posed.Pose, weights);
         }
         if (children is null && ReferenceEquals(mesh, Mesh)) return this;
         return new(mesh, Color, Position, Rotation, Size, Name, children is null ? Children : Array.AsReadOnly(children), Material, Geometry, _quaternion);
