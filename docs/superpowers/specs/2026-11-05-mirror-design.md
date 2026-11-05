@@ -20,8 +20,8 @@ Approved direction (2026-11-05): a new gallery scene, not the opening one, in wh
 
 ## Sample
 
-- Portable (`samples/Simple3D.Shared/Mirror`): `PoseFrame` (13 body landmarks in normalized image space with confidence), `PoseTracker` (searching/tracking/lost state machine with hysteresis), `PoseFilter` (One Euro smoothing), `HumanoidRetargeter` (landmark directions → humanoid bone rotations, mirrored, with foreshortening-based depth), the stylized pond scene built from library primitives, and the bundled CC0 character (100Avatars "Froggy", Polygonal Mind).
-- Platform: camera frames (AVCaptureSession / CameraX) and video frames (AVAssetReader / MediaCodec) feed one detector: Apple Vision `VNDetectHumanBodyPoseRequest` (2D, simulator-capable) or Google ML Kit Pose Detection. No model files ship with the app.
+- Portable (`samples/Simple3D.Shared/Mirror`): `PoseFrame` (13 body landmarks in normalized image space with confidence), `PoseTracker` (searching/tracking/lost state machine with hysteresis), `OneEuroFilter` (landmark smoothing), `HumanoidRetargeter` (landmark directions → humanoid bone rotations, mirrored, with foreshortening-based depth), the stylized pond scene built from library primitives, and the bundled CC0 character (100Avatars "Froggy", Polygonal Mind).
+- Platform: camera frames (AVCaptureSession / CameraX) and video frames (AVAssetReader / MediaCodec) feed one detector: Apple Vision `VNDetectHumanBodyPoseRequest` (2D) or Google ML Kit Pose Detection. No model files ship with the app.
 - Haptics: `UINotificationFeedbackGenerator` success/warning on Apple, `HapticFeedbackConstants.CONFIRM`/`REJECT` on Android (MAUI fallback).
 
 ## Assumptions checked during implementation
@@ -36,5 +36,5 @@ Approved direction (2026-11-05): a new gallery scene, not the opening one, in wh
 
 - A fixed CC-licensed-for-use stock video (Mixkit 44414, downloaded at test time, never committed) with an inserted empty segment exercises tracking, loss and reacquisition.
 - Host: a macOS Vision tool extracts landmark fixtures from the video; portable tests retarget them, render with the software renderer and compare projected bone directions with the landmarks; a contact sheet supports visual review.
-- Native: a Debug-only `SIMPLE3D_MIRROR_VIDEO` mode replaces the camera with the video on iOS simulator, Mac Catalyst and the Android emulator, and logs state transitions, bone-direction error and frame timings, ending in `MIRROR_PROBE_PASS`.
+- Native: a Debug-only `SIMPLE3D_MIRROR_VIDEO` mode replaces the camera with the video on iOS simulator, Mac Catalyst and the Android emulator, and logs state transitions, limb-direction error and frame timings; `scripts/mirror-video-check.sh` requires Tracking → Lost → Tracking and prints `MIRROR_CHECK_PASS`.
 - Performance: skinning cost in the software renderer and GPU palette upload per frame; detector latency and displayed FPS are reported separately.

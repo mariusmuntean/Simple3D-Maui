@@ -33,3 +33,9 @@ for t in map(float, times):
     subprocess.run(["xcrun", "simctl", "io", device, "screenshot", f"{output}/shot-{t:04.1f}.png"], capture_output=True)
 PY
 grep -oE 'MIRROR_[A-Z]+.*' "$output/console.log" || true
+# The clip has a person, an empty gap, then the person again.
+states="$(grep -oE 'MIRROR_STATE [A-Za-z]+' "$output/console.log" | awk '{print $2}' | tr '\n' ' ')"
+case "$states" in
+    "Tracking Lost Tracking"*) echo "MIRROR_CHECK_PASS states: $states" ;;
+    *) echo "MIRROR_CHECK_FAIL states: ${states:-none}" >&2; exit 1 ;;
+esac
