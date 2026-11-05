@@ -742,9 +742,12 @@ public sealed partial class SceneView : ContentView
         }
         else
         {
+            var started = Stopwatch.GetTimestamp();
             var target = CapturePaintTarget(args.Info.Width, args.Info.Height);
             DrawSceneBitmap(canvas, PaintBitmap(target), args.Info.Width, args.Info.Height);
             labels = target.Labels; labelWidth = target.Width; labelHeight = target.Height;
+            RecordFrame(Stopwatch.GetElapsedTime(started).TotalMilliseconds, target.Width, target.Height);
+            RaiseFramePresented();
         }
         if (labels.Count == 0) return;
         using var font = new SKFont(SKTypeface.Default, LabelFontSize(args.Info.Width, Width));

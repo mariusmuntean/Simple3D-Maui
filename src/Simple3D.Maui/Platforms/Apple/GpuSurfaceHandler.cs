@@ -31,6 +31,7 @@ internal sealed class AppleGpuView : MTKView
         if (_released || !_owner.CanRenderHardware || DrawableSize.Width < 1 || DrawableSize.Height < 1) return;
         // iOS rejects GPU work from background apps (MTLCommandBufferError.NotPermitted).
         if (UIApplication.SharedApplication.ApplicationState == UIApplicationState.Background) return;
+        var presented = false;
         try
         {
             var renderer = Renderer ??= new MetalRenderer(Device ?? throw new PlatformNotSupportedException("Metal is unavailable."), OnCommandFailed);
@@ -45,8 +46,10 @@ internal sealed class AppleGpuView : MTKView
             if (drawable is null) return; // Window may be hidden/backgrounded. Retry on next invalidation.
             renderer.Render(frame, size.Width, size.Height, drawable.Texture, drawable, presentWithTransaction: withTransaction);
             _owner.HardwareFramePresented(renderer.Name, System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds, size.Width, size.Height);
+            presented = true;
         }
         catch (Exception ex) { _owner.ReportHardwareFailure(ex); }
+        if (presented) _owner.RaiseFramePresented();
     }
     // Completion handlers run on a Metal thread.
     private void OnCommandFailed(nint code, string message) =>

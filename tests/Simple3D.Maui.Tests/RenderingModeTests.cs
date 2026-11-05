@@ -54,7 +54,15 @@ internal static class RenderingModeTests
     {
         var view = new SceneView { Scene = new Scene().Add(Shape.Box()) };
         if (!view.PresentWithOverlay) throw new Exception("overlay must cover the native view before the first hardware frame");
-        view.HardwareFramePresented("test", 0, 100, 100);
+        var presented = 0;
+        view.FramePresented += (_, _) => presented++;
+        view.HardwareFramePresented("test", 2.5, 100, 80);
+        view.RaiseFramePresented(); // Native views raise it after their failure handling.
+        if (presented != 1 || view.LastFrameMilliseconds != 2.5 || view.LastFrameWidth != 100 || view.LastFrameHeight != 80)
+            throw new Exception("a presented hardware frame must raise FramePresented with its statistics");
+        // A throwing subscriber is the app's bug, not a GPU failure: recording a frame never invokes subscribers.
+        view.FramePresented += (_, _) => throw new InvalidOperationException("subscriber");
+        view.HardwareFramePresented("test", 1, 100, 80);
         if (view.PresentWithOverlay) throw new Exception("overlay must be hidden in hardware mode without labels");
         view.Scene.AddLabel(new WorldLabel("label", System.Numerics.Vector3.Zero));
         if (!view.PresentWithOverlay) throw new Exception("adding a label must show the overlay");
@@ -65,7 +73,7 @@ internal static class RenderingModeTests
         Console.WriteLine("PASS overlay composited only for labels in hardware mode");
     }
 
-    // The gallery must keep working with every renderer: its picker drives the view's mode,
+    // The gallery must keep working with every renderer: its mode selector drives the view's mode,
     // the status line follows the active backend, and scenes, capture and picking keep working.
     private static void RunGallery()
     {
@@ -73,15 +81,16 @@ internal static class RenderingModeTests
         try
         {
             var all = Descendants(page.Content).ToArray();
-            var picker = all.OfType<Picker>().Single(p => p.AutomationId == "RenderingMode");
+            void Select(RenderingMode mode) =>
+                ((IButtonController)all.OfType<Button>().Single(b => b.AutomationId == $"RenderingMode{mode}")).SendClicked();
             var status = all.OfType<Label>().Single(l => l.AutomationId == "RenderingBackend");
             var view = all.OfType<SceneView>().Single();
             var sceneButtons = all.OfType<Button>().Where(b => Simple3D.Shared.DemoScenes.All.Any(s => s.Name == b.Text)).ToArray();
             if (sceneButtons.Length == 0) throw new Exception("gallery scene buttons missing");
             foreach (var mode in new[] { RenderingMode.Software, RenderingMode.Hardware, RenderingMode.Auto, RenderingMode.Software })
             {
-                picker.SelectedItem = mode;
-                if (view.RenderingMode != mode) throw new Exception($"gallery picker did not select {mode}");
+                Select(mode);
+                if (view.RenderingMode != mode) throw new Exception($"gallery mode selector did not select {mode}");
                 if (status.Text != $"{view.ActiveRenderingBackend}: {view.RenderingDiagnostic}") throw new Exception($"gallery status stale after {mode}");
                 foreach (var button in sceneButtons)
                 {
@@ -94,15 +103,15 @@ internal static class RenderingModeTests
             }
             // Without a native surface (headless), Software is presented and taps pick in Auto/Software.
             if (view.ActiveRenderingBackend != RenderingBackend.Software) throw new Exception("software mode not active");
-            picker.SelectedItem = RenderingMode.Auto;
+            Select(RenderingMode.Auto);
             view.ReportHardwareFailure(new InvalidOperationException("simulated GPU loss"));
             if (view.ActiveRenderingBackend != RenderingBackend.Software || !status.Text.Contains("simulated GPU loss"))
                 throw new Exception("gallery must show the fallback reason");
-            picker.SelectedItem = RenderingMode.Hardware;
+            Select(RenderingMode.Hardware);
             if (!view.CanRenderHardware || status.Text.Contains("simulated GPU loss")) throw new Exception("changing mode must retry hardware");
-            picker.SelectedItem = RenderingMode.Software;
+            Select(RenderingMode.Software);
             if (view.ActiveRenderingBackend != RenderingBackend.Software) throw new Exception("gallery cannot return to software");
-            Console.WriteLine("PASS gallery renderer picker, status, scenes, capture and failure recovery in every mode");
+            Console.WriteLine("PASS gallery renderer selector, status, scenes, capture and failure recovery in every mode");
         }
         finally
         {
