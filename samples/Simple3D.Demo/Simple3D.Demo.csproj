@@ -33,6 +33,12 @@
     <UseInterpreter>true</UseInterpreter>
     <MtouchInterpreter>-all,Simple3D.Demo</MtouchInterpreter>
   </PropertyGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
+    <PackageReference Include="Xamarin.Google.MLKit.PoseDetection" Version="117.0.0.23" />
+    <PackageReference Include="Xamarin.AndroidX.Camera.Camera2" Version="1.5.2.1" />
+    <PackageReference Include="Xamarin.AndroidX.Camera.Lifecycle" Version="1.5.2.1" />
+    <PackageReference Include="Xamarin.AndroidX.Camera.View" Version="1.5.2.1" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
     <PackageReference Include="Microsoft.Maui.Essentials" Version="$(MauiVersion)" />
