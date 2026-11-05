@@ -52,7 +52,7 @@ Choose `RenderingMode.Auto` (default), `Software`, or `Hardware` on `SceneView`.
 
 Open [Simple3D.sln](Simple3D.sln) in Rider or another MAUI IDE with .NET 10 and the target's MAUI workload. Choose **Simple3D.Demo** and an Android device, iOS simulator or Mac Catalyst target. Apple targets require macOS and a workload-compatible Xcode.
 
-The five examples progress from [Equipment](samples/Simple3D.Shared/Equipment.cs) for primitives, labels and an imported controller with a mapped display, through [Telemetry](samples/Simple3D.Shared/Telemetry.cs) for data updates, [Surface](samples/Simple3D.Shared/Surface.cs) for height-based vertex colors and [Robot Arm](samples/Simple3D.Shared/RobotArm.cs) for hierarchy, to [Gantry Crane](samples/Simple3D.Shared/GantryCrane.cs) for coordinated motion. In Surface, use **Shading: smooth / flat** to compare normals and **Light: from right / left** to move the directional light. Each file contains one scene and its animation. The gallery pauses in the background; press Animate to resume.
+The five examples progress from [Equipment](samples/Simple3D.Shared/Equipment.cs) for primitives, labels and an imported controller with a mapped display, through [Telemetry](samples/Simple3D.Shared/Telemetry.cs) for data updates, [Surface](samples/Simple3D.Shared/Surface.cs) for height-based vertex colors and [Robot Arm](samples/Simple3D.Shared/RobotArm.cs) for hierarchy, to [Gantry Crane](samples/Simple3D.Shared/GantryCrane.cs) for coordinated motion. Then open **Mirror ✦**: point the camera at someone and a 3D frog copies their whole-body pose in real time, using Apple Vision or Google ML Kit on the device, a [skinned glTF/VRM character](docs/site/skinned-characters.md) and the native GPU renderer. In Surface, use **Shading: smooth / flat** to compare normals and **Light: from right / left** to move the directional light. Each file contains one scene and its animation. The gallery pauses in the background; press Animate to resume.
 
 ## Documentation
 
@@ -63,12 +63,13 @@ Read the [documentation site](https://mariusmuntean.github.io/Simple3D-Maui/), i
 - [Scenes and cameras](docs/site/scenes-and-cameras.md)
 - [Meshes and groups](docs/site/meshes-and-groups.md)
 - [Materials, lighting, and OBJ import](docs/site/materials-and-import.md)
+- [Skinned characters and glTF](docs/site/skinned-characters.md)
 - [Interaction and selection](docs/site/interaction-and-picking.md)
 - [Examples](docs/site/examples.md)
 - [Hardware rendering and backend selection](docs/site/hardware-rendering.md)
 - [Rendering limits](docs/site/rendering-limits.md)
 
-The renderer supports opaque textured triangles, configurable directional lighting, smooth normals, vertex colors, OBJ geometry import, and depth-aware picking. Transparency, PBR, and shadows remain unsupported. Labels overlay geometry. Viewport and work budgets bound rendering costs; frame rate depends on scene complexity, viewport and device. See the limits page before choosing it for your application.
+The renderer supports opaque textured triangles, skinned meshes with glTF/VRM import, configurable directional lighting, smooth normals, vertex colors, OBJ geometry import, and depth-aware picking. Transparency, PBR, and shadows remain unsupported. Labels overlay geometry. Viewport and work budgets bound rendering costs; frame rate depends on scene complexity, viewport and device. See the limits page before choosing it for your application.
 
 ## Develop
 
@@ -81,4 +82,4 @@ See [development and native validation](docs/DEVELOPMENT.md) for Rider setup, do
 
 ## License and contributions
 
-[MIT](LICENSE), copyright Marius Muntean. Report bugs or suggest changes through issues and pull requests. Include the platform, build configuration and a small reproduction. The maintainer reviews changes and publishes official releases.
+[MIT](LICENSE), copyright Marius Muntean. The Mirror sample's character is [100Avatars](https://github.com/PolygonalMind/100Avatars) "Froggy" by Polygonal Mind, released as CC0. Report bugs or suggest changes through issues and pull requests. Include the platform, build configuration and a small reproduction. The maintainer reviews changes and publishes official releases.
