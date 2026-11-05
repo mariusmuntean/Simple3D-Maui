@@ -28,7 +28,7 @@ public sealed class HumanoidRetargeter
     private const float DepthGain = .8f;
     private const float LengthMemory = .995f;
     private const float FacingSmoothing = .35f;
-    private float _facing, _frontWidth, _turnSign = 1;
+    private float _facing, _frontWidth, _turnSign = 1, _torsoLength;
 
     private readonly Skeleton _skeleton;
     private readonly Quaternion _toView, _fromView;
@@ -92,7 +92,7 @@ public sealed class HumanoidRetargeter
     }
 
     /// <summary>Forgets only the calibrated segment lengths, for example after a camera zoom changed the person's size in the image.</summary>
-    public void ForgetLengths() { Array.Clear(_segmentLength); _frontWidth = 0; }
+    public void ForgetLengths() { Array.Clear(_segmentLength); _frontWidth = 0; _torsoLength = 0; }
 
     /// <summary>Forgets calibrated segment lengths, for example when a different person appears.</summary>
     public void Reset()
@@ -121,11 +121,27 @@ public sealed class HumanoidRetargeter
         }
         Vector2 P(BodyJoint joint) => points[(int)joint];
 
-        var hipCenter = (P(BodyJoint.LeftHip) + P(BodyJoint.RightHip)) / 2;
         var shoulderCenter = (P(BodyJoint.LeftShoulder) + P(BodyJoint.RightShoulder)) / 2;
-        var up = Direction(shoulderCenter - hipCenter, Vector2.UnitY);
-        var facing = Facing(landmarks, P(BodyJoint.Nose) - shoulderCenter, Vector2.Distance(shoulderCenter, hipCenter),
-            P(BodyJoint.LeftHip) - P(BodyJoint.RightHip) + P(BodyJoint.LeftShoulder) - P(BodyJoint.RightShoulder));
+        var shoulders = P(BodyJoint.LeftShoulder) - P(BodyJoint.RightShoulder);
+        Vector2 hipCenter, up, side;
+        if (landmarks[(int)BodyJoint.LeftHip].Confidence >= MinimumConfidence && landmarks[(int)BodyJoint.RightHip].Confidence >= MinimumConfidence)
+        {
+            hipCenter = (P(BodyJoint.LeftHip) + P(BodyJoint.RightHip)) / 2;
+            up = Direction(shoulderCenter - hipCenter, Vector2.UnitY);
+            _torsoLength = Vector2.Distance(shoulderCenter, hipCenter);
+            side = P(BodyJoint.LeftHip) - P(BodyJoint.RightHip) + shoulders;
+        }
+        else
+        {
+            // Waist-up framing: the spine is perpendicular to the shoulder line (upright, whichever way the
+            // person faces) and as long as last seen, or about one and a half shoulder widths.
+            up = Direction(new Vector2(-shoulders.Y, shoulders.X), Vector2.UnitY);
+            if (up.Y < 0) up = -up;
+            if (_torsoLength <= 0) _torsoLength = 1.5f * shoulders.Length();
+            hipCenter = shoulderCenter - up * _torsoLength;
+            side = 2 * shoulders;
+        }
+        var facing = Facing(landmarks, P(BodyJoint.Nose) - shoulderCenter, _torsoLength, side);
         // Turn about the vertical axis first, then lean within the image plane along the spine.
         var lean = MathF.Atan2(-up.X, up.Y);
         var torso = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, lean) * Quaternion.CreateFromAxisAngle(Vector3.UnitY, facing);
@@ -182,7 +198,8 @@ public sealed class HumanoidRetargeter
         var ratio = side.X / torsoLength;
         _frontWidth = MathF.Max(MathF.Max(_frontWidth * LengthMemory, MathF.Abs(ratio)), .2f);
         var cos = Math.Clamp(ratio / _frontWidth, -1, 1);
-        if (landmarks[(int)BodyJoint.Nose].Confidence >= MinimumConfidence && MathF.Abs(noseOffset.X) > .02f * torsoLength)
+        // Only while the face is toward the camera: ML Kit estimates a nose position even from behind.
+        if (cos > .2f && landmarks[(int)BodyJoint.Nose].Confidence >= MinimumConfidence && MathF.Abs(noseOffset.X) > .02f * torsoLength)
             _turnSign = MathF.Sign(noseOffset.X);
         var target = MathF.Atan2(_turnSign * MathF.Sqrt(1 - cos * cos), cos);
         // Smooth along the shorter way around the circle so noisy side views do not flip the character.

@@ -113,6 +113,30 @@ internal static class MirrorTests
         var away = new HumanoidRetargeter(awaySkeleton, bones, turned).Retarget(raised, 1, mirrored: false);
         var hand = Vector3.Transform(away.WorldTransforms[bones["leftHand"]].Translation, turned);
         Check(hand.X > 0 && HandHeight(away, "left") > HandHeight(away, "right") + .3f, "facing rotation");
+        // Waist-up framing: the same clip with hips and legs hidden still tracks, the arms follow and the legs stand at rest.
+        BodyJoint[] lower = [BodyJoint.LeftHip, BodyJoint.RightHip, BodyJoint.LeftKnee, BodyJoint.RightKnee, BodyJoint.LeftAnkle, BodyJoint.RightAnkle];
+        var upperTracker = new PoseTracker();
+        var upper = new HumanoidRetargeter(skeleton, bones, Quaternion.Identity);
+        var upperErrors = new List<float>();
+        var restLeg = skeleton.RestPose.WorldTransforms[bones["leftFoot"]].Translation - skeleton.RestPose.WorldTransforms[bones["leftUpperLeg"]].Translation;
+        foreach (var frame in frames)
+        {
+            var cropped = frame.Landmarks is { } all ? frame with { Landmarks = all.Select((p, i) => lower.Contains((BodyJoint)i) ? p with { Confidence = 0 } : p).ToArray() } : frame;
+            if (!upperTracker.Update(cropped)) continue;
+            var world = upper.Retarget(upperTracker.Landmarks, upperTracker.ImageAspect, mirrored: false).WorldTransforms;
+            var (a, b) = (upperTracker.Landmarks[(int)BodyJoint.LeftShoulder], upperTracker.Landmarks[(int)BodyJoint.LeftElbow]);
+            if (b.Confidence < .3f) continue;
+            var arm = world[bones["leftLowerArm"]].Translation - world[bones["leftUpperArm"]].Translation;
+            var person = new Vector2((b.X - a.X) * upperTracker.ImageAspect, a.Y - b.Y);
+            upperErrors.Add(MathF.Acos(Math.Clamp(Vector2.Dot(Vector2.Normalize(new(arm.X, arm.Y)), Vector2.Normalize(person)), -1, 1)) * 180 / MathF.PI);
+            var leg = world[bones["leftFoot"]].Translation - world[bones["leftUpperLeg"]].Translation;
+            Check(float.IsFinite(leg.X) && Vector3.Distance(Vector3.Normalize(leg), Vector3.Normalize(Vector3.Transform(restLeg, Quaternion.CreateFromRotationMatrix(world[bones["hips"]])))) < .05f,
+                "hidden legs keep their rest pose relative to the hips");
+        }
+        upperErrors.Sort();
+        Check(upperTracker.State == TrackingState.Tracking && upperErrors.Count > 600 && upperErrors[upperErrors.Count / 2] < 1,
+            $"waist-up tracking: {upperErrors.Count} arm samples, median {(upperErrors.Count > 0 ? upperErrors[upperErrors.Count / 2] : -1):0.0}°");
+
         // Turning around: a dancer (Apple Vision landmarks, Mixkit clip 43650) spins between facing the camera and showing her back.
         var spinner = new HumanoidRetargeter(skeleton, bones, Quaternion.Identity);
         var spin = new PoseTracker();
@@ -129,6 +153,7 @@ internal static class MirrorTests
         }
         Check(backFrames > 20 && backRight >= backFrames * .8 && frontFrames > 20 && frontRight >= frontFrames * .8,
             $"facing: back {backRight}/{backFrames}, front {frontRight}/{frontFrames}");
+        Console.WriteLine($"PASS mirror waist-up framing: arms follow ({upperErrors.Count} samples), legs stand");
         Console.WriteLine($"PASS mirror turning: character faces away in {backRight}/{backFrames} back views and toward the camera in {frontRight}/{frontFrames} front views");
         Console.WriteLine($"PASS mirror tracking ({summary}) and retargeting (median {errors[errors.Count / 2]:0.00}°)");
     }

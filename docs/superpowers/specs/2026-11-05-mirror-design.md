@@ -7,7 +7,7 @@ Approved direction (2026-11-05): a new gallery scene, not the opening one, in wh
 1. **Intro.** Explains that the scene uses the camera to copy a person's movement; a Start button.
 2. **Permission.** Start requests camera access. Denied: explain and offer Settings; the rest of the gallery still works.
 3. **Guide.** Live camera preview with a translucent person silhouette and "Point the camera at someone and fit their whole body in the frame."
-4. **Tracking.** A full body for several consecutive frames reveals the character in its scene, copying the pose. Success haptic.
+4. **Tracking.** Shoulders plus hips or elbows (whole body, waist up, or torso and arms) for several consecutive frames reveal the character in its scene, copying the pose. Success haptic.
 5. **Lost.** No full body for ~0.6 s shows a small hint, "Step back into the frame", and holds the last pose. Warning haptic. Reacquiring hides the hint (success haptic again).
 
 ## Library (Core) additions
@@ -30,6 +30,8 @@ Approved direction (2026-11-05): a new gallery scene, not the opening one, in wh
 - Mac Catalyst probes need an unlocked desktop session; a locked screen gives the app no window.
 - 100Avatars VRM 0.x models face −Z and are T-posed; the stage turns them toward the camera and normalizes height.
 - 2D landmarks give no depth: limbs swing toward their image direction and depth is estimated from foreshortening, so reaching straight at the camera is approximate.
+- Detectors label joints anatomically even from behind (Vision; ML Kit agrees on front/back in 253/263 clear frames of a turning dancer), so the signed shoulder/hip width gives the body's turn. ML Kit reports a nose from behind too, so the nose only decides the turn direction while the person faces the camera.
+- Waist-up framing estimates the hips from the shoulder line; hidden legs keep the character standing.
 - Sideways motion follows the person's position across the image, bounded to the island; scaling by leg length overshot when the person stood off-center.
 
 ## Validation without a physical camera

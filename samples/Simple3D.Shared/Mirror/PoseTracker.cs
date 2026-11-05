@@ -12,8 +12,8 @@ public enum TrackingState
 }
 
 /// <summary>Turns detector frames into stable tracking states and smoothed landmarks. Not thread safe; feed frames in order.</summary>
-/// <remarks>Acquiring needs a whole body for several consecutive frames, so a passer-by's arm does not start tracking.
-/// While tracking, a visible torso is enough to continue, so a hand leaving the frame does not interrupt it.</remarks>
+/// <remarks>Acquiring needs shoulders plus hips or elbows for several consecutive frames, so a passer-by's arm does not
+/// start tracking. While tracking, visible shoulders are enough to continue, so a hand leaving the frame does not interrupt it.</remarks>
 public sealed class PoseTracker
 {
     /// <summary>Consecutive whole-body frames needed to start or resume tracking.</summary>
@@ -25,14 +25,14 @@ public sealed class PoseTracker
 
     private readonly OneEuroFilter[] _filters = Enumerable.Range(0, PoseFrame.JointCount * 2).Select(_ => new OneEuroFilter()).ToArray();
     private readonly Landmark[] _smoothed = new Landmark[PoseFrame.JointCount];
-    private int _wholeBodyFrames;
+    private int _acquireFrames;
     private TimeSpan _lastTorso;
 
     /// <summary>The current state.</summary>
     public TrackingState State { get; private set; } = TrackingState.Searching;
     /// <summary>Raised when <see cref="State"/> changes, after the frame that caused it was applied.</summary>
     public event Action<TrackingState>? StateChanged;
-    /// <summary>Smoothed landmarks of the most recent frame with a visible torso; joints below the confidence threshold keep their last value.</summary>
+    /// <summary>Smoothed landmarks of the most recent frame with visible shoulders; joints below the confidence threshold keep their last value.</summary>
     public IReadOnlyList<Landmark> Landmarks => _smoothed;
     /// <summary>Aspect ratio (width / height) of the analyzed images.</summary>
     public float ImageAspect { get; private set; } = 1;
@@ -41,14 +41,14 @@ public sealed class PoseTracker
     public bool Update(PoseFrame frame)
     {
         ArgumentNullException.ThrowIfNull(frame);
-        var wholeBody = IsWholeBody(frame);
-        var torso = wholeBody || HasTorso(frame);
-        _wholeBodyFrames = wholeBody ? _wholeBodyFrames + 1 : 0;
+        var acquirable = CanAcquire(frame);
+        var torso = acquirable || HasShoulders(frame);
+        _acquireFrames = acquirable ? _acquireFrames + 1 : 0;
         if (torso) _lastTorso = frame.Timestamp;
         var next = State switch
         {
             TrackingState.Tracking when !torso && frame.Timestamp - _lastTorso >= LoseAfter => TrackingState.Lost,
-            not TrackingState.Tracking when _wholeBodyFrames >= AcquireFrames => TrackingState.Tracking,
+            not TrackingState.Tracking when _acquireFrames >= AcquireFrames => TrackingState.Tracking,
             _ => State
         };
         var updated = false;
@@ -70,20 +70,19 @@ public sealed class PoseTracker
     /// <summary>Returns to <see cref="TrackingState.Searching"/>, for example when the camera restarts.</summary>
     public void Reset()
     {
-        _wholeBodyFrames = 0;
+        _acquireFrames = 0;
         foreach (var filter in _filters) filter.Reset();
         if (State == TrackingState.Searching) return;
         State = TrackingState.Searching;
         StateChanged?.Invoke(State);
     }
 
-    /// <summary>Whether shoulders, hips, knees and ankles are all visible: the whole body is in frame.</summary>
-    public bool IsWholeBody(PoseFrame frame) => frame.Landmarks is not null &&
-        Visible(frame, BodyJoint.LeftShoulder, BodyJoint.RightShoulder, BodyJoint.LeftHip, BodyJoint.RightHip,
-            BodyJoint.LeftKnee, BodyJoint.RightKnee, BodyJoint.LeftAnkle, BodyJoint.RightAnkle);
+    /// <summary>Whether enough of a person is in frame to start: both shoulders, plus both hips or both elbows.
+    /// A whole body, the waist up, or the torso and arms all qualify; legs that are out of frame keep the character standing.</summary>
+    public bool CanAcquire(PoseFrame frame) => HasShoulders(frame) &&
+        (Visible(frame, BodyJoint.LeftHip, BodyJoint.RightHip) || Visible(frame, BodyJoint.LeftElbow, BodyJoint.RightElbow));
 
-    private bool HasTorso(PoseFrame frame) => frame.Landmarks is not null &&
-        Visible(frame, BodyJoint.LeftShoulder, BodyJoint.RightShoulder, BodyJoint.LeftHip, BodyJoint.RightHip);
+    private bool HasShoulders(PoseFrame frame) => frame.Landmarks is not null && Visible(frame, BodyJoint.LeftShoulder, BodyJoint.RightShoulder);
 
     private bool Visible(PoseFrame frame, params ReadOnlySpan<BodyJoint> joints)
     {

@@ -60,7 +60,7 @@ public sealed class MirrorPage : ContentPage
         _intro = Card("Mirror", "Your camera lets a 3D frog copy your moves in real time.\nVideo stays on this device.",
             ("Start", Start), ("Back", Close));
         _guide = Guide();
-        _lostHint = Pill("Step back into the frame so your whole body shows");
+        _lostHint = Pill("Step back into the frame");
         _blockedAction = PrimaryButton("Open Settings", CameraAccess.OpenSettings);
         _blocked = new Border
         {
@@ -352,7 +352,7 @@ public sealed class MirrorPage : ContentPage
         return new Grid
         {
             InputTransparent = true,
-            Children = { silhouette, Pill("Point the camera at someone and fit their whole body in the frame", top: true) }
+            Children = { silhouette, Pill("Point the camera at someone: whole body, or from the waist up", top: true) }
         };
     }
 

@@ -28,7 +28,7 @@ The [gallery page](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samp
 
 ## Mirror
 
-The gallery's **Mirror ✦** button opens a full-screen scene in which a frog copies the person the camera sees. It asks for the camera, shows a silhouette until someone's whole body is in frame, then reveals the character on its pond and keeps the camera as a small inset. When the person leaves the frame, the frog holds its pose and a hint asks them to step back in; haptics mark both moments. Video stays on the device.
+The gallery's **Mirror ✦** button opens a full-screen scene in which a frog copies the person the camera sees. It asks for the camera, shows a silhouette until someone is in frame (whole body, or from the waist up), then reveals the character on its pond and keeps the camera as a small inset. Legs out of frame keep the frog standing; turning around shows the frog's back. Pinch to zoom the camera and use ⇄ to switch between the front and back camera. When the person leaves the frame, the frog holds its pose and a hint asks them to step back in; haptics mark both moments. Video stays on the device.
 
 | Piece | Source |
 | --- | --- |
