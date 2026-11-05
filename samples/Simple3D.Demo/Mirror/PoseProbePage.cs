@@ -41,6 +41,8 @@ internal sealed class PoseProbePage : ContentPage
         finally
         {
             preview.Source = null;
+            // Detach before disconnecting so no later layout pass measures a handler without a platform view.
+            Content = null;
             preview.Handler?.DisconnectHandler();
         }
         Environment.Exit(exitCode);

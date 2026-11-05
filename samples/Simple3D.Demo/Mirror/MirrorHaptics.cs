@@ -14,7 +14,7 @@ public static class MirrorHaptics
 #elif ANDROID
         if (OperatingSystem.IsAndroidVersionAtLeast(30))
             Platform.CurrentActivity?.Window?.DecorView?.PerformHapticFeedback(found
-                ? Android.Views.HapticFeedbackConstants.Confirm : Android.Views.HapticFeedbackConstants.Reject);
+                ? Android.Views.FeedbackConstants.Confirm : Android.Views.FeedbackConstants.Reject);
         else if (HapticFeedback.Default.IsSupported)
             HapticFeedback.Default.Perform(found ? HapticFeedbackType.Click : HapticFeedbackType.LongPress);
 #endif
