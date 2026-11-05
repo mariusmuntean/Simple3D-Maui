@@ -134,9 +134,10 @@ public sealed class MirrorPage : ContentPage
         Preferences.Default.Set("mirror.character", _model.File);
         try
         {
-            await (_loading = LoadAsync());
-            _session!.Reset();
-            if (_step == Step.Live) Show(Step.Guide);
+            // Parse and decode off the UI thread first, so the swap animation itself never waits on loading.
+            var character = await Character(_model.File);
+            await _loading!;
+            _session!.SwitchCharacter(character);
         }
         catch (Exception error) { Block($"The character couldn't load: {error.Message}", settings: false); }
     }
@@ -185,7 +186,8 @@ public sealed class MirrorPage : ContentPage
             if (!Current()) return;
             _started = _lastFrame = Stopwatch.GetTimestamp();
             _timer ??= Dispatcher.CreateTimer();
-            _timer.Interval = TimeSpan.FromMilliseconds(1000d / 30);
+            // Display rate: the fireflies and character swaps animate smoothly; poses still arrive at the camera's rate.
+            _timer.Interval = TimeSpan.FromMilliseconds(1000d / 60);
             _timer.Tick -= Animate; _timer.Tick += Animate;
             _timer.Start();
             _switching = false;
@@ -287,7 +289,7 @@ public sealed class MirrorPage : ContentPage
         if (_step == Step.Live && silence > TimeSpan.FromSeconds(2))
             _session.Apply(new PoseFrame(_lastTimestamp + silence, 1, 1, null), _source.IsMirrored);
         // About once a second: pose rate, detection latency, renderer and how closely the limbs follow.
-        if ((int)(seconds * 30) % 30 != 0 || seconds < 1) return;
+        if ((int)(seconds * 60) % 60 != 0 || seconds < 1) return;
         var line = $"{_frames / seconds:0} poses/s · detect {_detectMilliseconds:0} ms · {_view.ActiveRenderingBackend} {_view.LastFrameMilliseconds:0.0} ms";
         _status.Text = line;
         if (_step == Step.Live) Log($"MIRROR_STATS t={seconds:0.0} analyzed={_frames} posed={_poses} detect_ms={_detectMilliseconds:0.0} render_ms={_view.LastFrameMilliseconds:0.0} backend={_view.ActiveRenderingBackend}");

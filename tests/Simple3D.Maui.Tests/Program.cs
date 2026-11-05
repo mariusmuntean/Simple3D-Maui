@@ -8,6 +8,7 @@ using Simple3D.Demo;
 using SkiaSharp;
 
 if (args.Length > 0 && args[0] == "--render-mirror") return MirrorRender.Run(args[1..]);
+if (args.Length > 1 && args[0] == "--render-swap") return MirrorRender.Swap(args[1]);
 if (args.Contains("--performance")) return PerformanceProbe.Run();
 if (args.Contains("--appearance-performance")) { AppearancePerformanceProbe.Run(); return 0; }
 

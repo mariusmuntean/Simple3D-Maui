@@ -53,6 +53,33 @@ internal static class MirrorRender
     private static double Median(List<double> values) { values.Sort(); return values[values.Count / 2]; }
     private static double P95(List<double> values) { values.Sort(); return values[(int)(values.Count * .95)]; }
 
+    /// <summary>Renders a character swap at 60 frames per second while the fixture keeps the person tracked.</summary>
+    internal static int Swap(string output)
+    {
+        Directory.CreateDirectory(output);
+        var session = new MirrorSession(Character("cat.vrm"));
+        var next = Character("froggy.vrm");
+        var renderer = new DepthRenderer();
+        var frames = Frames("mirror-landmarks");
+        var swapped = false;
+        var shot = 0;
+        for (var i = 0; i < 400; i++)
+        {
+            var t = i / 60f;
+            session.Apply(frames.Count > 0 ? PoseRecording.Nearest(frames, TimeSpan.FromSeconds(5 + t)) with { Timestamp = TimeSpan.FromSeconds(t) } : frames[0], mirrored: false);
+            session.Stage.Animate(t);
+            if (!swapped && t >= 2) { session.SwitchCharacter(next); swapped = true; }
+            if (t < 1.95f || t > 3.0f || i % 3 != 0) continue;
+            var image = renderer.Render(session.Stage.Scene, session.Stage.Camera, 270, 480, 0xFF0E1A2B);
+            using var bitmap = new SKBitmap(new SKImageInfo(image.Width, image.Height, SKColorType.Bgra8888, SKAlphaType.Opaque));
+            System.Runtime.InteropServices.MemoryMarshal.AsBytes(image.Pixels.Span).CopyTo(bitmap.GetPixelSpan());
+            using var png = bitmap.Encode(SKEncodedImageFormat.Png, 90);
+            File.WriteAllBytes(Path.Combine(output, $"swap-{shot++:00}.png"), png.ToArray());
+        }
+        Console.WriteLine($"MIRROR_SWAP frames={shot} swapping={session.Stage.IsSwapping} output={Path.GetFullPath(output)}");
+        return 0;
+    }
+
     internal static MirrorCharacter Character(string file)
     {
         using var asset = File.OpenRead(Path.Combine(AppContext.BaseDirectory, "Assets", file));

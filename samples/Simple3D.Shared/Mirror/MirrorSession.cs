@@ -5,7 +5,7 @@ namespace Simple3D.Shared.Mirror;
 /// <summary>Turns pose frames into a posed, expressive character on the pond stage. Use on one thread (the UI thread in an app).</summary>
 public sealed class MirrorSession
 {
-    private readonly HumanoidRetargeter _retargeter;
+    private HumanoidRetargeter _retargeter;
 
     /// <summary>The stage holding the scene and camera.</summary>
     public MirrorStage Stage { get; }
@@ -58,6 +58,14 @@ public sealed class MirrorSession
             // Models without separate eyes have "blink"; models with both use the per-eye presets.
             ["blink_l"] = left, ["blink_r"] = right, ["blink"] = MathF.Min(left, right),
         };
+    }
+
+    /// <summary>Switches to another character, animated when one is on stage. Tracking carries on, so the new character
+    /// copies the person from its first frame.</summary>
+    public void SwitchCharacter(MirrorCharacter character)
+    {
+        Stage.Swap(character);
+        _retargeter = new HumanoidRetargeter(character.Skeleton, character.HumanoidBones, Stage.CharacterToView) { TorsoRadius = character.TorsoRadius };
     }
 
     /// <summary>Forgets the person's limb lengths, for example after the camera zoom changed their size in the image.</summary>

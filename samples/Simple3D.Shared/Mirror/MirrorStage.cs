@@ -64,54 +64,117 @@ public sealed record MirrorCharacter(Shape Shape, Skeleton Skeleton, IReadOnlyDi
 public sealed class MirrorStage
 {
     private const float IslandTop = 0;
-    private Shape _placed;
+    private const float LeaveSeconds = .35f, EnterDelay = .18f, EnterSeconds = .55f, SparkleSeconds = .8f;
+    private static readonly uint[] SparkleColors = [0xFFFFE680, 0xFFFF9EC7, 0xFF9EE7FF, 0xFFB8FF9E];
     private readonly List<(Shape Shape, Vector3 Home, float Phase)> _fireflies = new();
+    // The posed character, and the group around it that the swap animation scales and spins about the feet.
+    private Shape _body, _shown;
+    private Shape? _leaving;
+    private float? _swapStart;
+    private float _now;
+    private Vector3 _cameraFrom, _cameraTo;
+    private readonly List<(Shape Shape, Vector3 Direction)> _sparkles = new();
+    private bool _visible;
 
     /// <summary>The scene to display.</summary>
     public Scene Scene { get; } = new() { AmbientLight = .46f, Light = new DirectionalLight(new(-.35f, -.75f, -.55f), 0xFFFFF1DC, .7f) };
     /// <summary>A camera framing the character's whole body and the island.</summary>
     public Camera Camera { get; }
     /// <summary>The character.</summary>
-    public MirrorCharacter Character { get; }
+    public MirrorCharacter Character { get; private set; }
     /// <summary>Rotation from the character's skeleton space to view space, for <see cref="HumanoidRetargeter"/>.</summary>
-    public Quaternion CharacterToView { get; }
+    public Quaternion CharacterToView { get; private set; }
+    /// <summary>Whether a character swap is animating; drive <see cref="Animate"/> at the display rate meanwhile.</summary>
+    public bool IsSwapping => _swapStart is not null;
 
     /// <summary>Places the character, normalizing its height and turning it toward the camera.</summary>
     public MirrorStage(MirrorCharacter character)
     {
         Character = character ?? throw new ArgumentNullException(nameof(character));
+        (_body, var toView) = Place(character);
+        CharacterToView = toView;
+        _shown = Shape.Group(_body);
+        Camera = new(4.6f, 0, .12f) { Target = CameraTarget(character) };
+        BuildPond();
+    }
+
+    // Normalizes the height, turns the model toward the camera and stands its feet at the origin, the island's center.
+    private static (Shape Placed, Quaternion ToView) Place(MirrorCharacter character)
+    {
         var bounds = new Scene().Add(character.Shape).GetBounds() ?? throw new ArgumentException("The character has no geometry.", nameof(character));
         var scale = character.Height / bounds.Size.Y;
         var yaw = character.FacesPositiveZ ? 0 : MathF.PI;
-        CharacterToView = Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw);
-        // Center the feet on the island; the retargeter keeps them grounded from here.
-        var feet = Vector3.Transform(new Vector3(bounds.Center.X, bounds.Min.Y, bounds.Center.Z) * scale, CharacterToView);
-        _placed = Shape.Group(character.Shape).Named("Character").Scaled(scale).Rotated(0, yaw, 0).At(-feet.X, IslandTop - feet.Y, -feet.Z);
-        Camera = new(4.6f, 0, .12f) { Target = new(0, character.Height * .52f, 0) };
-        BuildPond();
+        var toView = Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw);
+        var feet = Vector3.Transform(new Vector3(bounds.Center.X, bounds.Min.Y, bounds.Center.Z) * scale, toView);
+        return (Shape.Group(character.Shape).Named("Character").Scaled(scale).Rotated(0, yaw, 0).At(-feet.X, IslandTop - feet.Y, -feet.Z), toView);
     }
+
+    private static Vector3 CameraTarget(MirrorCharacter character) => new(0, character.Height * .52f, 0);
 
     /// <summary>Shows or hides the character.</summary>
     public void ShowCharacter(bool visible)
     {
-        var present = Scene.Shapes.Contains(_placed);
-        if (visible && !present) Scene.Add(_placed);
-        else if (!visible && present) Scene.Remove(_placed);
+        if (visible == _visible) return;
+        _visible = visible;
+        if (visible) Scene.Add(_shown);
+        else
+        {
+            Scene.Remove(_shown);
+            FinishSwap();
+        }
     }
 
     /// <summary>Replaces the character with <paramref name="change"/> of its current shape (shown or not).</summary>
     public void Update(Func<Shape, Shape> change)
     {
         ArgumentNullException.ThrowIfNull(change);
-        var next = change(_placed);
-        if (ReferenceEquals(next, _placed)) return;
-        Scene.Replace(_placed, next);
-        _placed = next;
+        var next = change(_body);
+        if (ReferenceEquals(next, _body)) return;
+        _body = next;
+        Show(Entering());
     }
 
-    /// <summary>Animates the ambient scenery: drifting fireflies and bobbing lily pads.</summary>
+    /// <summary>Replaces the character. While it is shown, the old one spins away in a puff of sparkles and the new one
+    /// pops up in its place; otherwise the swap is immediate. Load the model before calling: this only rearranges the scene.</summary>
+    public void Swap(MirrorCharacter character)
+    {
+        ArgumentNullException.ThrowIfNull(character);
+        var (placed, toView) = Place(character);
+        FinishSwap();
+        Character = character;
+        CharacterToView = toView;
+        _cameraFrom = Camera.Target;
+        _cameraTo = CameraTarget(character);
+        if (!_visible)
+        {
+            _body = placed;
+            _shown = Shape.Group(_body);
+            Camera.Target = _cameraTo;
+            return;
+        }
+        // The old character keeps its last pose while it leaves; the new one starts nearly invisible, so its first
+        // GPU upload happens before it is meant to be seen.
+        _leaving = _shown;
+        _body = placed;
+        _shown = Shape.Group(_body).Scaled(.001f);
+        Scene.Add(_shown);
+        _swapStart = _now;
+        var chest = new Vector3(0, Character.Height * .55f, 0);
+        var random = new Random(_sparkles.Count + (int)(_now * 1000));
+        for (var i = 0; i < 16; i++)
+        {
+            var angle = i * MathF.Tau / 16 + random.NextSingle() * .3f;
+            var direction = new Vector3(MathF.Cos(angle), .6f * random.NextSingle() - .1f, MathF.Sin(angle) * .5f) * (.7f + .5f * random.NextSingle());
+            var sparkle = Shape.Sphere().WithMaterial(new Material(SparkleColors[i % SparkleColors.Length], lit: false)).Scaled(.08f).At(chest.X, chest.Y, chest.Z);
+            Scene.Add(sparkle);
+            _sparkles.Add((sparkle, direction));
+        }
+    }
+
+    /// <summary>Animates the ambient scenery (drifting fireflies) and any character swap.</summary>
     public void Animate(float seconds)
     {
+        _now = seconds;
         for (var i = 0; i < _fireflies.Count; i++)
         {
             var (shape, home, phase) = _fireflies[i];
@@ -120,7 +183,66 @@ public sealed class MirrorStage
             Scene.Replace(shape, next);
             _fireflies[i] = (next, home, phase);
         }
+        if (_swapStart is not { } start) return;
+        var elapsed = seconds - start;
+        if (_leaving is { } leaving)
+        {
+            var u = Math.Clamp(elapsed / LeaveSeconds, 0, 1);
+            if (u >= 1) { Scene.Remove(leaving); _leaving = null; }
+            else
+            {
+                // Spin up, shrink and sink: ease in, so it starts gently and is gone quickly.
+                var next = leaving.Scaled(MathF.Max(.001f, 1 - u * u)).Rotated(0, u * u * MathF.PI, 0).At(0, -.15f * u * u, 0);
+                Scene.Replace(leaving, next);
+                _leaving = next;
+            }
+        }
+        Show(Entering());
+        var c = SmoothStep(Math.Clamp(elapsed / (EnterDelay + EnterSeconds), 0, 1));
+        Camera.Target = Vector3.Lerp(_cameraFrom, _cameraTo, c);
+        var center = new Vector3(0, Character.Height * .55f, 0);
+        var s = Math.Clamp(elapsed / SparkleSeconds, 0, 1);
+        for (var i = 0; i < _sparkles.Count; i++)
+        {
+            var (sparkle, direction) = _sparkles[i];
+            var p = center + direction * (1 - (1 - s) * (1 - s));
+            var next = sparkle.Scaled(MathF.Max(.001f, .08f * (1 - s))).At(p.X, p.Y + .3f * s, p.Z);
+            Scene.Replace(sparkle, next);
+            _sparkles[i] = (next, direction);
+        }
+        if (elapsed >= MathF.Max(EnterDelay + EnterSeconds, SparkleSeconds)) FinishSwap();
     }
+
+    // The entering character's transform at the current time: grows with a little overshoot from a quarter turn away.
+    private Shape Entering()
+    {
+        if (_swapStart is not { } start) return Shape.Group(_body);
+        var v = Math.Clamp((_now - start - EnterDelay) / EnterSeconds, 0, 1);
+        if (v <= 0) return Shape.Group(_body).Scaled(.001f);
+        const float overshoot = 1.7f;
+        var back = 1 + (overshoot + 1) * MathF.Pow(v - 1, 3) + overshoot * MathF.Pow(v - 1, 2);
+        return Shape.Group(_body).Scaled(MathF.Max(.001f, back)).Rotated(0, -MathF.PI / 2 * MathF.Pow(1 - v, 3), 0);
+    }
+
+    private void Show(Shape next)
+    {
+        if (_visible) Scene.Replace(_shown, next);
+        _shown = next;
+    }
+
+    private void FinishSwap()
+    {
+        if (_swapStart is null) return;
+        _swapStart = null;
+        if (_leaving is { } leaving) Scene.Remove(leaving);
+        _leaving = null;
+        foreach (var (sparkle, _) in _sparkles) Scene.Remove(sparkle);
+        _sparkles.Clear();
+        Camera.Target = _cameraTo;
+        Show(Shape.Group(_body));
+    }
+
+    private static float SmoothStep(float x) => x * x * (3 - 2 * x);
 
     private void BuildPond()
     {
