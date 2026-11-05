@@ -47,6 +47,7 @@ internal sealed class NativeGpuViewProbePage : ContentPage
                 throw new InvalidOperationException("Hardware pick at the view center did not hit the box.");
 
             await ProbeRenderPathAndOverlay();
+            await ProbeLabelSync();
             await ProbeTransientFailure();
 
             // Scene content errors are reported but must keep hardware rendering available.
@@ -127,6 +128,66 @@ internal sealed class NativeGpuViewProbePage : ContentPage
         await WaitFor("overlay hidden after labels removed", () => !_view.DebugOverlayVisible);
     }
 
+    // What is on screen after each main run-loop turn (one Core Animation commit / one Android
+    // traversal) is the last GPU frame and the last overlay paint so far. Their labels must agree,
+    // for an off-centre label whose projection moves with the camera. Measured twice: camera
+    // animated from a timer, and camera advanced from FrameSubmitted (inside the native draw).
+    private async Task ProbeLabelSync()
+    {
+        var anchor = new Vector3(.5f, .5f, .5f); // Box corner: moves on screen when orbiting.
+        _view.Scene = new Scene().Add(_box);
+        _view.Scene.AddLabel(new WorldLabel("corner", anchor));
+        await WaitFor("overlay shown for sync probe", () => _view.DebugOverlayVisible);
+        await NextFrames(3);
+        foreach (var fromFrameEvent in new[] { false, true })
+        {
+            Vector2? gpu = null, overlay = null, shown = null;
+            var turns = 0; var compared = 0; var mismatches = 0; var worst = 0f;
+            var order = new System.Text.StringBuilder(); var orders = new Dictionary<string, int>();
+            static Vector2? First(IReadOnlyList<ProjectedLabel> labels, int w, int h) =>
+                labels.Count == 0 ? null : new Vector2(labels[0].Position.X / w, labels[0].Position.Y / h);
+            _view.DebugLabelTrace = (isGpu, labels, w, h) =>
+            {
+                if (isGpu) gpu = First(labels, w, h); else overlay = First(labels, w, h);
+                order.Append(isGpu ? 'G' : 'O');
+            };
+            using var turnEnd = new MainLoopTurns(() =>
+            {
+                turns++;
+                if (order.Length > 0) { var key = order.ToString(); orders[key] = orders.GetValueOrDefault(key) + 1; order.Clear(); }
+                // Apple: called after the commit, which shows the last GPU frame and overlay so far.
+                // Android: called before each traversal draws. The previous traversal showed the
+                // GPU frame latched when it started, with the overlay it painted.
+                var displayed = MainLoopTurns.BeforeDraw ? shown : gpu;
+                shown = gpu;
+                if (displayed is not { } g || overlay is not { } o) return;
+                compared++;
+                var error = Vector2.Distance(g, o);
+                worst = Math.Max(worst, error);
+                if (error > .002f) mismatches++; // > ~0.6 px in the 320 dp probe view.
+            });
+            void Advance(object? sender, EventArgs e) => _view.Camera.Orbit(.03f, 0);
+            if (fromFrameEvent) _view.FrameSubmitted += Advance;
+            try
+            {
+                for (var i = 0; i < 60; i++)
+                {
+                    if (!fromFrameEvent) _view.Camera.Orbit(.03f, 0); else _view.Refresh();
+                    await Task.Delay(16);
+                }
+                await NextFrames(2);
+            }
+            finally { if (fromFrameEvent) _view.FrameSubmitted -= Advance; _view.DebugLabelTrace = null; }
+            var pattern = string.Join(", ", orders.OrderByDescending(p => p.Value).Select(p => $"{p.Key}x{p.Value}"));
+            var name = fromFrameEvent ? "camera advanced from FrameSubmitted" : "camera animated from a timer";
+            Log($"label sync, {name}: {mismatches}/{compared} turns mismatched (worst {worst:F4} of view), per-turn draw order {pattern}");
+            if (compared < 10) throw new InvalidOperationException($"Label sync ({name}) compared only {compared} turns.");
+            if (mismatches > 0) throw new InvalidOperationException($"Labels out of sync with the GPU frame ({name}): {mismatches}/{compared} turns, worst {worst:F4}.");
+        }
+        _view.Scene = new Scene().Add(_box);
+        await WaitFor("overlay hidden after sync probe", () => !_view.DebugOverlayVisible);
+    }
+
     private bool? LastFrameDirect() => _view.DebugNativeView switch
     {
 #if IOS || MACCATALYST
@@ -202,5 +263,49 @@ internal sealed class NativeGpuViewProbePage : ContentPage
     }
 
     private static void Log(string message) => Console.WriteLine("GPU_VIEW_PROBE: " + message);
+}
+
+// Calls back once at the end of every main run-loop turn, after the platform has committed that
+// turn's drawing (Core Animation commit on Apple, view traversal on Android).
+internal sealed class MainLoopTurns : IDisposable
+{
+#if IOS || MACCATALYST
+    internal const bool BeforeDraw = false;
+    private static Action? s_current;
+    private readonly IntPtr _observer;
+    internal unsafe MainLoopTurns(Action onTurn)
+    {
+        s_current = onTurn;
+        // kCFRunLoopBeforeWaiting, ordered after Core Animation's commit observer (2000000).
+        _observer = CFRunLoopObserverCreate(IntPtr.Zero, 1 << 5, true, 3_000_000, &OnObserver, IntPtr.Zero);
+        var cf = ObjCRuntime.Dlfcn.dlopen(CF, 0);
+        var commonModes = ObjCRuntime.Dlfcn.GetIntPtr(cf, "kCFRunLoopCommonModes");
+        CFRunLoopAddObserver(CFRunLoopGetMain(), _observer, commonModes);
+    }
+    [System.Runtime.InteropServices.UnmanagedCallersOnly]
+    private static void OnObserver(IntPtr observer, nuint activity, IntPtr info) => s_current?.Invoke();
+    public void Dispose() { CFRunLoopObserverInvalidate(_observer); CFRelease(_observer); s_current = null; }
+    private const string CF = "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation";
+    [System.Runtime.InteropServices.DllImport(CF)] private static extern unsafe IntPtr CFRunLoopObserverCreate(IntPtr allocator, nuint activities, [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.I1)] bool repeats, nint order, delegate* unmanaged<IntPtr, nuint, IntPtr, void> callout, IntPtr context);
+    [System.Runtime.InteropServices.DllImport(CF)] private static extern IntPtr CFRunLoopGetMain();
+    [System.Runtime.InteropServices.DllImport(CF)] private static extern void CFRunLoopAddObserver(IntPtr loop, IntPtr observer, IntPtr mode);
+    [System.Runtime.InteropServices.DllImport(CF)] private static extern void CFRunLoopObserverInvalidate(IntPtr observer);
+    [System.Runtime.InteropServices.DllImport(CF)] private static extern void CFRelease(IntPtr handle);
+#else
+    // Android: a pre-draw listener runs as each traversal starts drawing, when the TextureView will
+    // latch the newest swapped GPU frame and the Skia overlay will paint.
+    internal const bool BeforeDraw = true;
+    private readonly Android.Views.ViewTreeObserver _observer;
+    private readonly Listener _listener;
+    internal MainLoopTurns(Action onTurn)
+    {
+        _observer = Platform.CurrentActivity!.Window!.DecorView.ViewTreeObserver!;
+        _listener = new Listener(onTurn);
+        _observer.AddOnDrawListener(_listener);
+    }
+    public void Dispose() { if (_observer.IsAlive) _observer.RemoveOnDrawListener(_listener); }
+    private sealed class Listener(Action onTurn) : Java.Lang.Object, Android.Views.ViewTreeObserver.IOnDrawListener
+    { public void OnDraw() => onTurn(); }
+#endif
 }
 #endif

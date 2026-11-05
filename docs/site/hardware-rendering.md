@@ -48,6 +48,8 @@ Labels are projected into a transparent Skia overlay and use the existing layout
 
 Frames requested while an iOS app is in the background are skipped and redrawn on activation; a submission rejected for background execution does not disable hardware rendering. On Android, a lost or invalidated EGL context is recreated on the same surface up to three times in a short window before the failure is reported like any other device failure. Switching `RenderingMode` releases the native view and all its GPU resources.
 
+Labels are drawn by a Skia overlay above the native view and stay on the GPU frame they belong to. On iOS and Mac Catalyst both repaint inside the same Core Animation commit (the overlay first, then Metal, from the same scene and camera, presented with the transaction). On Android the overlay repaints from a snapshot of the labels of the last swapped GPU frame, which the TextureView shows in the same traversal. Changes made while a Metal frame is drawing, for example a `FrameSubmitted` handler advancing the camera, are applied on the next run-loop turn; redrawing within the same commit would never end.
+
 `CaptureFrame(width, height)` deliberately remains an **owned software snapshot**, regardless of the view's mode. Existing capture/picking ownership remains intact; capture is not proof that the GPU works and does not include the GPU selection composite. Normal GPU painting has no pixel readback. Native validation probes explicitly wait and read pixels for comparison.
 
 ## Compatibility

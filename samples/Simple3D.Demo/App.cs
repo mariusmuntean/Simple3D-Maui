@@ -9,6 +9,7 @@ public sealed class App : Application
 #if IOS || MACCATALYST || ANDROID
         NativeGpuProbe.RunIfRequested();
         if (NativeGpuViewProbePage.IsRequested) return new Window(new NativeGpuViewProbePage()) { Title = "Simple3D GPU view probe" };
+        if (LabelSyncProbePage.Mode is not null) return new Window(new LabelSyncProbePage()) { Title = "Simple3D label sync probe" };
 #endif
 #endif
         var page = new GalleryPage();

@@ -28,6 +28,12 @@ internal sealed class AppleGpuView : MTKView
     internal void RequestRender() { if (!_released && _owner.CanRenderHardware) SetNeedsDisplay(); }
     private void Render()
     {
+        _owner.DrawingHardware = true;
+        try { RenderFrame(); }
+        finally { _owner.DrawingHardware = false; }
+    }
+    private void RenderFrame()
+    {
         if (_released || !_owner.CanRenderHardware || DrawableSize.Width < 1 || DrawableSize.Height < 1) return;
         // iOS rejects GPU work from background apps (MTLCommandBufferError.NotPermitted).
         if (UIApplication.SharedApplication.ApplicationState == UIApplicationState.Background) return;

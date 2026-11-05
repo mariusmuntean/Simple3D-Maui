@@ -36,6 +36,13 @@ public sealed partial class SceneView
     private readonly GpuScene _gpuScene = new();
     private GpuSurface? _gpuSurface;
     private bool _hardwareFailed;
+#if IOS || MACCATALYST
+    private bool _drawingHardware, _invalidateDeferred;
+    private Action? _deferredInvalidate;
+    /// <summary>Set by the Metal view around its draw (including FrameSubmitted); see InvalidateSurface.</summary>
+    internal bool DrawingHardware { set => _drawingHardware = value; }
+    private void DeferredInvalidate() { _invalidateDeferred = false; InvalidateSurface(); }
+#endif
     // Labels of the last presented GPU frame, in its render-pixel space. Android paints the overlay
     // from this snapshot so labels match the 3D image even if the camera moved since.
     private readonly List<ProjectedLabel> _presentedLabels = new();
@@ -47,6 +54,8 @@ public sealed partial class SceneView
     internal bool DebugOverlayVisible => _canvas.IsVisible;
     internal object? DebugNativeView => _gpuSurface?.Handler?.PlatformView;
     internal void DebugCountOverlayPaint() => DebugOverlayPaints++;
+    /// <summary>Label positions each GPU frame (gpu: true) and each overlay paint (gpu: false) used, in their pixel space.</summary>
+    internal Action<bool, IReadOnlyList<ProjectedLabel>, int, int>? DebugLabelTrace;
 #endif
 
     private void InitializeSurfaces()
@@ -137,6 +146,7 @@ public sealed partial class SceneView
         _presentedWidth = width; _presentedHeight = height;
 #if DEBUG || NATIVE_RENDER_PROBE
         DebugHardwareFrames++;
+        DebugLabelTrace?.Invoke(true, _gpuScene.Labels, width, height);
 #endif
         var first = ActiveRenderingBackend != RenderingBackend.Hardware;
         if (first || RenderingDiagnostic != name) SetBackend(RenderingBackend.Hardware, name);
@@ -182,6 +192,17 @@ public sealed partial class SceneView
     /// <summary>Requests a new native paint. Scene and camera changes call this automatically.</summary>
     public void InvalidateSurface()
     {
+#if IOS || MACCATALYST
+        // Core Animation displays views inside its commit, and a view invalidated while displaying is
+        // displayed again in the same commit. A change made during a Metal draw (for example a
+        // FrameSubmitted handler advancing the camera) would loop forever and freeze the UI, so it
+        // is deferred to the next run-loop turn, coalesced into one request.
+        if (_drawingHardware)
+        {
+            if (!_invalidateDeferred && Dispatcher is { } dispatcher) { _invalidateDeferred = true; dispatcher.Dispatch(_deferredInvalidate ??= DeferredInvalidate); }
+            return;
+        }
+#endif
         _gpuSurface?.RequestRender();
         if (ActiveRenderingBackend != RenderingBackend.Hardware) { _canvas.InvalidateSurface(); return; }
         UpdateOverlayVisibility();

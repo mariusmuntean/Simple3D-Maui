@@ -732,6 +732,9 @@ public sealed partial class SceneView : ContentView
 #endif
             if (HardwareOverlayLabels(args.Info.Width, args.Info.Height) is not { } overlay) return;
             (labels, labelWidth, labelHeight) = overlay;
+#if DEBUG || NATIVE_RENDER_PROBE
+            DebugLabelTrace?.Invoke(false, labels, labelWidth, labelHeight);
+#endif
         }
         else if (RenderingMode == RenderingMode.Hardware || (RenderingMode == RenderingMode.Auto && !_hardwareFailed && Handler is not null))
         {
