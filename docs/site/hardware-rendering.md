@@ -38,6 +38,18 @@ GPU geometry is expanded at upload time to preserve flat face normals, cached by
 
 Normals use the transform's cofactor matrix, so very small composed scales that become singular in floating-point arithmetic still render, lighting the surviving faces like the software renderer. A shape whose transformed bounds overflow to non-finite values is skipped as a whole on the GPU, whereas the software renderer skips only its non-finite triangles. Perspective GPU projection uses an infinite far plane. Metal uses reversed depth (near = 1) with a 32-bit float buffer for precision at distance; OpenGL ES, which lacks clip control, uses a 24-bit buffer with standard depth. Orthographic geometry uses a far plane computed from scene bounds; overlay labels retain near-plane-only visibility.
 
+## Animate at the display's rate
+
+`SceneView` draws on demand, so frame rate follows how often your app changes the scene. Drive animation with `FrameClock`, which ticks once per display refresh at the screen's real rate (60, 120 Hz or more; `CADisplayLink` on iOS and Mac Catalyst, `Choreographer` on Android, a timer capped at 240 Hz elsewhere):
+
+```csharp
+var clock = new FrameClock();
+clock.Tick += (elapsed, delta) => Animate((float)elapsed.TotalSeconds);
+clock.Start();   // Stop() while nothing moves, so the display can slow down
+```
+
+iPhones run apps at 60 Hz unless the app's Info.plist sets `CADisableMinimumFrameDurationOnPhone` to true. Android may pick a 60 Hz mode for a window on a faster screen; the gallery's `MainActivity` asks for the fastest mode at the current resolution.
+
 ## Picking, labels and snapshots
 
 Hardware picking performs an on-demand nearest-triangle ray query with near clipping and material backface culling. It does not read an ID buffer back every frame or run the full software rasterizer. Exact boundary pixels can differ from software pixel picking. Equal-depth hits prefer the earlier scene item. Large meshes can make a tap more expensive even when GPU drawing is fast.

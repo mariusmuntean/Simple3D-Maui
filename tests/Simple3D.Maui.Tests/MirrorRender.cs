@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.IO.Compression;
 using Simple3D.Core;
 using Simple3D.Maui;
@@ -83,15 +84,71 @@ internal static class MirrorRender
     }
 
     /// <summary>Renders a character in its rest pose on the stage, to check which way it faces.</summary>
-    internal static int Rest(string output, string model)
+    internal static int Rest(string output, string model, string? expression = null)
     {
-        var stage = new MirrorStage(Character(model));
+        var character = Character(model);
+        var stage = new MirrorStage(character);
         stage.ShowCharacter(true);
+        if (expression is not null && character.Express is { } express)
+            stage.Update(shape => express(shape, expression.Split('+').ToDictionary(e => e, _ => 1f)));
+        // Close-up on the face.
+        stage.Camera.Target = new Vector3(0, character.Height * .85f, 0);
+        stage.Camera.Zoom(stage.Camera.Distance / 1.4f);
         var image = new DepthRenderer().Render(stage.Scene, stage.Camera, 360, 640, 0xFF0E1A2B);
         using var bitmap = new SKBitmap(new SKImageInfo(image.Width, image.Height, SKColorType.Bgra8888, SKAlphaType.Opaque));
         System.Runtime.InteropServices.MemoryMarshal.AsBytes(image.Pixels.Span).CopyTo(bitmap.GetPixelSpan());
         using var png = bitmap.Encode(SKEncodedImageFormat.Png, 90);
         File.WriteAllBytes(output, png.ToArray());
+        return 0;
+    }
+
+    /// <summary>Renders the showcase: three recorded performances, each driving a different character, with animated swaps.
+    /// Writes frame-NNNN.png at 15 fps plus manifest.txt ("frame fixture seconds" per line) for the skeleton panel.</summary>
+    internal static int Showcase(string output)
+    {
+        Directory.CreateDirectory(output);
+        (string Fixture, double From, double To, string Model)[] scenes =
+            [("mirror-landmarks", 5.2, 10.4, "cat.vrm"), ("face-46379", 2.6, 8.6, "juanita.vrm"), ("turning-landmarks", 6.0, 11.0, "weirdcat.vrm")];
+        var renderer = new DepthRenderer();
+        var session = new MirrorSession(Character(scenes[0].Model));
+        var manifest = new List<string>();
+        var index = 0;
+        var clock = 0.0;
+        foreach (var (fixture, from, to, model) in scenes)
+        {
+            var frames = Frames(fixture);
+            if (index > 0) session.SwitchCharacter(Character(model));
+            // Warm up so tracking and smoothing are settled when the scene starts.
+            foreach (var frame in frames.Where(f => f.Timestamp.TotalSeconds < from && f.Timestamp.TotalSeconds > from - 1.5))
+            {
+                session.Apply(frame, mirrored: false);
+                session.Present(TimeSpan.FromSeconds(.04));
+            }
+            for (var t = from; t < to; t += 1 / 15.0)
+            {
+                foreach (var frame in frames.Where(f => f.Timestamp.TotalSeconds > t - 1 / 15.0 && f.Timestamp.TotalSeconds <= t))
+                    session.Apply(frame, mirrored: false);
+                for (var i = 0; i < 4; i++) session.Present(TimeSpan.FromSeconds(1 / 60.0));
+                clock += 1 / 15.0;
+                session.Stage.Animate((float)clock);
+                // The face scene eases in to head and shoulders once the swap has played, so the face reads at GIF size.
+                if (fixture.StartsWith("face") && !session.Stage.IsSwapping)
+                {
+                    var camera = session.Stage.Camera;
+                    camera.Target = Vector3.Lerp(camera.Target, new Vector3(0, session.Stage.Character.Height * .82f, 0), .15f);
+                    camera.Zoom(MathF.Pow(camera.Distance / 1.7f, .15f));
+                }
+                var image = renderer.Render(session.Stage.Scene, session.Stage.Camera, 540, 720, 0xFF0E1A2B);
+                using var bitmap = new SKBitmap(new SKImageInfo(image.Width, image.Height, SKColorType.Bgra8888, SKAlphaType.Opaque));
+                System.Runtime.InteropServices.MemoryMarshal.AsBytes(image.Pixels.Span).CopyTo(bitmap.GetPixelSpan());
+                using var png = bitmap.Encode(SKEncodedImageFormat.Png, 90);
+                File.WriteAllBytes(Path.Combine(output, $"frame-{index:0000}.png"), png.ToArray());
+                manifest.Add(FormattableString.Invariant($"{index} {fixture} {t:0.000} {model}"));
+                index++;
+            }
+        }
+        File.WriteAllLines(Path.Combine(output, "manifest.txt"), manifest);
+        Console.WriteLine($"MIRROR_SHOWCASE frames={index} output={Path.GetFullPath(output)}");
         return 0;
     }
 

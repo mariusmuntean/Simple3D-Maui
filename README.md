@@ -4,7 +4,19 @@
 
 ![Simple3D](docs/site/images/brand-banner.svg)
 
-A 3D scene control with software and native GPU rendering for .NET 10 MAUI on iOS, Android and Mac Catalyst. Build a scene from shapes or an indexed mesh, display it in a `SceneView`, and let users orbit, zoom and select parts. Use it for equipment diagrams, data displays, scientific models and other small illustrations.
+A 3D scene control with software and native GPU rendering for .NET 10 MAUI on iOS, Android and Mac Catalyst. Build a scene from shapes, meshes or rigged glTF/VRM characters, display it in a `SceneView`, and let users orbit, zoom and select parts. Animate skeletons and facial expressions on Metal and OpenGL ES at the display's full refresh rate. Use it for equipment diagrams, data displays, scientific models and characters.
+
+![Mirror: a tracked person and the character copying them](docs/site/images/mirror.gif)
+
+*The gallery's **Mirror** scene: the phone's camera tracks a person's body and face on the device (Apple Vision or Google ML Kit), and a skinned VRM character copies them, including squats, presses, blinks, a talking mouth, head tilt and turning around. The left side shows the tracked landmarks; the GIF is rendered from recorded landmarks, so no video footage is redistributed.*
+
+| What the library does | Where |
+| --- | --- |
+| Shapes, meshes, groups, labels, orbit/zoom, depth-aware picking | [Getting started](docs/site/getting-started.md) |
+| Textures, lighting, smooth normals, vertex colors, OBJ import | [Materials and import](docs/site/materials-and-import.md) |
+| Rigged glTF/VRM characters: skeletons, poses, morph targets, VRM expressions | [Skinned characters](docs/site/skinned-characters.md) |
+| Native Metal and OpenGL ES 3 rendering with software fallback, GPU skinning and morphing | [Hardware rendering](docs/site/hardware-rendering.md) |
+| Animation at the display's refresh rate (`FrameClock`) | [Hardware rendering](docs/site/hardware-rendering.md#animate-at-the-displays-rate) |
 
 ![Equipment scene](docs/site/images/Equipment.png)
 
@@ -52,7 +64,7 @@ Choose `RenderingMode.Auto` (default), `Software`, or `Hardware` on `SceneView`.
 
 Open [Simple3D.sln](Simple3D.sln) in Rider or another MAUI IDE with .NET 10 and the target's MAUI workload. Choose **Simple3D.Demo** and an Android device, iOS simulator or Mac Catalyst target. Apple targets require macOS and a workload-compatible Xcode.
 
-The five examples progress from [Equipment](samples/Simple3D.Shared/Equipment.cs) for primitives, labels and an imported controller with a mapped display, through [Telemetry](samples/Simple3D.Shared/Telemetry.cs) for data updates, [Surface](samples/Simple3D.Shared/Surface.cs) for height-based vertex colors and [Robot Arm](samples/Simple3D.Shared/RobotArm.cs) for hierarchy, to [Gantry Crane](samples/Simple3D.Shared/GantryCrane.cs) for coordinated motion. Then open **Mirror ✦**: point the camera at someone and a 3D frog copies their whole-body pose in real time, using Apple Vision or Google ML Kit on the device, a [skinned glTF/VRM character](docs/site/skinned-characters.md) and the native GPU renderer. In Surface, use **Shading: smooth / flat** to compare normals and **Light: from right / left** to move the directional light. Each file contains one scene and its animation. The gallery pauses in the background; press Animate to resume.
+The five examples progress from [Equipment](samples/Simple3D.Shared/Equipment.cs) for primitives, labels and an imported controller with a mapped display, through [Telemetry](samples/Simple3D.Shared/Telemetry.cs) for data updates, [Surface](samples/Simple3D.Shared/Surface.cs) for height-based vertex colors and [Robot Arm](samples/Simple3D.Shared/RobotArm.cs) for hierarchy, to [Gantry Crane](samples/Simple3D.Shared/GantryCrane.cs) for coordinated motion. Then open **Mirror ✦**: point the camera at someone (whole body, waist up, or just the face) and the chosen character copies their pose, face and head in real time; see [the Mirror example](docs/site/examples.md#mirror). In Surface, use **Shading: smooth / flat** to compare normals and **Light: from right / left** to move the directional light. Each file contains one scene and its animation. The gallery pauses in the background; press Animate to resume.
 
 ## Documentation
 
