@@ -110,6 +110,9 @@ Before merging GPU changes, run native builds/probes on all three targets and ma
 
 ## Mirror (camera pose) validation
 
+Apple builds can keep a stale compiled `Info.plist` after you edit `Platforms/*/Info.plist`: the SDK's incremental check skips `_CompileAppManifest`. Delete `obj/<Configuration>/<tfm>/<rid>/AppManifest.plist` and rebuild. A missing `NSCameraUsageDescription` in the built bundle shows up as `PermissionException` when Mirror starts.
+
+
 No physical camera is needed. Prepare a test clip once: download Mixkit stock video 44414 (one person, full body; Mixkit license, so never commit it) and insert an empty segment to exercise losing and finding the person:
 
 ```bash
