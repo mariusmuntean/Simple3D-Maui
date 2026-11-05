@@ -19,20 +19,16 @@ public sealed class MirrorPage : ContentPage
     private readonly View _intro, _guide, _blocked, _lostHint;
     private readonly Label _blockedText = Text("", 16), _status = Text("", 12, "#A9B8D4");
     private readonly Button _blockedAction;
+    // Debug builds can replay a video instead of the camera (and on simulators without a body-pose model, recorded
+    // landmarks instead of detection) through this same page, for development and automated checks.
 #if DEBUG
-    // Development and automated checks without a camera: replay a video (and on simulators without a body-pose
-    // model, recorded landmarks) through the same page.
-    private readonly string? _videoPath = Environment.GetEnvironmentVariable("SIMPLE3D_MIRROR_VIDEO");
-    private readonly string? _landmarksPath = Environment.GetEnvironmentVariable("SIMPLE3D_MIRROR_LANDMARKS");
+    private static string? VideoPath => Environment.GetEnvironmentVariable("SIMPLE3D_MIRROR_VIDEO");
+    private static string? LandmarksPath => Environment.GetEnvironmentVariable("SIMPLE3D_MIRROR_LANDMARKS");
 #else
-    private readonly string? _videoPath = null, _landmarksPath = null;
+    private static string? VideoPath => null;
+    private static string? LandmarksPath => null;
 #endif
-    internal static bool IsRequested =>
-#if DEBUG
-        Environment.GetEnvironmentVariable("SIMPLE3D_MIRROR_VIDEO") is not null;
-#else
-        false;
-#endif
+    internal static bool IsRequested => VideoPath is not null;
     private MirrorSession? _session;
     private IPoseSource? _source;
     private Task? _loading;
@@ -76,7 +72,7 @@ public sealed class MirrorPage : ContentPage
         Content = new Grid { Children = { _view, _previewFrame, _guide, _lostHint, _intro, _blocked, close, _status } };
         Show(Step.Intro);
         _loading = LoadAsync();
-        if (_videoPath is not null) Dispatcher.Dispatch(Start);
+        if (IsRequested) Dispatcher.Dispatch(Start);
     }
 
     private async Task LoadAsync()
@@ -96,7 +92,7 @@ public sealed class MirrorPage : ContentPage
         Show(Step.Starting);
         try
         {
-            if (_videoPath is null)
+            if (!IsRequested)
             {
                 var access = await CameraAccess.RequestAsync();
                 if (access != CameraAccessStatus.Granted)
@@ -108,7 +104,7 @@ public sealed class MirrorPage : ContentPage
                 }
             }
             await _loading!;
-            _source = _videoPath is null ? PoseSources.CreateCamera() : PoseSources.CreateVideo(_videoPath, _landmarksPath);
+            _source = VideoPath is not { } video ? PoseSources.CreateCamera() : PoseSources.CreateVideo(video, LandmarksPath);
             _source.FrameAnalyzed += OnFrame;
             if (_source is PoseSource diagnostics) diagnostics.DetectionMeasured += ms => _detectMilliseconds = ms;
             _preview.Source = _source;
@@ -120,7 +116,7 @@ public sealed class MirrorPage : ContentPage
             _timer.Tick -= Animate; _timer.Tick += Animate;
             _timer.Start();
             Show(Step.Guide);
-            Log($"MIRROR_START source={(_videoPath is null ? "camera" : "video")} renderer={_view.ActiveRenderingBackend}");
+            Log($"MIRROR_START source={(IsRequested ? "video" : "camera")} renderer={_view.ActiveRenderingBackend}");
         }
         catch (Exception error)
         {
@@ -222,12 +218,24 @@ public sealed class MirrorPage : ContentPage
         }
     }
 
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+        if (Window is { } window) { window.Stopped -= OnStopped; window.Stopped += OnStopped; }
+    }
+
     protected override void OnDisappearing()
     {
-        // Leaving the page (or the app going to the background on some platforms) releases the camera.
+        if (Window is { } window) window.Stopped -= OnStopped;
+        OnStopped(this, EventArgs.Empty);
+        base.OnDisappearing();
+    }
+
+    // Leaving the page or sending the app to the background releases the camera; Start resumes from the intro.
+    private void OnStopped(object? sender, EventArgs e)
+    {
         _ = StopAsync();
         if (_step is Step.Guide or Step.Live) Show(Step.Intro);
-        base.OnDisappearing();
     }
 
     private View Guide()
