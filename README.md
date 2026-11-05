@@ -82,4 +82,4 @@ See [development and native validation](docs/DEVELOPMENT.md) for Rider setup, do
 
 ## License and contributions
 
-[MIT](LICENSE), copyright Marius Muntean. The Mirror sample's character is [100Avatars](https://github.com/PolygonalMind/100Avatars) "Froggy" by Polygonal Mind, released as CC0. Report bugs or suggest changes through issues and pull requests. Include the platform, build configuration and a small reproduction. The maintainer reviews changes and publishes official releases.
+[MIT](LICENSE), copyright Marius Muntean. The Mirror sample's characters are [100Avatars](https://github.com/PolygonalMind/100Avatars) "Froggy" by Polygonal Mind and "Chubby Tubby Cat" by [ToxSam](https://github.com/ToxSam/open-source-avatars), both released as CC0. Report bugs or suggest changes through issues and pull requests. Include the platform, build configuration and a small reproduction. The maintainer reviews changes and publishes official releases.
