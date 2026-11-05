@@ -1,5 +1,7 @@
 # Rendering model and limits
 
+The CPU raster budgets below describe the software backend. Native GPU rendering has separate resource limits, mode selection and picking behavior; see [hardware rendering](hardware-rendering.md).
+
 `DepthRenderer` transforms opaque triangles, clips them at the camera near plane, shades them with configurable directional and ambient light, rasterizes with per-pixel depth, and stores the visible leaf shape for picking. This resolves intersecting opaque geometry that a sorted-triangle painter cannot. `SceneRenderer` remains for older primitive/default-camera code and throws a diagnostic for newer features it cannot represent.
 
 | Limit | Value | Why |
@@ -14,7 +16,7 @@ The sample-work budget counts clipped triangle bounding boxes, including pixels 
 
 Repeated group instances count separately toward the node budget, including groups with no geometry. The view's resolution-recovery checks enforce this same limit, so a large replacement hierarchy cannot bypass the bound before rendering begins. Excessive node visits throw an `ArgumentException`; lowering render resolution does not reduce hierarchy traversal.
 
-Only opaque surfaces are supported. Labels overlay the scene and are not depth tested. There is no far clipping plane, transparency, shadowing, PBR, mipmapping, or GPU scene engine. Opaque textures support nearest/bilinear filtering and clamp/repeat addressing. Smooth normals use per-vertex Gouraud lighting. The CPU renderer is deterministic for the tested inputs and uses a bounded scratch depth buffer. Device frame rate depends on scene, viewport, and native presentation, so profile the target device for animation.
+Only opaque surfaces are supported. Labels overlay the scene and are not depth tested. There is no far clipping plane, transparency, shadowing, PBR, mipmapping, or full game engine. Opaque textures support nearest/bilinear filtering and clamp/repeat addressing. Smooth normals use per-vertex Gouraud lighting. The CPU renderer is deterministic for the tested inputs and uses a bounded scratch depth buffer. Device frame rate depends on scene, viewport, and native presentation, so profile the target device for animation.
 
 `DepthRenderer.Render` returns an owned `RenderFrame`; its pixels and picks remain valid after later renders. For repeated frames when snapshots are unnecessary, create a fixed-size `RenderTarget` and call `RenderInto`. The target reuses its pixel and picking arrays, and the next render overwrites their content. Create a new target when the viewport size changes. If rendering throws, render successfully again before reading the target.
 

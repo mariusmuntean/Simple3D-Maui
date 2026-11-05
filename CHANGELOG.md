@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+- Add Auto/Software/Hardware rendering modes, native Metal and GLES3 backends, active-backend diagnostics and strict hardware failure reporting.
+- Cache native geometry/textures, depth-test opaque surfaces, and composite visible selection masks.
+- Add gallery backend controls, portable GPU preparation tests, headless GLES comparisons/performance probes and opt-in native GPU probes.
+- Breaking preview API change: SceneView now derives from ContentView rather than SKCanvasView. CaptureFrame remains an owned software snapshot.
+- Scene budget errors are reported through `RenderingDiagnostic` without disabling hardware rendering; near-singular transforms render on the GPU; failed native surfaces release their resources.
+- Gallery renderer picker switches Auto/Software/Hardware at runtime; native GPU probes now include a SceneView-level stage.
+- Fix a crash when switching rendering mode on an attached view (the native GPU surface was released before it was removed from the layout).
+- Hardware frames without a visible selection render in one pass to the drawable; the selection composite uses an 8-bit mask, linear upscaling and a density-scaled outline. Depth is never stored (memoryless on Apple GPUs, invalidated on GLES); Metal uses reversed float depth.
+- The label overlay is only composited and repainted in hardware mode while the scene has labels, once per GPU frame and in step with it.
+- Background GPU submissions on iOS and EGL context loss on Android no longer permanently disable hardware rendering.
+- Resident GPU meshes no longer keep their expanded CPU vertex copy; per-frame renderer bookkeeping no longer allocates.
+- Package: each platform's DLL contains only its own native renderer (GLES and its shaders only on Android, Metal only on iOS/Mac Catalyst), and both libraries are marked trimming/AOT compatible, so apps' Release builds remove unused library code.
+- Fix an iOS/Mac Catalyst UI freeze when the scene or camera changes while a Metal frame is drawing (for example from a `FrameSubmitted` handler); such changes now redraw on the next run-loop turn.
+- Add `SceneView.FrameSubmitted` and `LastFrameMilliseconds`/`LastFrameWidth`/`LastFrameHeight` for frame statistics. The gallery shows them in an FPS HUD and replaces the renderer picker with a segmented selector aligned with its status line.
+
+
 ## 0.2.0-preview.1 · 2026-10-14
 
 - `Texture2D` image textures with nearest/bilinear filtering and clamp/repeat addressing; `Material(Texture2D)` and texture-ready box, sphere, cylinder and pyramid UVs.

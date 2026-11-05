@@ -3,8 +3,8 @@ set -euo pipefail
 
 mode="${1:-}"
 case "$mode" in
-    ''|--render-probe) ;;
-    *) echo 'Usage: ios-simulator-smoke.sh [--render-probe]' >&2; exit 2 ;;
+    ''|--render-probe|--gpu-probe) ;;
+    *) echo 'Usage: ios-simulator-smoke.sh [--render-probe|--gpu-probe]' >&2; exit 2 ;;
 esac
 
 device="$(python3 - <<'PY'
@@ -46,6 +46,17 @@ xcrun simctl boot "$device"
 xcrun simctl bootstatus "$device" -b
 xcrun simctl install "$device" "$app"
 mkdir -p artifacts
+if [ "$mode" = --gpu-probe ]; then
+    SIMCTL_CHILD_SIMPLE3D_GPU_PROBE=1 xcrun simctl launch --console "$device" dev.simple3d.gallery \
+        2>&1 | tee artifacts/ios-gpu-probe.log
+    grep -q NATIVE_GPU_PROBE_PASS artifacts/ios-gpu-probe.log
+    # A real SceneView: native view creation, composition, mode switching and reattachment.
+    SIMCTL_CHILD_SIMPLE3D_GPU_VIEW_PROBE=1 xcrun simctl launch --console "$device" dev.simple3d.gallery \
+        2>&1 | tee artifacts/ios-gpu-view-probe.log
+    grep -q NATIVE_GPU_VIEW_PROBE_PASS artifacts/ios-gpu-view-probe.log
+    exit 0
+fi
+
 if [ "$mode" = --render-probe ]; then
     SIMCTL_CHILD_SIMPLE3D_RENDER_PROBE=1 xcrun simctl launch --console "$device" dev.simple3d.gallery \
         2>&1 | tee artifacts/ios-render-probe.log

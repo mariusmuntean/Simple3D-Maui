@@ -12,8 +12,8 @@ using UIKit;
 
 namespace Simple3D.Maui;
 
-/// <summary>A depth-rendered, touch-enabled surface for small opaque scenes. Mutate its scene and camera on the UI thread.</summary>
-public sealed class SceneView : SKCanvasView
+/// <summary>A touch-enabled surface with selectable software and native GPU rendering for small opaque scenes. Mutate its scene and camera on the UI thread.</summary>
+public sealed partial class SceneView : ContentView
 {
     private bool[] _selectionIds = [];
     private const int DragPreviewMaximumDimension = 512;
@@ -31,7 +31,7 @@ public sealed class SceneView : SKCanvasView
     /// <summary>Whether the view installs orbit, zoom and picking gestures. Application gestures are preserved.</summary>
     public static readonly BindableProperty IsInteractiveProperty = BindableProperty.Create(nameof(IsInteractive), typeof(bool), typeof(SceneView),
         true, propertyChanged: (bindable, _, _) => ((SceneView)bindable).UpdateInteraction());
-    /// <summary>Whether native painting softens high-contrast diagonal pixel steps.</summary>
+    /// <summary>Whether software painting softens high-contrast diagonal pixel steps.</summary>
     public static readonly BindableProperty IsAntialiasEnabledProperty = BindableProperty.Create(nameof(IsAntialiasEnabled), typeof(bool), typeof(SceneView),
         true, propertyChanged: (bindable, _, _) =>
         {
@@ -84,7 +84,7 @@ public sealed class SceneView : SKCanvasView
     /// <summary>Creates a view and installs orbit, pinch and picking gestures.</summary>
     public SceneView()
     {
-        PaintSurface += Paint;
+        InitializeSurfaces();
         SetSubscriptions(true);
 #if !MACCATALYST
         var pan = new PanGestureRecognizer();
@@ -134,7 +134,7 @@ public sealed class SceneView : SKCanvasView
         get => (bool)GetValue(IsInteractiveProperty);
         set => SetValue(IsInteractiveProperty, value);
     }
-    /// <summary>Soften diagonal edges during native painting. Core captures and picking remain unchanged.</summary>
+    /// <summary>Soften diagonal edges during software painting. GPU rendering, Core captures and picking remain unchanged.</summary>
     public bool IsAntialiasEnabled
     {
         get => (bool)GetValue(IsAntialiasEnabledProperty);
@@ -244,7 +244,14 @@ public sealed class SceneView : SKCanvasView
     public Shape? PickAt(double x, double y, double viewWidth, double viewHeight)
     {
         if (!double.IsFinite(x) || !double.IsFinite(y) ||
-            viewWidth <= 0 || viewHeight <= 0 || x < 0 || y < 0 || x >= viewWidth || y >= viewHeight) return null;
+            !double.IsFinite(viewWidth) || !double.IsFinite(viewHeight) || viewWidth <= 0 || viewHeight <= 0 || x < 0 || y < 0 || x >= viewWidth || y >= viewHeight) return null;
+        if (ActiveRenderingBackend == RenderingBackend.Hardware)
+        {
+            // Geometric picking is CPU-only: a failure here is a scene problem, not a device failure.
+            var size = PickSize(viewWidth, viewHeight);
+            return TryUpdateGpuScene(size.Width, size.Height) ? _gpuScene.Pick(x / viewWidth * size.Width, y / viewHeight * size.Height) : null;
+        }
+        if (RenderingMode == RenderingMode.Hardware && Handler is not null) return null;
         if (_paintTarget is not null)
         {
             if (_paintTargetDirty) CapturePaintTarget(_paintSurfaceWidth, _paintSurfaceHeight);
@@ -253,6 +260,12 @@ public sealed class SceneView : SKCanvasView
         if (_frame is null) return null;
         if (_dirty) CaptureFrame(_frame.Width, _frame.Height);
         return _frame.Pick((int)(x * _frame.Width / viewWidth), (int)(y * _frame.Height / viewHeight));
+    }
+
+    private static (int Width, int Height) PickSize(double width, double height)
+    {
+        var scale = 1024 / Math.Max(width, height);
+        return (Math.Max(1, (int)Math.Round(width * scale)), Math.Max(1, (int)Math.Round(height * scale)));
     }
 
     private uint BackgroundPixel()
@@ -285,12 +298,15 @@ public sealed class SceneView : SKCanvasView
         if (Handler is null)
         {
             _panActive = _pinchActive = false;
+            ReleaseHardware();
+            SetBackend(RenderingBackend.None, "Native surface disconnected.");
             ReleaseRenderResources();
             if (_wasConnected) SetSubscriptions(false);
         }
         else
         {
             _wasConnected = true;
+            ConfigureRendering();
             SetSubscriptions(true);
             Refresh();
 #if MACCATALYST
@@ -706,12 +722,40 @@ public sealed class SceneView : SKCanvasView
     {
         var canvas = args.Surface.Canvas;
         if (args.Info.Width < 1 || args.Info.Height < 1) return;
-        var target = CapturePaintTarget(args.Info.Width, args.Info.Height);
-        DrawSceneBitmap(canvas, PaintBitmap(target), args.Info.Width, args.Info.Height);
-        if (target.Labels.Count == 0) return;
+        IReadOnlyList<ProjectedLabel> labels;
+        int labelWidth, labelHeight;
+        if (ActiveRenderingBackend == RenderingBackend.Hardware)
+        {
+            canvas.Clear(SKColors.Transparent);
+#if DEBUG || NATIVE_RENDER_PROBE
+            DebugCountOverlayPaint();
+#endif
+            if (HardwareOverlayLabels(args.Info.Width, args.Info.Height) is not { } overlay) return;
+            (labels, labelWidth, labelHeight) = overlay;
+#if DEBUG || NATIVE_RENDER_PROBE
+            DebugLabelTrace?.Invoke(false, labels, labelWidth, labelHeight);
+#endif
+        }
+        else if (RenderingMode == RenderingMode.Hardware || (RenderingMode == RenderingMode.Auto && !_hardwareFailed && Handler is not null))
+        {
+            // Opaque until the first hardware frame: the native view below has no content yet
+            // and would otherwise show through as black.
+            canvas.Clear(new SKColor(BackgroundPixel()));
+            return;
+        }
+        else
+        {
+            var started = Stopwatch.GetTimestamp();
+            var target = CapturePaintTarget(args.Info.Width, args.Info.Height);
+            DrawSceneBitmap(canvas, PaintBitmap(target), args.Info.Width, args.Info.Height);
+            labels = target.Labels; labelWidth = target.Width; labelHeight = target.Height;
+            RecordFrame(Stopwatch.GetElapsedTime(started).TotalMilliseconds, target.Width, target.Height);
+            RaiseFrameSubmitted();
+        }
+        if (labels.Count == 0) return;
         using var font = new SKFont(SKTypeface.Default, LabelFontSize(args.Info.Width, Width));
         using var paint = new SKPaint { IsAntialias = true };
-        foreach (var label in LayoutLabels(target.Labels, font, args.Info.Width, args.Info.Height, target.Width, target.Height))
+        foreach (var label in LayoutLabels(labels, font, args.Info.Width, args.Info.Height, labelWidth, labelHeight))
         {
             paint.Color = new SKColor((byte)(label.Color >> 16), (byte)(label.Color >> 8), (byte)label.Color);
             canvas.DrawText(label.Text, label.Position.X, label.Position.Y, font, paint);

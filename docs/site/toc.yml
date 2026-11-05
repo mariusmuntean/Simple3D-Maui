@@ -12,3 +12,6 @@
   href: rendering-limits.md
 - name: API reference
   href: api/
+
+- name: Hardware rendering
+  href: hardware-rendering.md

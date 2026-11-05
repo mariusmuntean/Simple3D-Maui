@@ -10,6 +10,8 @@ using SkiaSharp;
 if (args.Contains("--performance")) return PerformanceProbe.Run();
 if (args.Contains("--appearance-performance")) { AppearancePerformanceProbe.Run(); return 0; }
 
+RenderingModeTests.Run();
+
 var tests = new (string Name, Action Run)[]
 {
     ("diagonal antialiasing blends stair steps and preserves straight edges", () =>

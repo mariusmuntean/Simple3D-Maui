@@ -1,8 +1,10 @@
 # Simple3D
 
+> Native GPU rendering is unreleased. GPU APIs described here require a source build from this branch; NuGet `0.2.0-preview.1` remains software-only.
+
 ![Simple3D](docs/site/images/brand-banner.svg)
 
-A 3D software renderer for .NET 10 MAUI on iOS, Android and Mac Catalyst. Build a scene from shapes or an indexed mesh, display it in a `SceneView`, and let users orbit, zoom and select parts. Use it for equipment diagrams, data displays, scientific models and other small illustrations.
+A 3D scene control with software and native GPU rendering for .NET 10 MAUI on iOS, Android and Mac Catalyst. Build a scene from shapes or an indexed mesh, display it in a `SceneView`, and let users orbit, zoom and select parts. Use it for equipment diagrams, data displays, scientific models and other small illustrations.
 
 ![Equipment scene](docs/site/images/Equipment.png)
 
@@ -40,6 +42,12 @@ Drag to orbit, pinch to zoom and tap to select. Selected parts receive a tint an
 
 Core colors use opaque `0xFFRRGGBB`; angles use radians. Shape transforms return copies and set absolute values. Replace animated shapes with `Scene.Replace` on the UI thread; scene and camera changes trigger a redraw.
 
+## Rendering backends
+
+Choose `RenderingMode.Auto` (default), `Software`, or `Hardware` on `SceneView`. Auto prefers Metal on iOS/Mac Catalyst or OpenGL ES 3 on Android and falls back with a diagnostic. Hardware reports failure without silently using software. Observe `ActiveRenderingBackend`, `RenderingDiagnostic` and `RenderingFailed`. The gallery exposes the same selector.
+
+`CaptureFrame` always returns an owned software snapshot. GPU painting uses native triangle rendering with cached geometry/textures and no per-frame pixel readback. See [hardware rendering](docs/site/hardware-rendering.md) for limits, picking, capture semantics and the `SKCanvasView` → `ContentView` compatibility change.
+
 ## Try the gallery
 
 Open [Simple3D.sln](Simple3D.sln) in Rider or another MAUI IDE with .NET 10 and the target's MAUI workload. Choose **Simple3D.Demo** and an Android device, iOS simulator or Mac Catalyst target. Apple targets require macOS and a workload-compatible Xcode.
@@ -57,6 +65,7 @@ Read the [documentation site](https://mariusmuntean.github.io/Simple3D-Maui/), i
 - [Materials, lighting, and OBJ import](docs/site/materials-and-import.md)
 - [Interaction and selection](docs/site/interaction-and-picking.md)
 - [Examples](docs/site/examples.md)
+- [Hardware rendering and backend selection](docs/site/hardware-rendering.md)
 - [Rendering limits](docs/site/rendering-limits.md)
 
 The renderer supports opaque textured triangles, configurable directional lighting, smooth normals, vertex colors, OBJ geometry import, and depth-aware picking. Transparency, PBR, and shadows remain unsupported. Labels overlay geometry. Viewport and work budgets bound rendering costs; frame rate depends on scene complexity, viewport and device. See the limits page before choosing it for your application.
@@ -68,7 +77,7 @@ dotnet run --project tests/Simple3D.Core.Tests -c Release
 dotnet run --project tests/Simple3D.Maui.Tests -c Release
 ```
 
-See [development and native validation](docs/DEVELOPMENT.md) for Rider setup, documentation builds, image generation and performance comparisons, and [packaging](docs/PACKAGING.md) for independent package consumers. Checks run locally; hosted native validation requires a manual trigger.
+See [development and native validation](docs/DEVELOPMENT.md) for Rider setup, documentation builds, image generation and performance comparisons, and [packaging](docs/PACKAGING.md) for independent package consumers. Portable and headless GLES checks run on pull requests. Hosted native validation requires a manual trigger; native GPU probes compare actual renderer pixels and record completion timings.
 
 ## License and contributions
 

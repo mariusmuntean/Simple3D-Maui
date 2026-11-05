@@ -15,6 +15,10 @@ public sealed class GalleryPage : ContentPage
     private readonly Button _animationButton;
     private readonly Button _shadingButton;
     private readonly Button _lightButton;
+    private readonly Hud _hud = new();
+    private IDispatcherTimer? _hudTimer;
+    private int _hudFrames;
+    private long _hudStarted;
     private DemoScene? _current;
     private IDispatcherTimer? _animationTimer;
     private double _animationSeconds;
@@ -23,10 +27,34 @@ public sealed class GalleryPage : ContentPage
     public GalleryPage()
     {
         BackgroundColor = Color.FromArgb("#0D1322");
-        var title = new Label { Text = "Simple3D", FontSize = 34, FontAttributes = FontAttributes.Bold,
-            TextColor = Colors.White };
-        var subtitle = new Label { Text = "3D software renderer for .NET MAUI", FontSize = 16,
-            TextColor = Color.FromArgb("#B7C6E2") };
+        var title = new Label
+        {
+            Text = "Simple3D",
+            FontSize = 34,
+            FontAttributes = FontAttributes.Bold,
+            TextColor = Colors.White
+        };
+        var subtitle = new Label
+        {
+            Text = "Interactive 3D for .NET MAUI",
+            FontSize = 16,
+            TextColor = Color.FromArgb("#B7C6E2")
+        };
+        var rendererStatus = new Label
+        {
+            TextColor = Color.FromArgb("#A9B8D4"), FontSize = 12, AutomationId = "RenderingBackend",
+            VerticalOptions = LayoutOptions.Center, LineBreakMode = LineBreakMode.TailTruncation
+        };
+        void UpdateRendererStatus() => rendererStatus.Text = $"{_view.ActiveRenderingBackend}: {_view.RenderingDiagnostic}";
+        _view.RenderingBackendChanged += (_, _) => UpdateRendererStatus();
+        UpdateRendererStatus();
+        var rendererControls = new Grid
+        {
+            ColumnSpacing = 12,
+            ColumnDefinitions = { new(GridLength.Auto), new(GridLength.Star) }
+        };
+        rendererControls.Add(RenderingModeSelector(), 0, 0);
+        rendererControls.Add(rendererStatus, 1, 0);
         var scenes = new HorizontalStackLayout { Spacing = 8 };
         foreach (var sample in _scenes)
             scenes.Add(SceneButton(sample.Name, () => Show(sample)));
@@ -56,44 +84,106 @@ public sealed class GalleryPage : ContentPage
         tools.Children.Insert(0, _shadingButton);
         tools.Children.Insert(1, _lightButton);
         _view.SelectionChanged += (_, shape) => _selection.Text = shape is null ? "Tap an object to inspect it" : $"Selected: {shape.Name ?? "unnamed shape"}";
-        var sceneScroller = new ScrollView { Orientation = ScrollOrientation.Horizontal,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Never, Content = scenes };
-        var toolScroller = new ScrollView { Orientation = ScrollOrientation.Horizontal,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Never, Content = tools };
+        var sceneScroller = new ScrollView
+        {
+            Orientation = ScrollOrientation.Horizontal,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Never,
+            Content = scenes
+        };
+        var toolScroller = new ScrollView
+        {
+            Orientation = ScrollOrientation.Horizontal,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Never,
+            Content = tools
+        };
         var header = new VerticalStackLayout
         {
-            Padding = new Thickness(22, 20, 22, 12), Spacing = 12,
-            Children = { title, subtitle, sceneScroller }
+            Padding = new Thickness(22, 20, 22, 12),
+            Spacing = 12,
+            Children = { title, subtitle, rendererControls, sceneScroller }
         };
         var sceneBorder = new Border
         {
             Margin = new Thickness(22, 0),
             BackgroundColor = Color.FromArgb("#18243B"),
-            Stroke = Color.FromArgb("#314361"), StrokeThickness = 1,
+            Stroke = Color.FromArgb("#314361"),
+            StrokeThickness = 1,
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 24 },
             Content = _view
         };
-        var footer = new ScrollView { MaximumHeightRequest = 180, Content = new VerticalStackLayout
+        var footer = new ScrollView
         {
-            Padding = new Thickness(22, 12, 22, 20), Spacing = 12,
-            Children = { toolScroller, _caption, _selection, new Label
+            MaximumHeightRequest = 180,
+            Content = new VerticalStackLayout
+            {
+                Padding = new Thickness(22, 12, 22, 20),
+                Spacing = 12,
+                Children = { toolScroller, _caption, _selection, new Label
             {
                 Text = "Drag to orbit · Pinch to zoom · Tap to select · Animate the scene", TextColor = Color.FromArgb("#8BA1C1"), FontSize = 13
             } }
-        }};
+            }
+        };
         var layout = new Grid { RowDefinitions = { new(GridLength.Auto), new(GridLength.Star), new(GridLength.Auto) } };
         layout.Add(header, 0, 0);
         layout.Add(sceneBorder, 0, 1);
+        layout.Add(_hud, 0, 1); // Over the scene's top-right corner.
         layout.Add(footer, 0, 2);
         Content = layout;
+        _view.FrameSubmitted += (_, _) => _hudFrames++;
         var requested = Environment.GetEnvironmentVariable("SIMPLE3D_GALLERY_SCENE");
         Show(_scenes.FirstOrDefault(s => s.Name == requested) ?? _scenes[0]);
     }
 
+    // Segmented Auto | Software | Hardware control; same look as the other buttons on every platform.
+    private View RenderingModeSelector()
+    {
+        var segments = new HorizontalStackLayout { Spacing = 2, AutomationId = "RenderingMode" };
+        var buttons = new List<(Button Button, RenderingMode Mode)>();
+        void Refresh()
+        {
+            foreach (var (button, mode) in buttons)
+            {
+                var selected = mode == _view.RenderingMode;
+                button.BackgroundColor = selected ? Color.FromArgb("#4C7BD9") : Colors.Transparent;
+                button.TextColor = selected ? Colors.White : Color.FromArgb("#A9B8D4");
+                SemanticProperties.SetDescription(button, selected ? $"{mode} renderer, selected" : $"{mode} renderer");
+            }
+        }
+        foreach (var mode in Enum.GetValues<RenderingMode>())
+        {
+            var button = new Button
+            {
+                Text = mode.ToString(), FontSize = 13, CornerRadius = 10, Padding = new Thickness(12, 6),
+                MinimumHeightRequest = 0, BorderWidth = 0, AutomationId = $"RenderingMode{mode}"
+            };
+            button.Clicked += (_, _) => { _view.RenderingMode = mode; Refresh(); };
+            buttons.Add((button, mode));
+            segments.Add(button);
+        }
+        Refresh();
+        return new Border
+        {
+            Padding = 3,
+            BackgroundColor = Color.FromArgb("#1B2840"),
+            Stroke = Color.FromArgb("#314361"),
+            StrokeThickness = 1,
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 13 },
+            VerticalOptions = LayoutOptions.Center,
+            Content = segments
+        };
+    }
+
     private static Button SceneButton(string text, Action action)
     {
-        var button = new Button { Text = text, BackgroundColor = Color.FromArgb("#30466C"),
-            TextColor = Colors.White, CornerRadius = 13, Padding = new Thickness(15, 9) };
+        var button = new Button
+        {
+            Text = text,
+            BackgroundColor = Color.FromArgb("#30466C"),
+            TextColor = Colors.White,
+            CornerRadius = 13,
+            Padding = new Thickness(15, 9)
+        };
         button.Clicked += (_, _) => action();
         return button;
     }
@@ -162,9 +252,81 @@ public sealed class GalleryPage : ContentPage
         _animationButton.Text = "Animate";
     }
 
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+        _hudTimer ??= Dispatcher.CreateTimer();
+        _hudTimer.Interval = TimeSpan.FromMilliseconds(500);
+        _hudTimer.Tick -= UpdateHud;
+        _hudTimer.Tick += UpdateHud;
+        _hudFrames = 0; _hudStarted = Stopwatch.GetTimestamp();
+        _hudTimer.Start();
+    }
+
+    private void UpdateHud(object? sender, EventArgs args)
+    {
+        var now = Stopwatch.GetTimestamp();
+        var fps = _hudFrames / Math.Max(.001, Stopwatch.GetElapsedTime(_hudStarted, now).TotalSeconds);
+        _hudFrames = 0; _hudStarted = now;
+        _hud.Update(fps, _view);
+    }
+
     protected override void OnDisappearing()
     {
+        _hudTimer?.Stop();
         StopAnimation();
         base.OnDisappearing();
     }
+}
+
+// Frame statistics in the scene's top-right corner. Frames are drawn on demand, so a still scene reads "idle".
+internal sealed class Hud : ContentView
+{
+    private readonly Label _fps = Line(15, Colors.White, FontAttributes.Bold);
+    private readonly Label _frame = Line(12, Color.FromArgb("#A9B8D4"));
+    private readonly Label _backend = Line(12, Color.FromArgb("#A9B8D4"));
+    private readonly Label _triangles = Line(12, Color.FromArgb("#A9B8D4"));
+
+    public Hud()
+    {
+        InputTransparent = true;
+        HorizontalOptions = LayoutOptions.End;
+        VerticalOptions = LayoutOptions.Start;
+        Margin = new Thickness(0, 12, 34, 0); // Inside the scene border (22 margin + 12).
+        AutomationId = "FrameStats";
+        Content = new Border
+        {
+            Padding = new Thickness(10, 7),
+            BackgroundColor = Color.FromRgba(8, 12, 22, 170),
+            Stroke = Color.FromRgba(255, 255, 255, 30),
+            StrokeThickness = 1,
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 10 },
+            Content = new VerticalStackLayout { Spacing = 1, Children = { _fps, _frame, _backend, _triangles } }
+        };
+    }
+
+    public void Update(double fps, SceneView view)
+    {
+        _fps.Text = fps < .5 ? "idle" : $"{fps:0} fps";
+        _frame.Text = view.LastFrameWidth > 0 ? $"{view.LastFrameMilliseconds:0.0} ms CPU · {view.LastFrameWidth}×{view.LastFrameHeight}" : "no frame yet";
+        _backend.Text = view.ActiveRenderingBackend switch
+        {
+            // The API only ("Metal", "OpenGL ES 3"); the status line above has the full device name.
+            RenderingBackend.Hardware => view.RenderingDiagnostic?.Split(" / ")[0] ?? "Hardware",
+            var backend => backend.ToString()
+        };
+        // Animated scenes may swap shapes, so recount (cheap at 2 Hz).
+        _triangles.Text = $"{CountTriangles(view.Scene):N0} triangles";
+    }
+
+    private static long CountTriangles(Scene scene)
+    {
+        long count = 0;
+        foreach (var shape in scene.Shapes) Add(shape);
+        return count;
+        void Add(Shape shape) { count += shape.TriangleCount; foreach (var child in shape.Children) Add(child); }
+    }
+
+    private static Label Line(double size, Color color, FontAttributes attributes = FontAttributes.None) =>
+        new() { FontSize = size, TextColor = color, FontAttributes = attributes, HorizontalTextAlignment = TextAlignment.End, LineBreakMode = LineBreakMode.TailTruncation, MaximumWidthRequest = 200 };
 }

@@ -43,3 +43,7 @@ For simple animation, replace immutable shapes on the UI thread. Each replacemen
 Colors passed to Core use opaque `0xAARRGGBB` values. `SceneView.SceneBackgroundColor` accepts a MAUI `Color` and must be opaque. Angles are radians. Shape transforms return copies; adding a changed shape requires `Scene.Replace` or `Scene.Add`. `Scene.Changed` and `Camera.Changed` trigger a redraw automatically. Keep scene and camera mutations on the UI thread.
 
 Run the demo app or explore the [examples](examples.md). On Mac Catalyst, use the .NET installation with MAUI workloads and a compatible Xcode.
+
+## Select the renderer
+
+`SceneView.RenderingMode` defaults to `Auto`. Select `Software` for the existing CPU path or `Hardware` to require the native GPU. Observe `ActiveRenderingBackend` and `RenderingDiagnostic`; GPU availability is established after the native surface initializes. [Hardware rendering](hardware-rendering.md) explains fallback, capture, picking and compatibility.

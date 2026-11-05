@@ -7,10 +7,15 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>package-icon.png</PackageIcon>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Trimming/AOT safe (analyzers enforce it): apps trim unused library code in their default Release builds. -->
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Simple3D.Core.Tests" />
+    <InternalsVisibleTo Include="Simple3D.Gpu.Tests" />
     <InternalsVisibleTo Include="Simple3D.Maui" />
+    <!-- Only diagnostic builds of the gallery (native GPU probes) may use internals; packed Release builds keep the sample on the public API. -->
+    <InternalsVisibleTo Include="Simple3D.Demo" Condition="'$(Configuration)' == 'Debug' or '$(EnableNativeRenderProbe)' == 'true'" />
     <InternalsVisibleTo Include="Simple3D.Maui.Tests" />
     <None Include="../../docs/PACKAGE-README.md" Pack="true" PackagePath="/README.md" />
     <None Include="../../assets/brand/package-icon.png" Pack="true" PackagePath="/" />

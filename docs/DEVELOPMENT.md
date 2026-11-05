@@ -72,3 +72,38 @@ DocFX needs the workload-enabled `dotnet` first in `PATH`; set `DOTNET_ROOT` if 
 After reviewing `_site`, run `bash scripts/publish-docs.sh`. It publishes generated files to `gh-pages` through a temporary checkout and a normal push. It preserves the source checkout and cleans up its temporary directory. GitHub Pages serves the branch root; `.nojekyll` keeps DocFX assets intact. This triggers only the Pages deployment, not the manual MAUI validation workflow.
 
 To test a Release iOS simulator build, use `BUILD_CONFIGURATION=Release bash scripts/ios-simulator-smoke.sh --render-probe` after building with `-p:EnableNativeRenderProbe=true`. Remove that property and rebuild for distribution. If ordinary Clean leaves stale registrar or SDK compiler cache files, move only the affected generated `bin/Release` and `obj/Release` target directories aside and rebuild.
+
+## GPU validation
+
+The portable suites now include scene preparation/projection/picking, rendering-mode failure policy, scene-error recovery, and the gallery's renderer picker exercised in every mode. Run the actual GLES shader pipeline on Linux with Mesa EGL/GLES installed:
+
+```bash
+sudo apt-get install libegl1 libgles2 libgl1-mesa-dri
+dotnet run --project tests/Simple3D.Gpu.Tests -c Release
+dotnet run --project tests/Simple3D.Gpu.Tests -c Release -- --performance
+```
+
+`GPU_TESTS_PASS` requires real shader compilation, framebuffer rendering/readback, depth, textures, filtering, culling, clipping, selection, image comparisons across the five gallery scenes, resize/empty-scene behavior, and warm-frame resource reuse. The test prints the renderer identity. `llvmpipe`/software Mesa validates the API path but does not measure hardware acceleration. It runs the same `NativeGpuValidation` checks as the on-device probes (gallery comparisons, single-pass vs composite, selection outline, empty scene) and prints their completed-frame timings and managed bytes per frame; it reports measurements rather than imposing a machine-dependent speed threshold. Resource-upload assertions are deterministic performance regression checks.
+
+The `Portable and GLES rendering tests` workflow runs on PRs and can be started manually. The existing **Build and test** manual workflow additionally runs native Metal and Android GLES probes, storing their logs with the screenshots. Native probes must finish with `NATIVE_GPU_PROBE_PASS` and `NATIVE_GPU_VIEW_PROBE_PASS`; unavailability is a failure, never a skipped success.
+
+On Apple, build the demo in Debug (or Release with `-p:EnableNativeRenderProbe=true`), then:
+
+```bash
+bash scripts/ios-simulator-smoke.sh --gpu-probe
+# Mac Catalyst: run the executable from the built .app bundle:
+SIMPLE3D_GPU_PROBE=1 path/to/Simple3D.Demo.app/Contents/MacOS/Simple3D.Demo
+SIMPLE3D_GPU_VIEW_PROBE=1 path/to/Simple3D.Demo.app/Contents/MacOS/Simple3D.Demo
+```
+
+On a connected Android emulator/device after building a Debug APK:
+
+```bash
+bash scripts/android-emulator-smoke.sh --gpu-probe
+```
+
+Native probes render offscreen with the same backend/shaders, compare all gallery scenes to software with edge/rounding tolerance, require the single-pass and selection-composite paths to match, test depth, selection and outline width, and print completed+readback timings and managed bytes allocated per frame. This measures actual API completion plus explicit readback, not display FPS. A second stage (`SIMPLE3D_GPU_VIEW_PROBE=1`, or the `simple3d_gpu_view_probe` intent extra on Android) hosts a real `SceneView` in Hardware mode: it waits for presented hardware frames, picks, checks that an over-budget scene is reported without disabling hardware, switches Software/Hardware and Auto/Software/Auto, and disconnects and reattaches the handler. It also checks that frames without a selection take the single-pass path, that the label overlay is never repainted without labels and about once per GPU frame with them, that a transient failure (a simulated iOS background submission, or a real destroyed EGL context on Android) keeps hardware rendering, and that a permanent failure in Auto falls back to software. It also orbits the camera over an off-centre label, from a timer and from `FrameSubmitted`, and requires the overlay's label position to equal the GPU frame's after every main run-loop turn.
+
+To check label sync on the composited screen itself, launch `SIMPLE3D_LABEL_SYNC_PROBE=timer` (or `=frame`; on Android the `simple3d_label_sync_probe` intent extra). It orbits a magenta marker with a white label at the same anchor and logs `LABEL_SYNC_READY ... motion_px_per_frame=N`. Take screenshots from outside the app (`adb exec-out screencap -p`, `xcrun simctl io <device> screenshot`, `screencapture`) and run `python3 scripts/check-label-sync.py <N/2> shots/*.png`: the label-to-marker offset must vary by less than half a frame of motion. The library's probe counters and fault hooks compile only into Debug builds or builds with `EnableNativeRenderProbe=true`. The `--gpu-probe` scripts run both stages. Backgrounding and performance still need the manual checks below. Probe code is absent from ordinary Release demo builds. Never distribute a Release build with `EnableNativeRenderProbe` enabled.
+
+Before merging GPU changes, run native builds/probes on all three targets and manually exercise runtime switching, orbit/pinch/tap, selected animation, rotation/resizing and background/resume. For device performance, compare Software and Hardware on the same physical device in Release with matching scenes and render dimensions. The gallery shows the active backend so a fallback cannot masquerade as GPU performance.

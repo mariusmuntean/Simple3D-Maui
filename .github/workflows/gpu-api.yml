@@ -1,0 +1,32 @@
+name: Portable and GLES rendering tests
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rendering:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.401
+      - name: Install headless graphics and text dependencies
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libgles2 libgl1-mesa-dri fontconfig fonts-dejavu-core
+      - run: dotnet run --project tests/Simple3D.Core.Tests -c Release -- --tests-only
+      - run: dotnet run --project tests/Simple3D.Maui.Tests -c Release
+      - name: Test GLES shaders and record completed API timings
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          EGL_PLATFORM: surfaceless
+        run: |
+          mkdir -p artifacts
+          set -o pipefail
+          dotnet run --project tests/Simple3D.Gpu.Tests -c Release -- --performance | tee artifacts/gles-validation.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gles-validation
+          path: artifacts/gles-validation.log
+          if-no-files-found: warn

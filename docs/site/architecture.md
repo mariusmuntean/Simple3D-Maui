@@ -1,6 +1,6 @@
 # Architecture and rendering pipeline
 
-Simple3D is a small CPU renderer for opaque 3D scenes inside ordinary .NET MAUI pages. You describe geometry and a camera in Core. The MAUI control renders that geometry to a bitmap, presents it through SkiaSharp, and connects pointer gestures to the camera and selection.
+Simple3D provides software and native GPU rendering for opaque 3D scenes inside ordinary .NET MAUI pages. You describe geometry and a camera in Core. The MAUI control selects a native Metal/GLES surface or a software bitmap surface, overlays labels through SkiaSharp, and connects pointer gestures to the camera and selection.
 
 ## Package boundaries
 
@@ -13,11 +13,11 @@ Simple3D is a small CPU renderer for opaque 3D scenes inside ordinary .NET MAUI 
 | Your application | Scene content, animation timing, selected-part details and layout | MAUI control, or Core alone for exports |
 | Gallery | Five examples using shared scene factories | Both libraries through the demo project |
 
-Core has no MAUI or SkiaSharp dependency. You can render and query pixels in a console app without a native UI. `SceneView` uses `SKCanvasView`; SkiaSharp presents the raster image rather than executing the scene's triangles on a GPU.
+Core has no MAUI or SkiaSharp dependency. You can render and query pixels in a console app without a native UI. `SceneView` is a `ContentView` containing native GPU and Skia surfaces. The software path uses `SKCanvasView` for bitmap presentation; the hardware path executes triangles on Metal or GLES3. See [hardware rendering](hardware-rendering.md).
 
 This boundary keeps geometry and rendering tests portable. Your page hosts a normal MAUI view without adopting a game engine's application lifecycle.
 
-## One frame, step by step
+## One software frame, step by step
 
 ![Pipeline through transforms, clipping, depth rasterization and native presentation](images/rendering-pipeline.svg)
 
@@ -30,7 +30,7 @@ This boundary keeps geometry and rendering tests portable. Your page hosts a nor
 
 Scratch depth storage belongs to the `DepthRenderer` instance. Color and shape-ID arrays belong to the frame or reusable target. Core projects labels separately; labels overlay geometry without depth testing.
 
-## Picking shares visibility
+## Software picking shares visibility
 
 A render records the winning leaf ID for each pixel. `Pick` looks up that ID and returns its shape without a second geometry pass. Hidden triangles cannot win a tap.
 
@@ -61,7 +61,7 @@ Your application owns animation timing. Replace shapes from a UI timer and stop 
 
 The software path keeps rendering, visibility and picking in one inspectable pipeline. Its tradeoff is CPU work per covered pixel. Simple3D supports opaque textures, flat or smooth diffuse lighting, vertex colors, and OBJ geometry import. It has no transparency, PBR or shadows. Attribute interpolation is perspective-correct, including across near-plane clipping.
 
-`SceneRenderer` is the older projected-triangle API, retained for compatible primitive/default-camera code. `SceneView` uses `DepthRenderer`. Use the depth path for custom meshes, newer camera features and intersecting geometry.
+`SceneRenderer` is the older projected-triangle API, retained for compatible primitive/default-camera code. `SceneView` uses `DepthRenderer` for software presentation and explicit snapshots. Use the depth path for custom meshes, newer camera features and intersecting geometry.
 
 ## Read the implementation
 

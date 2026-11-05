@@ -21,10 +21,17 @@ elif args[:3] == ["shell", "pm", "path"]: print("package:/data/app/gallery.apk")
 elif args[:4] == ["shell", "cmd", "package", "resolve-activity"]: print("dev.simple3d.gallery/.MainActivity")
 elif args[:3] == ["shell", "am", "start"]:
     Path(os.environ["TEST_RUNNING"]).touch()
+    # Remember which opt-in probe this launch requested so logcat can answer for it.
+    Path(os.environ["TEST_RUNNING"] + ".extra").write_text(args[args.index("--es") + 1] if "--es" in args else "")
     if scenario in ("launch-failure", "launch-and-cleanup-failure"): sys.exit(23)
 elif args[:3] == ["shell", "am", "force-stop"]:
     if scenario in ("cleanup-failure", "launch-and-cleanup-failure"): sys.exit(7)
     Path(os.environ["TEST_RUNNING"]).unlink(missing_ok=True)
+elif args[:2] == ["logcat", "-d"] and scenario in ("gpu-success", "gpu-view-failure"):
+    extra = Path(os.environ["TEST_RUNNING"] + ".extra").read_text()
+    if extra == "simple3d_gpu_probe": print("NATIVE_GPU_PROBE_PASS")
+    elif extra == "simple3d_gpu_view_probe":
+        print("NATIVE_GPU_VIEW_PROBE_PASS" if scenario == "gpu-success" else "NATIVE_GPU_VIEW_PROBE_FAIL hardware after reattach timed out")
 elif args[:2] == ["exec-out", "screencap"]: sys.stdout.buffer.write(b"capture")
 '''
 SLEEP = '''#!/usr/bin/env python3
@@ -38,7 +45,7 @@ sys.exit(1 if os.environ["TEST_SCENARIO"] == "screenshot-failure" else 0)
 
 
 class AndroidCleanupTests(unittest.TestCase):
-    def run_smoke(self, scenario, configuration="Debug"):
+    def run_smoke(self, scenario, configuration="Debug", gpu_probe=False):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             tools = root / "tools"
@@ -55,9 +62,27 @@ class AndroidCleanupTests(unittest.TestCase):
             log, running = root / "adb.log", root / "running"
             env = dict(os.environ, PATH=str(tools) + os.pathsep + os.environ["PATH"],
                        TEST_SCENARIO=scenario, TEST_ADB_LOG=str(log), TEST_RUNNING=str(running), BUILD_CONFIGURATION=configuration)
-            result = subprocess.run(["bash", str(SCRIPT)], cwd=root, env=env,
+            result = subprocess.run(["bash", str(SCRIPT), *(["--gpu-probe"] if gpu_probe else [])], cwd=root, env=env,
                                     capture_output=True, text=True, timeout=10)
             return result, log.read_text().splitlines(), running.exists()
+
+    def test_gpu_probe_requires_marker_and_stops_gallery(self):
+        result, commands, running = self.run_smoke("gpu-success", gpu_probe=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(running)
+        self.assertTrue(any("--es simple3d_gpu_probe 1" in command for command in commands))
+        self.assertTrue(any("--es simple3d_gpu_view_probe 1" in command for command in commands))
+        # Every probe launch starts from a cleared log so earlier crashes are not attributed to it.
+        starts = [i for i, command in enumerate(commands) if command.startswith("shell am start")]
+        self.assertTrue(starts and all(commands[i - 1] == "logcat -c" for i in starts), commands)
+        result, commands, running = self.run_smoke("gpu-view-failure", gpu_probe=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(running)
+        self.assertIn("NATIVE_GPU_VIEW_PROBE_FAIL", result.stderr)
+        result, commands, running = self.run_smoke("gpu-no-marker", gpu_probe=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(running)
+        self.assertIn("did not complete", result.stderr)
 
     def test_release_launch_stops_gallery(self):
         result, commands, running = self.run_smoke("success", configuration="Release")

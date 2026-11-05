@@ -1,0 +1,89 @@
+// Compiled for Android only (and linked by the desktop GLES tests); see Simple3D.Maui.csproj.
+namespace Simple3D.Maui;
+
+internal static class GlesShaders
+{
+    internal const string SelectionMaskDefine = "SELECTION_MASK";
+    internal const string GlslVertex = """
+        #version 300 es
+        precision highp float;
+        layout(location=0) in vec4 position;
+        layout(location=1) in vec4 normal;
+        layout(location=2) in vec4 uv;
+        layout(location=3) in vec4 color;
+        layout(std140) uniform Params {
+            mat4 world; mat4 vp; mat4 normals;
+            vec4 lightAmbient; vec4 lightColor; vec4 tintLit; vec4 selection;
+        };
+        out vec2 texCoord;
+        out vec3 frontColor;
+        out vec3 backColor;
+        flat out float selectedFlag;
+        void main() {
+            vec4 p=world*position;
+            gl_Position=vp*p;
+            gl_Position.z=2.0*gl_Position.z-gl_Position.w;
+            vec3 n=normalize((normals*normal).xyz);
+            vec3 litFront=vec3(lightAmbient.w)+lightColor.rgb*lightColor.w*max(0.0,dot(n,-lightAmbient.xyz));
+            vec3 litBack=vec3(lightAmbient.w)+lightColor.rgb*lightColor.w*max(0.0,dot(-n,-lightAmbient.xyz));
+            frontColor=color.rgb*tintLit.rgb*mix(vec3(1),litFront,tintLit.w);
+            backColor=color.rgb*tintLit.rgb*mix(vec3(1),litBack,tintLit.w);
+            texCoord=vec2(uv.x,1.0-uv.y);
+            selectedFlag=selection.x;
+        }
+        """;
+    // Compiled twice: with SELECTION_MASK for the offscreen mask/outline path, and without it for
+    // direct rendering to the window surface when no selection is visible.
+    internal const string GlslFragment = """
+        #version 300 es
+        precision highp float;
+        in vec2 texCoord; in vec3 frontColor; in vec3 backColor; flat in float selectedFlag;
+        uniform sampler2D image;
+        layout(location=0) out vec4 outputColor;
+        #ifdef SELECTION_MASK
+        layout(location=1) out vec4 outputMask;
+        #endif
+        void main() {
+            outputColor=vec4(clamp((gl_FrontFacing?frontColor:backColor)*texture(image,texCoord).rgb,0.0,1.0),1);
+        #ifdef SELECTION_MASK
+            outputMask=vec4(selectedFlag,0,0,1);
+        #endif
+        }
+        """;
+    internal const string GlslScreenVertex = """
+        #version 300 es
+        precision highp float;
+        out vec2 texCoord;
+        void main() { vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2); texCoord=p; gl_Position=vec4(p*2.0-1.0,0,1); }
+        """;
+    // Color is sampled with linear filtering so a capped render size upscales smoothly; the mask
+    // is fetched exactly. The outline covers background pixels within outlineRadius mask texels.
+    internal const string GlslScreenFragment = """
+        #version 300 es
+        precision highp float;
+        in vec2 texCoord;
+        uniform sampler2D sceneColor; uniform sampler2D sceneMask; uniform int outlineRadius;
+        out vec4 outputColor;
+        void main() {
+            vec3 c=texture(sceneColor,texCoord).rgb;
+            ivec2 size=textureSize(sceneMask,0); ivec2 hi=size-1; ivec2 p=clamp(ivec2(texCoord*vec2(size)),ivec2(0),hi);
+            float m=texelFetch(sceneMask,p,0).r;
+            float neighbor=0.0;
+            for(int r=1;r<=3;r++) {
+                if(r>outlineRadius) break;
+                neighbor=max(neighbor,texelFetch(sceneMask,clamp(p+ivec2(r,0),ivec2(0),hi),0).r);
+                neighbor=max(neighbor,texelFetch(sceneMask,clamp(p-ivec2(r,0),ivec2(0),hi),0).r);
+                neighbor=max(neighbor,texelFetch(sceneMask,clamp(p+ivec2(0,r),ivec2(0),hi),0).r);
+                neighbor=max(neighbor,texelFetch(sceneMask,clamp(p-ivec2(0,r),ivec2(0),hi),0).r);
+            }
+            if(m>0.5) c=mix(c,vec3(0.3,0.7,1.0),0.25);
+            else if(neighbor>0.5) c=vec3(0.3,0.7,1.0);
+            outputColor=vec4(c,1);
+        }
+        """;
+    internal static string WithDefine(string source, string define)
+    {
+        var lineEnd = source.IndexOf('\n');
+        return source[..(lineEnd + 1)] + "#define " + define + " 1\n" + source[(lineEnd + 1)..];
+    }
+}
