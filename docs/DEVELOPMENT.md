@@ -110,6 +110,8 @@ Before merging GPU changes, run native builds/probes on all three targets and ma
 
 ## Mirror (camera pose) validation
 
+Physical iPhones: build with `-r ios-arm64 -p:CodesignKey="Apple Development: …" -p:CodesignProvision="…"`, then `xcrun devicectl device install app` and `device process launch`. A device build that aborts at launch inside `load_aot_module` has stale ahead-of-time modules: delete `obj` and `bin` for `net10.0-ios/ios-arm64` and rebuild.
+
 Apple builds can keep a stale compiled `Info.plist` after you edit `Platforms/*/Info.plist`: the SDK's incremental check skips `_CompileAppManifest`. Delete `obj/<Configuration>/<tfm>/<rid>/AppManifest.plist` and rebuild. A missing `NSCameraUsageDescription` in the built bundle shows up as `PermissionException` when Mirror starts.
 
 
