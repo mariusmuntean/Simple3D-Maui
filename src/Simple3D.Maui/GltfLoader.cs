@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Simple3D.Core;
 
 namespace Simple3D.Maui;
@@ -16,7 +17,9 @@ public static class GltfLoader
         var model = GltfReader.Read(stream);
         return new(model, model.CreateShape(image =>
         {
-            using var encoded = new MemoryStream(image.Bytes.ToArray(), writable: false);
+            // GltfImage owns its array: read it in place instead of copying the encoded image again.
+            using var encoded = MemoryMarshal.TryGetArray(image.Bytes, out var bytes)
+                ? new MemoryStream(bytes.Array!, bytes.Offset, bytes.Count, writable: false) : new MemoryStream(image.Bytes.ToArray(), writable: false);
             return TextureLoader.LoadOpaque(encoded, TextureFilter.Bilinear, TextureAddressMode.Repeat);
         }));
     }

@@ -20,9 +20,9 @@ public sealed class GltfModel
 {
     private readonly Shape _scene;
     private readonly IReadOnlyDictionary<Material, int> _textures;
-    /// <summary>Skins in glTF order. Each skeleton's joints are reordered parents-first.</summary>
+    /// <summary>Skeletons, one per armature: skins whose shared joints have equal inverse bind matrices are merged. Joints are ordered parents-first.</summary>
     public IReadOnlyList<Skeleton> Skeletons { get; }
-    /// <summary>VRM bone names mapped to joint indices in the first skeleton; unmapped nodes are omitted.</summary>
+    /// <summary>VRM bone names mapped to joint indices in the skeleton of the first skin; unmapped nodes are omitted.</summary>
     public IReadOnlyDictionary<string, int> HumanoidBones { get; }
     /// <summary>Encoded images in glTF order.</summary>
     public IReadOnlyList<GltfImage> Images { get; }
@@ -70,7 +70,7 @@ public static class GltfReader
 
     /// <summary>Reads a GLB with one JSON and one BIN chunk, leaving the stream open.</summary>
     /// <remarks>Supports triangles, base color, UV0, vertex colors, normals, node TRS/matrices and skins.
-    /// Morphs, animations, cameras, lights, PBR, texture transforms and nontriangle modes are ignored.
+    /// Morphs, animations, cameras, lights, PBR, texture transforms, nontriangle modes and influences beyond JOINTS_0/WEIGHTS_0 are ignored.
     /// Alpha is opaque. External/data URIs, sparse accessors and required geometry compression are rejected.</remarks>
     /// <exception cref="InvalidDataException">Malformed, oversized or unsupported input.</exception>
     public static GltfModel Read(Stream glb)
@@ -185,7 +185,7 @@ public static class GltfReader
         private int[] parents = [], depths = [];
         private Matrix4x4[] worlds = [];
         private Skeleton[] skeletons = [];
-        private Dictionary<int, int>[] jointMaps = [];
+        private Dictionary<int, int>[] jointMaps = [];  // per skeleton: glTF node → joint
         private int[][] remaps = [];
         private readonly Dictionary<Material, int> textures = [];
         private int vertexBudget, indexBudget;
@@ -211,12 +211,26 @@ public static class GltfReader
             ReadHierarchy();
             ReadSkins();
             var images = ReadImages();
-            var materials = ReadMaterials(images.Length);
+            var materials = ReadMaterials(images);
             var meshes = Array(root, "meshes").Select(m => Array(m, "primitives").Where(p => Int(p, "mode", 4) == 4)
                 .Select(p => ReadPart(p, materials)).ToArray()).ToArray();
             var scene = ReadScene(meshes);
-            _ = new Scene().Add(scene).GetBounds();
+            ValidateBounds(scene, Matrix4x4.Identity);
             return new(scene, skeletons, ReadBones(), images, textures);
+        }
+
+        // Rejects transforms that overflow, like Scene.GetBounds, but uses per-joint bounds so loading never skins on the CPU.
+        private static void ValidateBounds(Shape shape, Matrix4x4 parent)
+        {
+            var world = shape.Transform * parent;
+            if (shape.SkinnedMesh is { } skinned)
+            {
+                var (min, max) = skinned.PosedBounds(skinned.Skeleton.RestPose);
+                if (min.X <= max.X) { Check(Vector3.Transform(min, world)); Check(Vector3.Transform(max, world)); }
+            }
+            else if (shape.Geometry is { } mesh) foreach (var v in mesh.Vertices) Check(Vector3.Transform(v, world));
+            foreach (var child in shape.Children) ValidateBounds(child, world);
+            static void Check(Vector3 p) { if (!float.IsFinite(p.X) || !float.IsFinite(p.Y) || !float.IsFinite(p.Z)) throw Error("Transformed geometry overflows."); }
         }
 
         private View ReadView(JsonElement v)
@@ -303,27 +317,49 @@ public static class GltfReader
             }
         }
 
+        // Exporters often write one skin per mesh over a single armature. Skins whose shared joints have the same
+        // inverse bind matrices merge into one skeleton, so one pose moves every part.
+        private int[] skinGroups = [];
         private void ReadSkins()
         {
             var skins = Array(root, "skins");
-            skeletons = new Skeleton[skins.Length]; jointMaps = new Dictionary<int, int>[skins.Length]; remaps = new int[skins.Length][];
+            remaps = new int[skins.Length][]; skinGroups = new int[skins.Length];
+            var sources = new int[skins.Length][];
+            var groups = new List<Dictionary<int, Matrix4x4>>();
             for (var s = 0; s < skins.Length; s++)
             {
                 var skin = skins[s];
-                var source = Array(skin, "joints", Skeleton.MaximumJoints).Select(j => j.GetInt32()).ToArray();
+                var source = sources[s] = Array(skin, "joints", Skeleton.MaximumJoints).Select(j => j.GetInt32()).ToArray();
                 if (source.Length == 0 || source.Distinct().Count() != source.Length) throw Error("Skin joints must be nonempty and unique.");
                 foreach (var node in source) _ = At(nodes, node);
                 if (skin.TryGetProperty("skeleton", out var skeletonRoot)) _ = At(nodes, skeletonRoot.GetInt32());
-                var ordered = source.OrderBy(j => depths[j]).ToArray();
-                var map = jointMaps[s] = ordered.Select((node, i) => (node, i)).ToDictionary(x => x.node, x => x.i);
-                remaps[s] = source.Select(j => map[j]).ToArray();
                 Accessor? inverse = null;
                 if (skin.TryGetProperty("inverseBindMatrices", out var ib))
                 {
                     inverse = At(accessors, ib.GetInt32()); inverse.Require(16);
                     if (inverse.ComponentType != 5126 || inverse.Count < source.Length) throw Error("Invalid inverse bind accessor.");
                 }
-                var joints = new Joint[source.Length]; var names = new HashSet<string>(StringComparer.Ordinal);
+                var binds = new Dictionary<int, Matrix4x4>(source.Length);
+                for (var j = 0; j < source.Length; j++)
+                {
+                    var bind = inverse is null ? Matrix4x4.Identity : Matrix(Enumerable.Range(0, 16).Select(k => inverse.F(j, k)).ToArray());
+                    // Skinning drops w on the CPU but not on the GPU: only affine binds keep both renderers in agreement.
+                    if (MathF.Abs(bind.M14) + MathF.Abs(bind.M24) + MathF.Abs(bind.M34) + MathF.Abs(bind.M44 - 1) > 1e-4f) throw Error("Inverse bind matrices must be affine.");
+                    binds[source[j]] = bind;
+                }
+                var group = groups.FindIndex(g => binds.Keys.Any(g.ContainsKey) && binds.All(b => !g.TryGetValue(b.Key, out var other) || Close(other, b.Value)) &&
+                    g.Keys.Union(binds.Keys).Count() <= Skeleton.MaximumJoints);
+                if (group < 0) { groups.Add(new(binds)); group = groups.Count - 1; }
+                else foreach (var (node, bind) in binds) groups[group][node] = bind;
+                skinGroups[s] = group;
+            }
+            skeletons = new Skeleton[groups.Count]; jointMaps = new Dictionary<int, int>[groups.Count];
+            for (var g = 0; g < groups.Count; g++)
+            {
+                var binds = groups[g];
+                var ordered = binds.Keys.OrderBy(j => depths[j]).ThenBy(j => j).ToArray();
+                var map = jointMaps[g] = ordered.Select((node, i) => (node, i)).ToDictionary(x => x.node, x => x.i);
+                var joints = new Joint[ordered.Length]; var names = new HashSet<string>(StringComparer.Ordinal);
                 // A shared nonjoint ancestor belongs above all roots; other nonjoint chains fold into rest TRS.
                 var ancestor = parents[ordered[0]];
                 while (ancestor >= 0 && !ordered.All(j => IsAncestor(ancestor, j))) ancestor = parents[ancestor];
@@ -338,12 +374,18 @@ public static class GltfReader
                     var name = string.IsNullOrEmpty(node.Name) ? $"joint_{nodeIndex}" : node.Name;
                     var unique = name; var suffix = 1;
                     while (!names.Add(unique)) unique = $"{name}_{suffix++}";
-                    var original = System.Array.IndexOf(source, nodeIndex);
-                    var bind = inverse is null ? Matrix4x4.Identity : Matrix(Enumerable.Range(0, 16).Select(k => inverse.F(original, k)).ToArray());
-                    joints[j] = new(unique, parentJoint, translation, rotation, scale, bind);
+                    joints[j] = new(unique, parentJoint, translation, rotation, scale, binds[nodeIndex]);
                 }
-                skeletons[s] = new Skeleton(joints, rootTransform);
+                skeletons[g] = new Skeleton(joints, rootTransform);
             }
+            for (var s = 0; s < skins.Length; s++) remaps[s] = sources[s].Select(j => jointMaps[skinGroups[s]][j]).ToArray();
+        }
+
+        private static bool Close(Matrix4x4 a, Matrix4x4 b)
+        {
+            var d = a - b;
+            return MathF.Abs(d.M11) + MathF.Abs(d.M12) + MathF.Abs(d.M13) + MathF.Abs(d.M21) + MathF.Abs(d.M22) + MathF.Abs(d.M23) +
+                MathF.Abs(d.M31) + MathF.Abs(d.M32) + MathF.Abs(d.M33) + MathF.Abs(d.M41) + MathF.Abs(d.M42) + MathF.Abs(d.M43) < 1e-3f;
         }
 
         private bool IsAncestor(int ancestor, int node)
@@ -366,8 +408,10 @@ public static class GltfReader
             }).ToArray();
         }
 
-        private Material[] ReadMaterials(int imageCount)
+        private Material[] ReadMaterials(GltfImage[] images)
         {
+            var imageCount = images.Length;
+            var supported = images.Select(i => i.MimeType is "image/png" or "image/jpeg").ToArray();
             var textureSources = Array(root, "textures").Select(t => Int(t, "source", -1)).ToArray();
             return Array(root, "materials").Select(m =>
             {
@@ -384,10 +428,9 @@ public static class GltfReader
                 }
                 var material = new Material(color, !(m.TryGetProperty("extensions", out var ex) && ex.TryGetProperty("KHR_materials_unlit", out _)),
                     m.TryGetProperty("doubleSided", out var ds) && ds.GetBoolean());
-                if (image >= 0 && ArrayMimeSupported(image)) textures.Add(material, image);
+                if (image >= 0 && supported[image]) textures.Add(material, image);
                 return material;
             }).ToArray();
-            bool ArrayMimeSupported(int image) => At(Array(root, "images"), image).GetProperty("mimeType").GetString() is "image/png" or "image/jpeg";
         }
 
         private Part ReadPart(JsonElement p, Material[] materials)
@@ -459,7 +502,7 @@ public static class GltfReader
                 if (!visited.Add(index)) throw Error("Repeated scene node.");
                 if (++shapeCount > Scene.MaximumNodes) throw Error("Scene node budget exceeded.");
                 var parts = new List<Shape>();
-                if (node.Skin != -1) _ = At(skeletons, node.Skin);
+                if (node.Skin != -1) _ = At(remaps, node.Skin);
                 if (node.Mesh != -1)
                     foreach (var part in At(meshes, node.Mesh))
                     {
@@ -474,9 +517,11 @@ public static class GltfReader
                             for (var v = 0; v < influences.Length; v++)
                             {
                                 var j = part.Joints[v]; var w = part.Weights[v];
-                                influences[v] = new(new(Remap(j.X, w.X), Remap(j.Y, w.Y), Remap(j.Z, w.Z), Remap(j.W, w.W)), w);
+                                // Some exporters leave unweighted vertices; they follow the root joint instead of failing the file.
+                                influences[v] = w == Vector4.Zero ? new(default, Vector4.UnitX)
+                                    : new(new(Remap(j.X, w.X), Remap(j.Y, w.Y), Remap(j.Z, w.Z), Remap(j.W, w.W)), w);
                             }
-                            skinned.Add(Shape.FromSkinnedMesh(new SkinnedMesh(part.Mesh, skeletons[node.Skin], influences), part.Material).Named(node.Name));
+                            skinned.Add(Shape.FromSkinnedMesh(new SkinnedMesh(part.Mesh, skeletons[skinGroups[node.Skin]], influences), part.Material).Named(node.Name));
                             int Remap(int joint, float weight) => weight == 0 ? 0 : At(map, joint);
                         }
                     }
@@ -497,7 +542,7 @@ public static class GltfReader
             void Add(string name, int node)
             {
                 _ = At(nodes, node);
-                if (jointMaps[0].TryGetValue(node, out var joint)) bones[name] = joint;
+                if (jointMaps[skinGroups[0]].TryGetValue(node, out var joint)) bones[name] = joint;
             }
         }
     }

@@ -115,6 +115,29 @@ internal static class GltfReaderTests
         var bend = SkeletonPose.Create(skeleton, [Quaternion.Identity, Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI / 2)]);
         var posed = root.WithPose(bend);
         Check(Leaves(posed).Single().Mesh[1].B != leaf.Mesh[1].B, "loaded mesh responds to pose");
+        // A second skin over the same armature (joints listed in another order, equal binds) shares the skeleton,
+        // so one pose moves both meshes; a skin with conflicting binds gets its own skeleton.
+        var two = Skinned();
+        var nodes = (JsonArray)two.Root["nodes"]!;
+        nodes.Add(new JsonObject { ["mesh"] = 0, ["skin"] = 1 });
+        ((JsonArray)nodes[0]!["children"]!).Add(4);
+        var reversed = two.Accessor(MatrixValues(Matrix4x4.CreateTranslation(-3, 0, 0)).Concat(MatrixValues(Matrix4x4.CreateTranslation(-3, -1, 0))).ToArray(), "MAT4");
+        ((JsonArray)two.Root["skins"]!).Add(new JsonObject { ["joints"] = Numbers(1, 2), ["inverseBindMatrices"] = reversed });
+        var merged = two.Read();
+        Check(merged.Skeletons.Count == 1, "compatible skins merge into one skeleton");
+        var parts = Leaves(merged.CreateShape().WithPose(SkeletonPose.Create(merged.Skeletons[0], [Quaternion.Identity, Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI / 2)]))).ToArray();
+        Check(parts.Length == 2 && parts.All(p => p.Pose is not null && ReferenceEquals(p.Pose.Skeleton, merged.Skeletons[0])), "one pose reaches both skins");
+        Check(parts[0].SkinnedMesh!.Influences[0].Joints.X != parts[1].SkinnedMesh!.Influences[0].Joints.X, "each skin's JOINTS remapped to the shared skeleton");
+        two.Root["skins"]![1]!["inverseBindMatrices"] = two.Accessor(MatrixValues(Matrix4x4.CreateTranslation(5, 0, 0)).Concat(MatrixValues(Matrix4x4.CreateTranslation(5, 0, 0))).ToArray(), "MAT4");
+        Check(two.Read().Skeletons.Count == 2, "conflicting binds keep separate skeletons");
+        // Unweighted vertices follow the root joint rather than failing the file.
+        var unweighted = Skinned();
+        unweighted.Attributes["WEIGHTS_0"] = unweighted.Accessor(new ushort[] { 0, 0, 0, 0, 65535, 0, 0, 0, 65535, 0, 0, 0, 65535, 0, 0, 0 }, "VEC4", true);
+        Check(Leaves(unweighted.Read().CreateShape()).Single().SkinnedMesh!.Influences[0].Weights == Vector4.UnitX, "unweighted vertex bound to root");
+        // Projective inverse binds would render differently on the CPU and GPU.
+        var projective = Skinned();
+        projective.Root["skins"]![0]!["inverseBindMatrices"] = projective.Accessor(MatrixValues(Matrix4x4.CreatePerspective(1, 1, 1, 2)).Concat(MatrixValues(Matrix4x4.Identity)).ToArray(), "MAT4");
+        Bad(projective.Build(), "projective inverse bind");
         // Missing inverse binds use identity exactly.
         ((JsonObject)f.Root["skins"]![0]!).Remove("inverseBindMatrices");
         Check(f.Read().Skeletons[0].Joints.All(j => j.InverseBind == Matrix4x4.Identity), "absent inverse binds");

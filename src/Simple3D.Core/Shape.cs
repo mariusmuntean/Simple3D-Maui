@@ -24,7 +24,7 @@ public sealed class Shape
     public uint Color { get; }
     /// <summary>Local position relative to the parent.</summary>
     public Vector3 Position { get; }
-    /// <summary>Local Euler rotation in radians.</summary>
+    /// <summary>Local Euler rotation in radians. For nodes imported from glTF it approximates the exact imported rotation, which <see cref="Rotated"/> replaces.</summary>
     public Vector3 Rotation { get; }
     /// <summary>Positive local scale factors.</summary>
     public Vector3 Size { get; }

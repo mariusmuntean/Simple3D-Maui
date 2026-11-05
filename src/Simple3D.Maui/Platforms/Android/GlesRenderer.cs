@@ -11,7 +11,7 @@ internal sealed unsafe class GlesRenderer : IDisposable
 {
     private uint _program, _maskProgram, _skinnedProgram, _skinnedMaskProgram, _screenProgram, _uniform, _palette, _vao, _fbo, _color, _mask, _depth;
     private int _targetWidth, _targetHeight;
-    private readonly int _maxTextureSize, _uniformStride, _paletteStride, _outlineLocation;
+    private readonly int _maxTextureSize, _uniformStride, _uniformAlignment, _outlineLocation;
     private byte[] _uniformData = [], _paletteData = [];
     private int[] _paletteOffsets = [];
     // One VAO per resident mesh: attribute layout is specified once at upload, not per draw.
@@ -57,7 +57,7 @@ internal sealed unsafe class GlesRenderer : IDisposable
             glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, out var alignment);
             alignment = Math.Max(1, alignment);
             _uniformStride = (sizeof(GpuUniforms) + alignment - 1) / alignment * alignment;
-            _paletteStride = (GlesShaders.PaletteBytes + alignment - 1) / alignment * alignment;
+            _uniformAlignment = alignment;
             // Queried with the window surface current and the default framebuffer bound.
             glGetIntegerv(GL_DEPTH_BITS, out var depthBits);
             SupportsDirect = depthBits >= 16;
@@ -161,16 +161,17 @@ internal sealed unsafe class GlesRenderer : IDisposable
             glBufferData(GL_UNIFORM_BUFFER, size, data, GL_STREAM_DRAW);
         }
     }
-    // Every skinned item's joint palette in one upload per frame. Each slot spans the whole declared
-    // block (the bound range must cover it); only the used joints are copied.
+    // Every skinned item's joint palette in one upload per frame. Slots are packed by their real size; each
+    // bound range covers the whole declared block, so the buffer carries one block of tail padding.
     private void UploadPalettes(GpuFrame frame)
     {
         var items = frame.Geometry.Items;
         if (_paletteOffsets.Length < items.Count) _paletteOffsets = new int[Math.Max(items.Count, _paletteOffsets.Length * 2)];
-        var size = 0;
+        var used = 0;
         for (var i = 0; i < items.Count; i++)
-            if (items[i].Joints is not null) { _paletteOffsets[i] = size; size += _paletteStride; }
-        if (size == 0) return;
+            if (items[i].Joints is { } joints) { _paletteOffsets[i] = used; used = checked(used + Align(joints.Length * sizeof(System.Numerics.Matrix4x4))); }
+        if (used == 0) return;
+        var size = checked(used + GlesShaders.PaletteBytes);
         if (_paletteData.Length < size) _paletteData = new byte[Math.Max(size, _paletteData.Length * 2)];
         fixed (byte* data = _paletteData)
         {
@@ -185,6 +186,7 @@ internal sealed unsafe class GlesRenderer : IDisposable
             glBufferData(GL_UNIFORM_BUFFER, size, data, GL_STREAM_DRAW);
         }
     }
+    private int Align(int bytes) => (bytes + _uniformAlignment - 1) / _uniformAlignment * _uniformAlignment;
     private uint Mesh(GpuGeometry geometry)
     {
         if (_resources.Meshes.TryGetValue(geometry, out var mesh)) return mesh.Vao;

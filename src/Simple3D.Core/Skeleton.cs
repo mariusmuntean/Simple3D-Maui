@@ -45,7 +45,10 @@ public sealed class Skeleton
             Validation.Vector(joint.Scale, nameof(joints));
             if (joint.Scale.X <= 0 || joint.Scale.Y <= 0 || joint.Scale.Z <= 0) throw new ArgumentOutOfRangeException(nameof(joints), "Joint scales must be positive.");
             copy[i] = joint with { Rotation = Normalized(joint.Rotation, nameof(joints)) };
-            if (!Finite(joint.InverseBind)) throw new ArgumentOutOfRangeException(nameof(joints), "Inverse bind matrices must be finite.");
+            var bind = joint.InverseBind;
+            // CPU skinning drops w and GPU skinning keeps it: only affine matrices render the same on both.
+            if (!Finite(bind) || MathF.Abs(bind.M14) + MathF.Abs(bind.M24) + MathF.Abs(bind.M34) + MathF.Abs(bind.M44 - 1) > 1e-4f)
+                throw new ArgumentOutOfRangeException(nameof(joints), "Inverse bind matrices must be finite and affine.");
         }
         var root = rootTransform ?? Matrix4x4.Identity;
         if (!Finite(root)) throw new ArgumentOutOfRangeException(nameof(rootTransform));
@@ -77,6 +80,7 @@ public sealed class SkeletonPose
 {
     private readonly Quaternion[] _rotations;
     private Matrix4x4[]? _world, _skinning;
+    private IReadOnlyList<Matrix4x4>? _worldView;
 
     /// <summary>The posed skeleton.</summary>
     public Skeleton Skeleton { get; }
@@ -105,7 +109,7 @@ public sealed class SkeletonPose
     }
 
     /// <summary>Joint transforms in the skinned mesh's coordinate system, including <see cref="Skeleton.RootTransform"/>.</summary>
-    public IReadOnlyList<Matrix4x4> WorldTransforms => _world ??= ComputeWorld();
+    public IReadOnlyList<Matrix4x4> WorldTransforms => _worldView ??= Array.AsReadOnly(_world ??= ComputeWorld());
 
     /// <summary>Per-joint skinning matrices: inverse bind followed by the posed joint transform.</summary>
     internal Matrix4x4[] SkinningMatrices
@@ -182,9 +186,11 @@ public sealed class SkinnedMesh
             if (!float.IsFinite(weights.X) || !float.IsFinite(weights.Y) || !float.IsFinite(weights.Z) || !float.IsFinite(weights.W) ||
                 weights.X < 0 || weights.Y < 0 || weights.Z < 0 || weights.W < 0)
                 throw new ArgumentOutOfRangeException(nameof(influences), "Weights must be finite and nonnegative.");
-            var sum = weights.X + weights.Y + weights.Z + weights.W;
-            if (!(sum > 0)) throw new ArgumentOutOfRangeException(nameof(influences), "Each vertex needs a positive weight.");
-            weights /= sum;
+            // Scale by the largest weight first so huge finite weights cannot overflow the sum.
+            var largest = MathF.Max(MathF.Max(weights.X, weights.Y), MathF.Max(weights.Z, weights.W));
+            if (!(largest > 0)) throw new ArgumentOutOfRangeException(nameof(influences), "Each vertex needs a positive weight.");
+            weights /= largest;
+            weights /= weights.X + weights.Y + weights.Z + weights.W;
             for (var k = 0; k < 4; k++)
             {
                 var weight = k switch { 0 => weights.X, 1 => weights.Y, 2 => weights.Z, _ => weights.W };
@@ -263,10 +269,20 @@ public sealed class SkinnedMesh
 // Lazily skinned geometry of one posed shape. Count never triggers skinning, so budgets stay cheap.
 internal sealed class PosedGeometry(SkinnedMesh skinned, SkeletonPose pose) : IReadOnlyList<Triangle3>
 {
-    private (Vector3[] Positions, Vector3[]? Normals)? _deformed;
+    private sealed record Result(Vector3[] Positions, Vector3[]? Normals);
+    // A reference published atomically: concurrent readers (say, picking during a software render) never see a torn value.
+    private Result? _deformed;
     internal SkinnedMesh Skinned { get; } = skinned;
     internal SkeletonPose Pose { get; } = pose;
-    private (Vector3[] Positions, Vector3[]? Normals) Deformed => _deformed ??= Skinned.Deform(Pose);
+    private Result Deformed
+    {
+        get
+        {
+            if (Volatile.Read(ref _deformed) is { } cached) return cached;
+            var (positions, normals) = Skinned.Deform(Pose);
+            return Interlocked.CompareExchange(ref _deformed, new(positions, normals), null) ?? _deformed!;
+        }
+    }
     internal IReadOnlyList<Vector3>? Normals => Skinned.Mesh.Normals is null ? null : Deformed.Normals;
     public int Count => Skinned.Mesh.TriangleCount;
     public Triangle3 this[int index]

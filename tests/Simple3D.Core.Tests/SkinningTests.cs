@@ -72,6 +72,10 @@ internal static class SkinningTests
         var restFrame = new DepthRenderer().Render(new Scene().Add(rest), camera, 120, 120);
         Check(restFrame.Pick((int)tip.X, (int)tip.Y) is null, "rest pose must not cover the posed tip");
 
+        // Huge finite weights normalize instead of overflowing to zero.
+        var huge = new SkinnedMesh(skinned.Mesh, skeleton, skinned.Influences.Select(i => i with { Weights = i.Weights * 3e38f }));
+        Check(huge.Influences.All(i => MathF.Abs(i.Weights.X + i.Weights.Y + i.Weights.Z + i.Weights.W - 1) < 1e-5f), "overflow-safe weight normalization");
+        Check(bend.WorldTransforms is not Matrix4x4[], "world transforms must not expose the cached array");
         // Validation.
         try { _ = new SkinnedMesh(skinned.Mesh, skeleton, skinned.Influences.Take(3)); throw new Exception("missing influences accepted"); } catch (ArgumentException) { }
         try { _ = new Skeleton([new Joint("a", 0, default, Quaternion.Identity, Vector3.One, Matrix4x4.Identity)]); throw new Exception("self parent accepted"); } catch (ArgumentException) { }
