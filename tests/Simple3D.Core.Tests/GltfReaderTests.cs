@@ -159,8 +159,7 @@ internal static class GltfReaderTests
 
     private static void Smoke()
     {
-        var path = Path.Combine(".assets", "Froggy.vrm");
-        if (!File.Exists(path)) { Console.WriteLine("SKIP Froggy smoke (.assets/Froggy.vrm absent)"); return; }
+        var path = Path.Combine(AppContext.BaseDirectory, "Assets", "froggy.vrm");
         using var input = File.OpenRead(path);
         var model = GltfReader.Read(input); var shape = model.CreateShape();
         var triangles = Leaves(shape).Sum(s => s.TriangleCount);

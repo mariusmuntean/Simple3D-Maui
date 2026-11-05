@@ -37,11 +37,13 @@ public sealed class HumanoidRetargeter
     private readonly int[] _limbOfJoint;
     private readonly (int Joint, Vector3 LocalDirection, BodyJoint From, BodyJoint To, float DepthSign)[] _limbs;
     private readonly int[] _feet;
-    private readonly float _restFloor, _legLength;
+    private readonly float _restFloor;
     private readonly float[] _segmentLength;
-    private float _personLegLength;
     private readonly Quaternion[] _local, _world;
     private readonly Vector2[] _points = new Vector2[PoseFrame.JointCount];
+
+    /// <summary>How far, in skeleton units, the character moves sideways when the person reaches the image edge.</summary>
+    public float SidewaysRange { get; init; } = .6f;
 
     /// <summary>Angle in degrees between each limb's on-screen direction and its target in the last pose, in limb order (arms, then legs).</summary>
     public IReadOnlyList<float> LastErrors => _errors;
@@ -82,8 +84,6 @@ public sealed class HumanoidRetargeter
         _feet = new[] { "leftFoot", "rightFoot", "leftToes", "rightToes" }
             .Where(humanoidBones.ContainsKey).Select(Bone).ToArray();
         _restFloor = _feet.Min(f => ViewY(_restPositions[f]));
-        _legLength = Vector3.Distance(_restPositions[Bone("leftUpperLeg")], _restPositions[Bone("leftLowerLeg")]) +
-            Vector3.Distance(_restPositions[Bone("leftLowerLeg")], _restPositions[Bone("leftFoot")]);
         _segmentLength = new float[_limbs.Length];
         _errors = new float[_limbs.Length];
         _local = skeleton.RestPose.Rotations.ToArray();
@@ -94,7 +94,6 @@ public sealed class HumanoidRetargeter
     public void Reset()
     {
         Array.Clear(_segmentLength);
-        _personLegLength = 0;
     }
 
     /// <summary>Computes a pose from landmarks of the upright, unmirrored image.</summary>
@@ -149,13 +148,10 @@ public sealed class HumanoidRetargeter
             _errors[limb] = Angle(new Vector2(achieved.X, achieved.Y), P(to) - P(from));
         }
 
-        // Ground the lowest foot and follow the person sideways, scaled from their legs to the character's.
+        // Ground the lowest foot, and follow the person across the image within a bounded stage range.
         var pose = SkeletonPose.Create(_skeleton, _local);
         var floor = _feet.Min(f => ViewY(pose.WorldTransforms[f].Translation));
-        var personLeg = (Vector2.Distance(P(BodyJoint.LeftHip), P(BodyJoint.LeftKnee)) + Vector2.Distance(P(BodyJoint.LeftKnee), P(BodyJoint.LeftAnkle)) +
-            Vector2.Distance(P(BodyJoint.RightHip), P(BodyJoint.RightKnee)) + Vector2.Distance(P(BodyJoint.RightKnee), P(BodyJoint.RightAnkle))) / 2;
-        _personLegLength = MathF.Max(_personLegLength * LengthMemory, personLeg);
-        var sideways = _personLegLength > 1e-3f ? Math.Clamp(hipCenter.X / _personLegLength * _legLength, -3 * _legLength, 3 * _legLength) : 0;
+        var sideways = Math.Clamp(hipCenter.X / (imageAspect / 2), -1, 1) * SidewaysRange;
         var offset = Vector3.Transform(new Vector3(sideways, _restFloor - floor, 0), _fromView);
         // RootOffset is applied before RootTransform; undo its rotation and scale.
         if (Matrix4x4.Invert(_skeleton.RootTransform with { Translation = Vector3.Zero }, out var inverseRoot))
