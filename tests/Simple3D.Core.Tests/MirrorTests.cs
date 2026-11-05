@@ -6,9 +6,9 @@ using Simple3D.Shared.Mirror;
 internal static class MirrorTests
 {
     /// <summary>Apple Vision landmarks of a 33 s clip of one person exercising, with an empty 3 s gap at 14–17 s.</summary>
-    internal static IReadOnlyList<PoseFrame> Fixture()
+    internal static IReadOnlyList<PoseFrame> Fixture(string name = "mirror-landmarks")
     {
-        var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "mirror-landmarks.jsonl.gz");
+        var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", name + ".jsonl.gz");
         using var reader = new StreamReader(new GZipStream(File.OpenRead(path), CompressionMode.Decompress));
         return PoseRecording.Read(reader);
     }
@@ -113,6 +113,23 @@ internal static class MirrorTests
         var away = new HumanoidRetargeter(awaySkeleton, bones, turned).Retarget(raised, 1, mirrored: false);
         var hand = Vector3.Transform(away.WorldTransforms[bones["leftHand"]].Translation, turned);
         Check(hand.X > 0 && HandHeight(away, "left") > HandHeight(away, "right") + .3f, "facing rotation");
+        // Turning around: a dancer (Apple Vision landmarks, Mixkit clip 43650) spins between facing the camera and showing her back.
+        var spinner = new HumanoidRetargeter(skeleton, bones, Quaternion.Identity);
+        var spin = new PoseTracker();
+        int backFrames = 0, backRight = 0, frontFrames = 0, frontRight = 0;
+        foreach (var frame in Fixture("turning-landmarks"))
+        {
+            if (!spin.Update(frame)) continue;
+            var forward = Vector3.Transform(Vector3.UnitZ, Quaternion.CreateFromRotationMatrix(spinner.Retarget(spin.Landmarks, spin.ImageAspect, mirrored: false).WorldTransforms[bones["hips"]]));
+            var lm = frame.Landmarks!;
+            var width = lm[(int)BodyJoint.LeftShoulder].X - lm[(int)BodyJoint.RightShoulder].X + lm[(int)BodyJoint.LeftHip].X - lm[(int)BodyJoint.RightHip].X;
+            // Clear cases only: her left side well to the image left with the face hidden, or a wide frontal view.
+            if (width < -.1f && lm[(int)BodyJoint.Nose].Confidence < .3f) { backFrames++; if (forward.Z < -.3f) backRight++; }
+            else if (width > .15f && lm[(int)BodyJoint.Nose].Confidence > .8f) { frontFrames++; if (forward.Z > .5f) frontRight++; }
+        }
+        Check(backFrames > 20 && backRight >= backFrames * .8 && frontFrames > 20 && frontRight >= frontFrames * .8,
+            $"facing: back {backRight}/{backFrames}, front {frontRight}/{frontFrames}");
+        Console.WriteLine($"PASS mirror turning: character faces away in {backRight}/{backFrames} back views and toward the camera in {frontRight}/{frontFrames} front views");
         Console.WriteLine($"PASS mirror tracking ({summary}) and retargeting (median {errors[errors.Count / 2]:0.00}°)");
     }
 

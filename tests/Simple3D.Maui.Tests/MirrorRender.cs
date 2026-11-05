@@ -6,7 +6,7 @@ using SkiaSharp;
 using System.Diagnostics;
 
 /// <summary>Renders the Mirror character driven by recorded landmarks, for visual review next to the source video.</summary>
-/// <remarks><c>dotnet run --project tests/Simple3D.Maui.Tests -c Release -- --render-mirror out [every-nth-frame]</c>
+/// <remarks><c>dotnet run --project tests/Simple3D.Maui.Tests -c Release -- --render-mirror out [every-nth-frame] [fixture-name]</c>
 /// writes <c>frame-NNNN.png</c> for every nth analyzed frame plus <c>timeline.txt</c> with tracking states.</remarks>
 internal static class MirrorRender
 {
@@ -14,6 +14,7 @@ internal static class MirrorRender
     {
         var output = args.Length > 0 ? args[0] : "mirror-render";
         var every = args.Length > 1 ? int.Parse(args[1]) : 5;
+        var fixture = args.Length > 2 ? args[2] : "mirror-landmarks";
         Directory.CreateDirectory(output);
         using var asset = File.OpenRead(Path.Combine(AppContext.BaseDirectory, "Assets", "froggy.vrm"));
         var character = GltfLoader.Load(asset);
@@ -23,7 +24,7 @@ internal static class MirrorRender
         var timeline = new List<string>();
         var (pose, prepare, render) = (new List<double>(), new List<double>(), new List<double>());
         var index = 0;
-        foreach (var frame in Frames())
+        foreach (var frame in Frames(fixture))
         {
             var started = Stopwatch.GetTimestamp();
             if (session.Apply(frame, mirrored: false)) pose.Add(Stopwatch.GetElapsedTime(started).TotalMilliseconds);
@@ -52,9 +53,9 @@ internal static class MirrorRender
     private static double Median(List<double> values) { values.Sort(); return values[values.Count / 2]; }
     private static double P95(List<double> values) { values.Sort(); return values[(int)(values.Count * .95)]; }
 
-    private static IReadOnlyList<PoseFrame> Frames()
+    private static IReadOnlyList<PoseFrame> Frames(string fixture)
     {
-        using var reader = new StreamReader(new GZipStream(File.OpenRead(Path.Combine(AppContext.BaseDirectory, "Fixtures", "mirror-landmarks.jsonl.gz")), CompressionMode.Decompress));
+        using var reader = new StreamReader(new GZipStream(File.OpenRead(Path.Combine(AppContext.BaseDirectory, "Fixtures", fixture + ".jsonl.gz")), CompressionMode.Decompress));
         return PoseRecording.Read(reader);
     }
 }

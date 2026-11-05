@@ -8,8 +8,8 @@ namespace Simple3D.Shared.Mirror;
 /// Works in view space (X right, Y up, Z toward the camera), with the character facing the camera.
 /// Each limb bone receives the smallest rotation that turns it toward the target direction, so bones
 /// never twist. Detectors report 2D landmarks; depth comes from foreshortening against the longest
-/// length each segment recently had, signed by how people usually move (arms and thighs toward the
-/// camera, shins away). The feet stay on the ground and the body follows the person sideways.
+/// length each segment recently had, signed by how people usually move (arms and thighs in front of
+/// the body, shins behind). The body turns about the vertical axis to follow a person who faces away. The feet stay on the ground and the body follows the person sideways.
 /// </remarks>
 public sealed class HumanoidRetargeter
 {
@@ -27,6 +27,8 @@ public sealed class HumanoidRetargeter
     ];
     private const float DepthGain = .8f;
     private const float LengthMemory = .995f;
+    private const float FacingSmoothing = .35f;
+    private float _facing, _frontWidth, _turnSign = 1;
 
     private readonly Skeleton _skeleton;
     private readonly Quaternion _toView, _fromView;
@@ -90,12 +92,13 @@ public sealed class HumanoidRetargeter
     }
 
     /// <summary>Forgets only the calibrated segment lengths, for example after a camera zoom changed the person's size in the image.</summary>
-    public void ForgetLengths() => Array.Clear(_segmentLength);
+    public void ForgetLengths() { Array.Clear(_segmentLength); _frontWidth = 0; }
 
     /// <summary>Forgets calibrated segment lengths, for example when a different person appears.</summary>
     public void Reset()
     {
         ForgetLengths();
+        _facing = 0; _turnSign = 1;
         _skeleton.RestPose.Rotations.ToArray().CopyTo(_held, 0);
     }
 
@@ -121,11 +124,13 @@ public sealed class HumanoidRetargeter
         var hipCenter = (P(BodyJoint.LeftHip) + P(BodyJoint.RightHip)) / 2;
         var shoulderCenter = (P(BodyJoint.LeftShoulder) + P(BodyJoint.RightShoulder)) / 2;
         var up = Direction(shoulderCenter - hipCenter, Vector2.UnitY);
-        // The character's left is screen right when it faces the camera.
-        var side = P(BodyJoint.LeftHip) - P(BodyJoint.RightHip) + P(BodyJoint.LeftShoulder) - P(BodyJoint.RightShoulder);
-        var left = Direction(side - Vector2.Dot(side, up) * up, new Vector2(up.Y, -up.X));
-        var torso = Quaternion.CreateFromRotationMatrix(new Matrix4x4(
-            left.X, left.Y, 0, 0, up.X, up.Y, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1));
+        var facing = Facing(landmarks, P(BodyJoint.Nose) - shoulderCenter, Vector2.Distance(shoulderCenter, hipCenter),
+            P(BodyJoint.LeftHip) - P(BodyJoint.RightHip) + P(BodyJoint.LeftShoulder) - P(BodyJoint.RightShoulder));
+        // Turn about the vertical axis first, then lean within the image plane along the spine.
+        var lean = MathF.Atan2(-up.X, up.Y);
+        var torso = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, lean) * Quaternion.CreateFromAxisAngle(Vector3.UnitY, facing);
+        // Limbs usually reach in front of the body: toward the camera when facing it, away when turned around.
+        var forward = MathF.Cos(facing);
         var torsoSkeleton = _fromView * torso * _toView;
 
         var joints = _skeleton.Joints;
@@ -150,7 +155,7 @@ public sealed class HumanoidRetargeter
                 _world[j] = parent * _local[j];
                 continue;
             }
-            var target = Target(limb, P(to) - P(from), depthSign);
+            var target = Target(limb, P(to) - P(from), depthSign * forward);
             var current = Vector3.Transform(localDirection, _world[j]);
             _world[j] = Quaternion.Normalize(FromTo(current, Vector3.Transform(target, _fromView)) * _world[j]);
             _local[j] = _held[j] = Quaternion.Normalize(Quaternion.Conjugate(parent) * _world[j]);
@@ -165,6 +170,25 @@ public sealed class HumanoidRetargeter
         if (Matrix4x4.Invert(_skeleton.RootTransform with { Translation = Vector3.Zero }, out var inverseRoot))
             offset = Vector3.Transform(offset, inverseRoot);
         return SkeletonPose.Create(_skeleton, _local, offset);
+    }
+
+    // The body's turn about the vertical axis, 0 when facing the camera and ±π when showing its back.
+    // Detectors label joints anatomically, so a person seen from behind has their left side on the image
+    // left: the signed left-to-right width over its front-on maximum gives the cosine. The nose, visible
+    // only from the front or side, tells which way the person turned; seen from behind, the last turn holds.
+    private float Facing(IReadOnlyList<Landmark> landmarks, Vector2 noseOffset, float torsoLength, Vector2 side)
+    {
+        if (torsoLength < 1e-4f) return _facing;
+        var ratio = side.X / torsoLength;
+        _frontWidth = MathF.Max(MathF.Max(_frontWidth * LengthMemory, MathF.Abs(ratio)), .2f);
+        var cos = Math.Clamp(ratio / _frontWidth, -1, 1);
+        if (landmarks[(int)BodyJoint.Nose].Confidence >= MinimumConfidence && MathF.Abs(noseOffset.X) > .02f * torsoLength)
+            _turnSign = MathF.Sign(noseOffset.X);
+        var target = MathF.Atan2(_turnSign * MathF.Sqrt(1 - cos * cos), cos);
+        // Smooth along the shorter way around the circle so noisy side views do not flip the character.
+        var delta = MathF.IEEERemainder(target - _facing, 2 * MathF.PI);
+        _facing = MathF.IEEERemainder(_facing + delta * FacingSmoothing, 2 * MathF.PI);
+        return _facing;
     }
 
     private Vector3 Target(int limb, Vector2 segment, float depthSign)
