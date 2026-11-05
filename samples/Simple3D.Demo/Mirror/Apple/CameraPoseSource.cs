@@ -133,7 +133,7 @@ public sealed class CameraPoseSource(bool preferFront = true) : PoseSource
                 using var image = _detector.CreateImage(pixels, CGAffineTransform.MakeIdentity());
                 var start = Stopwatch.GetTimestamp();
                 var frame = _detector.Detect(image, _clock.Elapsed);
-                owner.Publish(frame, Stopwatch.GetElapsedTime(start).TotalMilliseconds);
+                owner.Publish(frame, Stopwatch.GetElapsedTime(start).TotalMilliseconds, _detector.LastFaceMilliseconds);
             }
             catch (Exception error) { owner.ReportError(error); }
             finally { sampleBuffer.Dispose(); }

@@ -1,6 +1,4 @@
 #if (DEBUG || NATIVE_RENDER_PROBE) && (IOS || MACCATALYST || ANDROID)
-using System.Globalization;
-using System.Text;
 using Simple3D.Shared.Mirror;
 
 namespace Simple3D.Demo.Mirror;
@@ -55,11 +53,13 @@ internal sealed class PoseProbePage : ContentPage
         await using var source = new VideoPoseSource(path, loop: false);
         preview.Source = source;
         var times = new List<double>();
-        int frames = 0, detected = 0;
+        var faceTimes = new List<double>();
+        int frames = 0, detected = 0, faces = 0;
         TimeSpan previous = TimeSpan.MinValue;
         Exception? failure = null;
         source.Failed += error => failure = error;
         source.DetectionMeasured += value => times.Add(value);
+        source.FaceDetectionMeasured += value => faceTimes.Add(value);
         source.FrameAnalyzed += frame =>
         {
             if (frame.Timestamp <= previous || frame.ImageWidth <= 0 || frame.ImageHeight <= 0)
@@ -72,32 +72,26 @@ internal sealed class PoseProbePage : ContentPage
                 throw new InvalidDataException("Invalid landmark array.");
             frames++;
             if (points is not null && points.All(p => p.Confidence > .3f)) detected++;
-            var json = new StringBuilder(512).Append("POSE_FRAME {\"t\":")
-                .Append(frame.Timestamp.TotalSeconds.ToString("0.######", CultureInfo.InvariantCulture))
-                .Append(",\"w\":").Append(frame.ImageWidth).Append(",\"h\":").Append(frame.ImageHeight).Append(",\"lm\":");
-            if (points is null) json.Append("null");
-            else
+            if (frame.Face is { } face)
             {
-                json.Append('[');
-                for (int i = 0; i < points.Length; i++)
-                {
-                    if (i > 0) json.Append(',');
-                    var point = points[i];
-                    json.Append(CultureInfo.InvariantCulture, $"[{point.X:0.######},{point.Y:0.######},{point.Confidence:0.######}]");
-                }
-                json.Append(']');
+                faces++;
+                float[] angles = [face.Yaw, face.Pitch, face.Roll], units = [face.MouthOpen, face.Smile, face.BlinkLeft, face.BlinkRight];
+                if (angles.Any(a => !float.IsFinite(a) || MathF.Abs(a) > MathF.PI) || units.Any(u => !(u is >= 0 and <= 1)) || !(face.Brows is >= -1 and <= 1))
+                    throw new InvalidDataException("Invalid face measurements.");
             }
-            Write(json.Append('}').ToString());
+            Write("POSE_FRAME " + PoseRecording.Format(frame));
         };
         await source.StartAsync();
         await source.Completion.WaitAsync(TimeSpan.FromMinutes(4));
         await source.StopAsync();
         if (failure is not null) throw new InvalidOperationException("Source failed.", failure);
         if (frames == 0 || times.Count != frames) throw new InvalidDataException("No analyzed frames or missing detection timings.");
-        if (times.Any(t => !double.IsFinite(t) || t < 0)) throw new InvalidDataException("Invalid detection timings.");
+        if (times.Concat(faceTimes).Any(t => !double.IsFinite(t) || t < 0) || faceTimes.Count != frames) throw new InvalidDataException("Invalid detection timings.");
         times.Sort();
-        var p95 = times[(int)Math.Ceiling(times.Count * .95) - 1];
-        Write(FormattableString.Invariant($"POSE_PROBE_PASS frames={frames} detected={detected} mean_detect_ms={times.Average():0.###} p95_detect_ms={p95:0.###}"));
+        faceTimes.Sort();
+        static double P95(List<double> sorted) => sorted[(int)Math.Ceiling(sorted.Count * .95) - 1];
+        // The detection time includes the face detection time.
+        Write(FormattableString.Invariant($"POSE_PROBE_PASS frames={frames} detected={detected} faces={faces} mean_detect_ms={times.Average():0.###} p95_detect_ms={P95(times):0.###} mean_face_ms={faceTimes.Average():0.###} p95_face_ms={P95(faceTimes):0.###}"));
     }
 
     async Task RunCameraAsync()

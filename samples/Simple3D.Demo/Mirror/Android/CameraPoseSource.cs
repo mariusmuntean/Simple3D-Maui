@@ -125,7 +125,7 @@ public sealed class CameraPoseSource(bool preferFront = true) : PoseSource
             using var input = InputImage.FromMediaImage(media, rotation);
             var start = Stopwatch.GetTimestamp();
             var frame = await detector!.DetectAsync(input, width, height, TimeSpan.FromTicks(ticks)).ConfigureAwait(false);
-            Publish(frame, Stopwatch.GetElapsedTime(start).TotalMilliseconds);
+            Publish(frame, Stopwatch.GetElapsedTime(start).TotalMilliseconds, detector.LastFaceMilliseconds);
         }
         catch (Exception error) { ReportError(error); }
         finally { proxy.Close(); }

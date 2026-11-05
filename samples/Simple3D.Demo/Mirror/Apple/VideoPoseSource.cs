@@ -95,7 +95,7 @@ public sealed class VideoPoseSource(string path, bool loop = false, IReadOnlyLis
                         var elapsed = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
                         token.ThrowIfCancellationRequested();
                         ImageReady?.Invoke(image);
-                        Publish(frame, elapsed);
+                        Publish(frame, elapsed, recording is null ? detector.LastFaceMilliseconds : 0);
                         lastTimestamp = timestamp;
                     }
                     token.ThrowIfCancellationRequested();
