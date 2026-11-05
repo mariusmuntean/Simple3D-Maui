@@ -15,6 +15,12 @@ public static class TextureLoader
     /// <exception cref="InvalidDataException">The image is invalid, incomplete, oversized, or contains transparency.</exception>
     public static Texture2D Load(Stream stream, TextureFilter filter = TextureFilter.Nearest,
         TextureAddressMode addressMode = TextureAddressMode.Clamp)
+        => LoadCore(stream, filter, addressMode, opaque: false);
+
+    internal static Texture2D LoadOpaque(Stream stream, TextureFilter filter, TextureAddressMode addressMode)
+        => LoadCore(stream, filter, addressMode, opaque: true);
+
+    private static Texture2D LoadCore(Stream stream, TextureFilter filter, TextureAddressMode addressMode, bool opaque)
     {
         ArgumentNullException.ThrowIfNull(stream);
         if (!Enum.IsDefined(filter)) throw new ArgumentOutOfRangeException(nameof(filter));
@@ -45,7 +51,7 @@ public static class TextureLoader
         for (var i = 0; i < pixels.Length; i++)
         {
             var offset = i * 4;
-            if (bytes[offset + 3] != 255)
+            if (!opaque && bytes[offset + 3] != 255)
                 throw new InvalidDataException("Texture images must contain only opaque pixels.");
             pixels[i] = 0xFF000000u | (uint)bytes[offset] << 16 | (uint)bytes[offset + 1] << 8 | bytes[offset + 2];
         }

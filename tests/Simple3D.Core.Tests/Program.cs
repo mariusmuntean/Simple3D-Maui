@@ -7,6 +7,8 @@ if (args.Length > 0 && args[0] == "--render-images")
 
 GpuSceneTests.Run();
 SkinningTests.Run();
+MirrorTests.Run();
+GltfReaderTests.Run();
 
 var tests = new (string Name, Action Run)[]
 {

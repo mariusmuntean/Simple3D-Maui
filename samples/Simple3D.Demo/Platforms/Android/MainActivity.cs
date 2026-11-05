@@ -17,6 +17,10 @@ public class MainActivity : MauiAppCompatActivity
             Environment.SetEnvironmentVariable("SIMPLE3D_GPU_VIEW_PROBE", "1");
         if (Intent?.GetStringExtra("simple3d_label_sync_probe") is { } labelSync)
             Environment.SetEnvironmentVariable("SIMPLE3D_LABEL_SYNC_PROBE", labelSync);
+        if (Intent?.GetStringExtra("simple3d_pose_probe") is { } poseVideo)
+            Environment.SetEnvironmentVariable("SIMPLE3D_POSE_PROBE", poseVideo);
+        if (Intent?.GetStringExtra("simple3d_camera_probe") is { } cameraProbe)
+            Environment.SetEnvironmentVariable("SIMPLE3D_CAMERA_PROBE", cameraProbe);
         base.OnCreate(savedInstanceState);
     }
 #endif
