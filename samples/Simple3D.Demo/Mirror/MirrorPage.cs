@@ -91,8 +91,9 @@ public sealed class MirrorPage : ContentPage
         SemanticProperties.SetDescription(_switchCamera, "Switch between the front and back camera");
         _switchCamera.Clicked += (_, _) => SwitchCamera();
         _characters = Carousel();
-        _status.HorizontalOptions = LayoutOptions.End; _status.VerticalOptions = LayoutOptions.End;
-        _status.Margin = new Thickness(0, 0, 16, 12); _status.InputTransparent = true;
+        // Debug-only developer stats, under the top-left buttons and clear of the carousel.
+        _status.HorizontalOptions = LayoutOptions.Start; _status.VerticalOptions = LayoutOptions.Start;
+        _status.Margin = new Thickness(18, 68, 0, 0); _status.InputTransparent = true;
         _zoomPill = new Border
         {
             IsVisible = false, InputTransparent = true, Padding = new Thickness(14, 6), Margin = new Thickness(0, 20, 0, 0),
