@@ -2,12 +2,13 @@
 using System.Diagnostics;
 using Android.Graphics;
 using Android.Media;
+using Simple3D.Shared.Mirror;
 using Xamarin.Google.MLKit.Vision.Common;
 
 namespace Simple3D.Demo.Mirror;
 
-/// <summary>Plays an MP4 in real time and analyzes its frames, skipping frames that are already late.</summary>
-public sealed class VideoPoseSource(string path, bool loop = false) : PoseSource, IAndroidPosePreview
+/// <summary>Plays an MP4 in real time and analyzes its frames, skipping frames that are already late. With a recording, its landmarks replace detection.</summary>
+public sealed class VideoPoseSource(string path, bool loop = false, IReadOnlyList<PoseFrame>? recording = null) : PoseSource, IAndroidPosePreview
 {
     private readonly SemaphoreSlim lifecycle = new(1, 1);
     private CancellationTokenSource? cancellation;
@@ -41,7 +42,7 @@ public sealed class VideoPoseSource(string path, bool loop = false) : PoseSource
         {
             // Stream mode tracks the person across consecutive frames; on the test clip single-image mode found a
             // full body in about half as many frames and often locked onto background clutter.
-            using var detector = new MlKitPoseDetector(stream: true);
+            using var detector = recording is null ? new MlKitPoseDetector(stream: true) : null;
             var timestampOffset = TimeSpan.Zero;
             do
             {
@@ -64,9 +65,10 @@ public sealed class VideoPoseSource(string path, bool loop = false) : PoseSource
                     {
                         var delay = timestamp - clock.Elapsed;
                         if (delay > TimeSpan.Zero) await Task.Delay(delay, token).ConfigureAwait(false);
-                        using var input = InputImage.FromBitmap(bitmap, 0);
                         var start = Stopwatch.GetTimestamp();
-                        var frame = await detector.DetectAsync(input, bitmap.Width, bitmap.Height, timestampOffset + timestamp).ConfigureAwait(false);
+                        var frame = detector is null
+                            ? PoseRecording.Nearest(recording!, timestamp) with { Timestamp = timestampOffset + timestamp }
+                            : await DetectAsync(detector, bitmap, timestampOffset + timestamp).ConfigureAwait(false);
                         var elapsed = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
                         token.ThrowIfCancellationRequested();
                         ImageReady?.Invoke(bitmap);
@@ -88,6 +90,12 @@ public sealed class VideoPoseSource(string path, bool loop = false) : PoseSource
             ReportError(error);
             throw;
         }
+    }
+
+    private static async Task<PoseFrame> DetectAsync(MlKitPoseDetector detector, Bitmap bitmap, TimeSpan timestamp)
+    {
+        using var input = InputImage.FromBitmap(bitmap, 0);
+        return await detector.DetectAsync(input, bitmap.Width, bitmap.Height, timestamp).ConfigureAwait(false);
     }
 
     public override async Task StopAsync()
