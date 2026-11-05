@@ -107,6 +107,17 @@ internal static class MirrorTests
         Check(HandHeight(mirrored, "right") > HandHeight(mirrored, "left") + .3f && mirrored.WorldTransforms[bones["rightHand"]].Translation.X < 0,
             "mirrored: the raised hand appears on screen left, like a reflection");
 
+        // Bowing toward the camera: once the full torso length has been seen, a shorter torso bends the chest
+        // forward (toward the camera, +Z) progressively along the spine, the pelvis only a little.
+        var bowing = new HumanoidRetargeter(skeleton, bones, Quaternion.Identity);
+        bowing.Retarget(raised, 1, mirrored: false);
+        var bent = raised.ToArray();
+        foreach (var joint in new[] { BodyJoint.Nose, BodyJoint.LeftShoulder, BodyJoint.RightShoulder, BodyJoint.LeftElbow, BodyJoint.RightElbow, BodyJoint.LeftWrist, BodyJoint.RightWrist })
+            bent[(int)joint] = bent[(int)joint] with { Y = .55f - (.55f - bent[(int)joint].Y) * .6f };
+        var bowPose = bowing.Retarget(bent, 1, mirrored: false).WorldTransforms;
+        Vector3 Up(string bone) => Vector3.TransformNormal(Vector3.UnitY, bowPose[bones[bone]]);
+        Check(Up("chest").Z > .5f && Up("hips").Z is > 0 and < .4f, $"bow: chest up {Up("chest")}, pelvis up {Up("hips")}");
+
         // A character modeled facing -Z (here through a rotated root) is turned to the camera by toView.
         var turned = Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI);
         var awaySkeleton = new Skeleton(skeleton.Joints, Matrix4x4.CreateFromQuaternion(turned));

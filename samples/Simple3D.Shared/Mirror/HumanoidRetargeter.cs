@@ -28,6 +28,10 @@ public sealed class HumanoidRetargeter
     private const float DepthGain = .8f;
     private const float LengthMemory = .995f;
     private const float FacingSmoothing = .35f;
+    private const float PelvisShare = .25f;
+    private const float BowDeadZone = .3f; // radians of apparent bend (about 17°) treated as noise
+    private float _torsoFull;
+    private readonly float[] _spineShare, _headShare;
     private float _facing, _frontWidth, _turnSign = 1, _torsoLength;
 
     private readonly Skeleton _skeleton;
@@ -72,6 +76,13 @@ public sealed class HumanoidRetargeter
             Matrix4x4.Decompose(restWorld[i], out _, out _restWorld[i], out _restPositions[i]);
         }
         _hips = Bone("hips");
+        // Spine bones up to the chest share the bend progressively; neck and head share the head's turn.
+        _spineShare = new float[restWorld.Count];
+        _headShare = new float[restWorld.Count];
+        var spine = new[] { "spine", "chest", "upperChest" }.Where(humanoidBones.ContainsKey).Select(Bone).ToArray();
+        for (var i = 0; i < spine.Length; i++) _spineShare[spine[i]] = (i + 1f) / spine.Length;
+        if (humanoidBones.TryGetValue("neck", out var neck)) _headShare[neck] = .4f;
+        if (humanoidBones.TryGetValue("head", out var headBone)) _headShare[headBone] = 1;
         _limbs = Limbs.Select(limb =>
         {
             var joint = Bone(limb.Bone);
@@ -92,7 +103,7 @@ public sealed class HumanoidRetargeter
     }
 
     /// <summary>Forgets only the calibrated segment lengths, for example after a camera zoom changed the person's size in the image.</summary>
-    public void ForgetLengths() { Array.Clear(_segmentLength); _frontWidth = 0; _torsoLength = 0; }
+    public void ForgetLengths() { Array.Clear(_segmentLength); _frontWidth = 0; _torsoLength = 0; _torsoFull = 0; }
 
     /// <summary>Forgets calibrated segment lengths, for example when a different person appears.</summary>
     public void Reset()
@@ -106,7 +117,8 @@ public sealed class HumanoidRetargeter
     /// <param name="landmarks">One landmark per <see cref="BodyJoint"/>.</param>
     /// <param name="imageAspect">Image width / height.</param>
     /// <param name="mirrored">True when the person sees a mirrored preview; the character then mirrors them.</param>
-    public SkeletonPose Retarget(IReadOnlyList<Landmark> landmarks, float imageAspect, bool mirrored)
+    /// <param name="face">Optional head angles; without them the head stays aligned with the chest.</param>
+    public SkeletonPose Retarget(IReadOnlyList<Landmark> landmarks, float imageAspect, bool mirrored, FaceFrame? face = null)
     {
         ArgumentNullException.ThrowIfNull(landmarks);
         if (landmarks.Count != PoseFrame.JointCount) throw new ArgumentException("Supply one landmark per body joint.", nameof(landmarks));
@@ -124,12 +136,19 @@ public sealed class HumanoidRetargeter
         var shoulderCenter = (P(BodyJoint.LeftShoulder) + P(BodyJoint.RightShoulder)) / 2;
         var shoulders = P(BodyJoint.LeftShoulder) - P(BodyJoint.RightShoulder);
         Vector2 hipCenter, up, side;
-        if (landmarks[(int)BodyJoint.LeftHip].Confidence >= MinimumConfidence && landmarks[(int)BodyJoint.RightHip].Confidence >= MinimumConfidence)
+        var hipsVisible = landmarks[(int)BodyJoint.LeftHip].Confidence >= MinimumConfidence && landmarks[(int)BodyJoint.RightHip].Confidence >= MinimumConfidence;
+        var bow = 0f;
+        if (hipsVisible)
         {
             hipCenter = (P(BodyJoint.LeftHip) + P(BodyJoint.RightHip)) / 2;
             up = Direction(shoulderCenter - hipCenter, Vector2.UnitY);
             _torsoLength = Vector2.Distance(shoulderCenter, hipCenter);
             side = P(BodyJoint.LeftHip) - P(BodyJoint.RightHip) + shoulders;
+            // Bowing toward or away from the camera shortens the torso in the image; people bow forward far more
+            // often than they arch back, so a shorter torso bends forward. Small changes are noise, not a bow.
+            _torsoFull = MathF.Max(_torsoFull * LengthMemory, _torsoLength);
+            var angle = MathF.Acos(Math.Clamp(_torsoLength / _torsoFull, 0, 1));
+            bow = MathF.Max(0, angle - BowDeadZone) * MathF.PI / 2 / (MathF.PI / 2 - BowDeadZone);
         }
         else
         {
@@ -142,20 +161,39 @@ public sealed class HumanoidRetargeter
             side = 2 * shoulders;
         }
         var facing = Facing(landmarks, P(BodyJoint.Nose) - shoulderCenter, _torsoLength, side);
-        // Turn about the vertical axis first, then lean within the image plane along the spine.
+        // The upper body turns about the vertical axis, bows about its own side-to-side axis, then leans within the image
+        // plane along the spine. The pelvis takes a share; the spine bones split the rest so the back curves.
         var lean = MathF.Atan2(-up.X, up.Y);
-        var torso = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, lean) * Quaternion.CreateFromAxisAngle(Vector3.UnitY, facing);
+        Quaternion Body(float share) => Quaternion.CreateFromAxisAngle(Vector3.UnitZ, lean * share) *
+            Quaternion.CreateFromAxisAngle(Vector3.UnitY, facing) * Quaternion.CreateFromAxisAngle(Vector3.UnitX, bow * share);
+        var pelvis = _fromView * Body(PelvisShare) * _toView;
+        var chest = _fromView * Body(1) * _toView;
+        var spineBend = chest * Quaternion.Conjugate(pelvis);
         // Limbs usually reach in front of the body: toward the camera when facing it, away when turned around.
         var forward = MathF.Cos(facing);
-        var torsoSkeleton = _fromView * torso * _toView;
+        // Head angles relative to the chest, mirrored like the body; only meaningful while the face is toward the camera.
+        var head = Quaternion.Identity;
+        if (face is not null && forward > 0)
+        {
+            var yaw = (mirrored ? -face.Yaw : face.Yaw) - facing;
+            var roll = mirrored ? -face.Roll : face.Roll;
+            head = _fromView * Quaternion.CreateFromAxisAngle(Vector3.UnitY, Math.Clamp(yaw, -1.2f, 1.2f)) *
+                Quaternion.CreateFromAxisAngle(Vector3.UnitX, Math.Clamp(-face.Pitch, -.8f, .8f)) *
+                Quaternion.CreateFromAxisAngle(Vector3.UnitZ, Math.Clamp(roll, -.8f, .8f)) * _toView;
+        }
 
         var joints = _skeleton.Joints;
         for (var j = 0; j < joints.Count; j++)
         {
             var parent = joints[j].Parent < 0 ? _rootRotation : _world[joints[j].Parent];
-            if (j == _hips)
+            if (j == _hips || _spineShare[j] > 0 || _headShare[j] > 0)
             {
-                _world[j] = torsoSkeleton * _restWorld[j];
+                // Rotations applied on top of the rest pose, in skeleton space: the pelvis's own, the spine's growing
+                // share of the bend above it, and the head's share of its turn above the chest.
+                var bend = j == _hips ? Quaternion.Identity : Quaternion.Slerp(Quaternion.Identity, spineBend, _spineShare[j]);
+                var turn = Quaternion.Slerp(Quaternion.Identity, head, _headShare[j]);
+                var delta = _headShare[j] > 0 ? Quaternion.Normalize(chest) : Quaternion.Normalize(bend * pelvis);
+                _world[j] = Quaternion.Normalize(turn * delta * _restWorld[j]);
                 _local[j] = Quaternion.Normalize(Quaternion.Conjugate(parent) * _world[j]);
                 continue;
             }
