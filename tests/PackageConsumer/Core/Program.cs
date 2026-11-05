@@ -58,9 +58,11 @@ var half = SkeletonPose.Blend(skeleton.RestPose, bent, .5f);
 var posed = Shape.FromSkinnedMesh(bar).WithPose(half);
 var morphed = posed.WithMorphWeights(bar, [1f]);
 Require(ReferenceEquals(posed.Pose, half) && morphed.MorphWeights![0] == 1, "Packaged skinning, blending or morph weights failed");
-// Bounds come from the skinned geometry: the bent bar no longer reaches y = 2, and the morph widens it.
+// Bounds come from the skinned geometry: bending the tip 45° left reaches x ≈ -1.06, beyond the widest the morphed rest
+// pose reaches (x = ±0.5); the unmorphed bend reaches only about -0.78.
 var bounds = new Scene().Add(morphed).GetBounds()!.Value;
-Require(bounds.Max.Y < 1.95f && bounds.Size.X > .5f, $"Packaged skinning or morphing did not change the geometry: {bounds.Min}..{bounds.Max}");
+var unmorphed = new Scene().Add(posed).GetBounds()!.Value;
+Require(bounds.Min.X < -1 && unmorphed.Min.X is > -.85f and < -.7f, $"Packaged skinning or morphing did not change the geometry: {bounds.Min}..{bounds.Max}");
 Console.WriteLine("PACKAGE_SKINNING_PASS: skeleton, pose blend, skinned mesh and morph target");
 
 if (args.Length == 0) return;
