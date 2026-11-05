@@ -14,6 +14,6 @@
     <Compile Include="../../src/Simple3D.Maui/Platforms/Android/GlesShaders.cs" Link="GlesShaders.cs" />
     <Compile Include="../../src/Simple3D.Maui/Rendering/GpuResources.cs" Link="GpuResources.cs" />
     <Compile Include="../Shared/NativeGpuValidation.cs" Link="NativeGpuValidation.cs" />
-    <Compile Include="../../samples/Simple3D.Shared/*.cs" Link="Samples/%(Filename)%(Extension)" />
+    <Compile Include="../../samples/Simple3D.Shared/**/*.cs" Link="Samples/%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

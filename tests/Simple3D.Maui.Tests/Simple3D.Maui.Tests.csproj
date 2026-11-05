@@ -14,7 +14,7 @@
     <ProjectReference Include="../../src/Simple3D.Core/Simple3D.Core.csproj" />
     <Compile Include="../../src/Simple3D.Maui/*.cs" Link="%(Filename)%(Extension)" />
     <Compile Include="../../src/Simple3D.Maui/Rendering/*.cs" Link="Rendering/%(Filename)%(Extension)" />
-    <Compile Include="../../samples/Simple3D.Shared/*.cs" Link="Samples/%(Filename)%(Extension)" />
+    <Compile Include="../../samples/Simple3D.Shared/**/*.cs" Link="Samples/%(Filename)%(Extension)" />
     <Compile Include="../../samples/Simple3D.Demo/GalleryPage.cs" Link="GalleryPage.cs" />
     <Compile Include="../../samples/Simple3D.Demo/App.cs" Link="App.cs" />
     <Compile Include="../../samples/Simple3D.Demo/NativeRenderProbe.cs" Link="NativeRenderProbe.cs" />
