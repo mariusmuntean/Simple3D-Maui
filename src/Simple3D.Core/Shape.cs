@@ -6,7 +6,8 @@ namespace Simple3D.Core;
 public sealed class Shape
 {
     internal readonly IReadOnlyList<Triangle3> Mesh;
-    internal Shape(IReadOnlyList<Triangle3> mesh, uint color, Vector3 position, Vector3 rotation, Vector3 size, string? name = null, IReadOnlyList<Shape>? children = null, Material? material = null, Mesh? geometry = null)
+    private readonly Quaternion? _quaternion;
+    internal Shape(IReadOnlyList<Triangle3> mesh, uint color, Vector3 position, Vector3 rotation, Vector3 size, string? name = null, IReadOnlyList<Shape>? children = null, Material? material = null, Mesh? geometry = null, Quaternion? quaternion = null)
     {
         if ((color & 0xFF000000) != 0xFF000000)
             throw new ArgumentOutOfRangeException(nameof(color), "Only opaque colors are supported.");
@@ -15,6 +16,7 @@ public sealed class Shape
         Children = children ?? Array.Empty<Shape>();
         Material = material ?? new Material(color);
         Geometry = geometry;
+        _quaternion = quaternion;
         HierarchyDepth = Children.Count == 0 ? 1 : 1 + Children.Max(c => c.HierarchyDepth);
     }
 
@@ -46,7 +48,7 @@ public sealed class Shape
         RequireFinite(x, nameof(x));
         RequireFinite(y, nameof(y));
         RequireFinite(z, nameof(z));
-        return new(Mesh, Color, new(x, y, z), Rotation, Size, Name, Children, Material, Geometry);
+        return new(Mesh, Color, new(x, y, z), Rotation, Size, Name, Children, Material, Geometry, _quaternion);
     }
 
     /// <summary>Returns a copy with absolute Euler angles in radians, preserving position and size.</summary>
@@ -62,7 +64,7 @@ public sealed class Shape
     public Shape Scaled(float size)
     {
         RequirePositive(size, nameof(size));
-        return new(Mesh, Color, Position, Rotation, new(size), Name, Children, Material, Geometry);
+        return new(Mesh, Color, Position, Rotation, new(size), Name, Children, Material, Geometry, _quaternion);
     }
 
     /// <summary>Returns a copy with absolute positive dimensions, preserving position and rotation.</summary>
@@ -71,7 +73,7 @@ public sealed class Shape
         RequirePositive(x, nameof(x));
         RequirePositive(y, nameof(y));
         RequirePositive(z, nameof(z));
-        return new(Mesh, Color, Position, Rotation, new(x, y, z), Name, Children, Material, Geometry);
+        return new(Mesh, Color, Position, Rotation, new(x, y, z), Name, Children, Material, Geometry, _quaternion);
     }
     /// <summary>Optional application identifier.</summary>
     public string? Name { get; }
@@ -82,7 +84,7 @@ public sealed class Shape
     /// <summary>Indexed geometry, or null for untextured cached primitives and groups.</summary>
     public Mesh? Geometry { get; }
     /// <summary>Returns a copy with an application identifier.</summary>
-    public Shape Named(string? name) => new(Mesh, Color, Position, Rotation, Size, name, Children, Material, Geometry);
+    public Shape Named(string? name) => new(Mesh, Color, Position, Rotation, Size, name, Children, Material, Geometry, _quaternion);
     /// <summary>Returns a copy with a different immutable material.</summary>
     public Shape WithMaterial(Material material)
     {
@@ -92,7 +94,7 @@ public sealed class Shape
         if (material.Texture is not null && geometry?.TextureCoordinates is null)
             throw new ArgumentException("Textured shapes require mesh texture coordinates.", nameof(material));
         var triangles = Mesh is PosedGeometry ? Mesh : geometry?.Triangles ?? Mesh;
-        return new(triangles, material.Color, Position, Rotation, Size, Name, Children, material, geometry);
+        return new(triangles, material.Color, Position, Rotation, Size, Name, Children, material, geometry, _quaternion);
     }
     /// <summary>Creates an instance of skinned geometry in its skeleton's rest pose.</summary>
     public static Shape FromSkinnedMesh(SkinnedMesh mesh, Material? material = null)
@@ -134,7 +136,7 @@ public sealed class Shape
             if (!ReferenceEquals(posed.Pose, pose)) mesh = new PosedGeometry(posed.Skinned, pose);
         }
         if (children is null && ReferenceEquals(mesh, Mesh)) return this;
-        return new(mesh, Color, Position, Rotation, Size, Name, children is null ? Children : Array.AsReadOnly(children), Material, Geometry);
+        return new(mesh, Color, Position, Rotation, Size, Name, children is null ? Children : Array.AsReadOnly(children), Material, Geometry, _quaternion);
     }
     // Lighting normals: skinned shapes use posed normals.
     internal IReadOnlyList<Vector3>? ShadingNormals => Mesh is PosedGeometry posed ? posed.Normals : Geometry?.Normals;
@@ -155,8 +157,20 @@ public sealed class Shape
         if (children.Any(c => c.HierarchyDepth >= 64)) throw new ArgumentException("Hierarchy exceeds 64 levels.", nameof(children));
         return new([], 0xFFFFFFFF, Vector3.Zero, Vector3.Zero, Vector3.One, children: Array.AsReadOnly(children.ToArray()));
     }
+    // Keep imported rotations exact, including at Euler singularities. Public rotation edits replace them.
+    internal Shape WithLocalTransform(Vector3 translation, Quaternion rotation, Vector3 scale)
+    {
+        var m = Matrix4x4.CreateFromQuaternion(rotation);
+        var pitch = MathF.Asin(Math.Clamp(-m.M32, -1, 1));
+        var angles = MathF.Abs(m.M32) < .999999f
+            ? new Vector3(pitch, MathF.Atan2(m.M31, m.M33), MathF.Atan2(m.M12, m.M22))
+            : new Vector3(pitch, MathF.Atan2(-m.M13, m.M11), 0);
+        return new(Mesh, Color, translation, angles, scale, Name, Children, Material, Geometry, rotation);
+    }
+    internal Shape WithChildren(Shape[] children) => new(Mesh, Color, Position, Rotation, Size, Name,
+        Array.AsReadOnly(children), Material, Geometry, _quaternion);
     internal int HierarchyDepth { get; }
-    internal Matrix4x4 Transform => Matrix4x4.CreateScale(Size) * Matrix4x4.CreateFromYawPitchRoll(Rotation.Y, Rotation.X, Rotation.Z) * Matrix4x4.CreateTranslation(Position);
+    internal Matrix4x4 Transform => Matrix4x4.CreateScale(Size) * (_quaternion is { } q ? Matrix4x4.CreateFromQuaternion(q) : Matrix4x4.CreateFromYawPitchRoll(Rotation.Y, Rotation.X, Rotation.Z)) * Matrix4x4.CreateTranslation(Position);
     /// <summary>Creates a cylindrical line between distinct finite endpoints. Thickness is a world-space diameter.</summary>
     public static Shape Line(Vector3 start, Vector3 end, float thickness = .03f, uint color = 0xFF7C9DFF)
         => Segment(start, end, thickness, color, false);
