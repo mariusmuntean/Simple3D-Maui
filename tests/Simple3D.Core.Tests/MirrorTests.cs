@@ -1,6 +1,5 @@
 using System.IO.Compression;
 using System.Numerics;
-using System.Text.Json;
 using Simple3D.Core;
 using Simple3D.Shared.Mirror;
 
@@ -11,18 +10,7 @@ internal static class MirrorTests
     {
         var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "mirror-landmarks.jsonl.gz");
         using var reader = new StreamReader(new GZipStream(File.OpenRead(path), CompressionMode.Decompress));
-        var frames = new List<PoseFrame>();
-        while (reader.ReadLine() is { } line)
-        {
-            using var json = JsonDocument.Parse(line);
-            var root = json.RootElement;
-            Landmark[]? landmarks = null;
-            if (root.GetProperty("lm").ValueKind == JsonValueKind.Array)
-                landmarks = root.GetProperty("lm").EnumerateArray()
-                    .Select(p => new Landmark(p[0].GetSingle(), p[1].GetSingle(), p[2].GetSingle())).ToArray();
-            frames.Add(new(TimeSpan.FromSeconds(root.GetProperty("t").GetDouble()), root.GetProperty("w").GetInt32(), root.GetProperty("h").GetInt32(), landmarks));
-        }
-        return frames;
+        return PoseRecording.Read(reader);
     }
 
     // A minimal VRM-named humanoid facing +Z (its left is +X), 1.6 units tall, in an A-pose.

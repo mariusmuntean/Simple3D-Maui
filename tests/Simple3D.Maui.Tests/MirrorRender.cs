@@ -1,5 +1,4 @@
 using System.IO.Compression;
-using System.Text.Json;
 using Simple3D.Core;
 using Simple3D.Maui;
 using Simple3D.Shared.Mirror;
@@ -47,17 +46,9 @@ internal static class MirrorRender
         return 0;
     }
 
-    private static IEnumerable<PoseFrame> Frames()
+    private static IReadOnlyList<PoseFrame> Frames()
     {
         using var reader = new StreamReader(new GZipStream(File.OpenRead(Path.Combine(AppContext.BaseDirectory, "Fixtures", "mirror-landmarks.jsonl.gz")), CompressionMode.Decompress));
-        while (reader.ReadLine() is { } line)
-        {
-            using var json = JsonDocument.Parse(line);
-            var root = json.RootElement;
-            var landmarks = root.GetProperty("lm").ValueKind == JsonValueKind.Array
-                ? root.GetProperty("lm").EnumerateArray().Select(p => new Landmark(p[0].GetSingle(), p[1].GetSingle(), p[2].GetSingle())).ToArray()
-                : null;
-            yield return new(TimeSpan.FromSeconds(root.GetProperty("t").GetDouble()), root.GetProperty("w").GetInt32(), root.GetProperty("h").GetInt32(), landmarks);
-        }
+        return PoseRecording.Read(reader);
     }
 }

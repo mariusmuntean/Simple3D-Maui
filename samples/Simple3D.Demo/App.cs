@@ -13,6 +13,9 @@ public sealed class App : Application
         if (LabelSyncProbePage.Mode is not null) return new Window(new LabelSyncProbePage()) { Title = "Simple3D label sync probe" };
 #endif
 #endif
+#if DEBUG && (IOS || MACCATALYST || ANDROID)
+        if (Mirror.MirrorPage.IsRequested) return new Window(new Mirror.MirrorPage()) { Title = "Simple3D Mirror" };
+#endif
         var page = new GalleryPage();
         var window = new Window(page) { Title = "Simple3D Gallery" };
         window.Stopped += (_, _) => page.StopAnimation();
