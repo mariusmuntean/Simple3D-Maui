@@ -172,7 +172,7 @@ internal static class MirrorRender
     {
         Directory.CreateDirectory(output);
         (string Fixture, double From, double To, string Model)[] scenes =
-            [("mirror-landmarks", 5.2, 10.4, "cat.vrm"), ("face-46379", 2.6, 8.6, "juanita.vrm"), ("turning-landmarks", 6.0, 11.0, "weirdcat.vrm")];
+            [("mirror-landmarks", 5.2, 10.4, "cat.vrm"), ("face-46379", 2.6, 8.6, "juanita.vrm"), ("turning-landmarks", 6.0, 11.0, "froggy.vrm")];
         var renderer = new DepthRenderer();
         var session = new MirrorSession(Character(scenes[0].Model));
         var manifest = new List<string>();

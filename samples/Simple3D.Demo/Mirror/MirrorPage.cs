@@ -30,7 +30,7 @@ public sealed class MirrorPage : ContentPage
     private readonly Label _zoomText = Text("", 15, center: true);
     private readonly Border _zoomPill;
     private readonly View _guidePill;
-    private int _zoomShown;
+    private int _zoomShown, _choice;
     // Debug builds can replay a video instead of the camera (and on simulators without a body-pose model, recorded
     // landmarks instead of detection) through this same page, for development and automated checks.
 #if DEBUG
@@ -115,7 +115,7 @@ public sealed class MirrorPage : ContentPage
     private async Task LoadAsync()
     {
         // Decoding the model and its textures takes a moment; keep it off the UI thread.
-        var session = new MirrorSession(await Character(_model.File));
+        var session = new MirrorSession(await Character(_model));
         if (_session is { } previous) previous.StateChanged -= OnTrackingChanged;
         _session = session;
         session.StateChanged += OnTrackingChanged;
@@ -125,28 +125,39 @@ public sealed class MirrorPage : ContentPage
     }
 
     // Swaps the character without stopping the camera: the stage animates the change while tracking carries on.
+    // The latest tap wins: a slower load from an earlier tap is dropped. The session outlives camera restarts, so a load that
+    // finishes while the camera is stopped still applies.
     private async Task ChooseCharacterAsync(MirrorModel model)
     {
         if (model == _model) return;
+        var previous = _model;
+        var choice = ++_choice;
         _model = model;
-        Preferences.Default.Set("mirror.character", _model.File);
         HighlightCharacter();
         try
         {
             // Parse and decode off the UI thread first, so the swap animation itself never waits on loading.
-            var character = await Character(_model.File);
+            var character = await Character(model);
             await _loading!;
+            if (choice != _choice) return;
             _session!.SwitchCharacter(character);
             UpdateLayout();
+            Preferences.Default.Set("mirror.character", model.File);
         }
-        catch (Exception error) { Block($"The character couldn't load: {error.Message}", settings: false); }
+        catch (Exception error)
+        {
+            if (choice != _choice) return;
+            _model = previous;
+            HighlightCharacter();
+            Log($"MIRROR_FAIL character {model.File}: {error.Message}");
+        }
     }
 
-    private static async Task<MirrorCharacter> Character(string file)
+    private static async Task<MirrorCharacter> Character(MirrorModel model)
     {
-        await using var stream = await FileSystem.OpenAppPackageFileAsync(file);
+        await using var stream = await FileSystem.OpenAppPackageFileAsync(model.File);
         var loaded = await GltfLoader.LoadAsync(stream);
-        return MirrorCharacter.FromVrm(loaded.Model, loaded.Shape);
+        return MirrorCharacter.FromVrm(loaded.Model, loaded.Shape, model.Face);
     }
 
     private async void Start()
@@ -457,7 +468,8 @@ public sealed class MirrorPage : ContentPage
                 Padding = 3, StrokeThickness = 2.5, BackgroundColor = Color.FromRgba(8, 12, 22, 190),
                 StrokeShape = new RoundRectangle { CornerRadius = 18 }, Content = new Border { StrokeThickness = 0, StrokeShape = new RoundRectangle { CornerRadius = 15 }, Content = image }
             };
-            SemanticProperties.SetDescription(chip, model.Name);
+            SemanticProperties.SetHint(chip, "Switches to this character");
+            AutomationProperties.SetIsInAccessibleTree(chip, true);
             var tap = new TapGestureRecognizer();
             tap.Tapped += async (_, _) => await ChooseCharacterAsync(model);
             chip.GestureRecognizers.Add(tap);
@@ -480,6 +492,7 @@ public sealed class MirrorPage : ContentPage
             var chosen = model == _model;
             chip.Stroke = chosen ? Color.FromArgb("#FFD27A") : Color.FromRgba(255, 255, 255, 40);
             chip.Scale = chosen ? 1.08 : 1;
+            SemanticProperties.SetDescription(chip, chosen ? $"{model.Name}, selected" : model.Name);
         }
     }
 

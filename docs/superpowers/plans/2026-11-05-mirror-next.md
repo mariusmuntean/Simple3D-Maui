@@ -4,7 +4,7 @@ Branch `feat/mirror-pose-character`; everything is committed and nothing is push
 
 ## Where things stand
 
-- **Gallery page:** `samples/Simple3D.Demo/Mirror/MirrorPage.cs`. One chosen VRM character copies body and face from the camera. The ☺ picker offers cat, Juanita, WeirdCat, CosmicBot and Froggy (`MirrorModels.cs`), with an animated swap.
+- **Gallery page:** `samples/Simple3D.Demo/Mirror/MirrorPage.cs`. One chosen VRM character copies body and face from the camera. The ☺ picker offers cat, Juanita, CosmicBot and Froggy (`MirrorModels.cs`), with an animated swap.
 - **Portable logic** in `samples/Simple3D.Shared/Mirror`:
   - `PoseTracker`: visibility hysteresis, an outlier gate and per-person brow/smile calibration.
   - `HumanoidRetargeter`: spine bend, facing, a face-only mode, and limbs that tilt out of the image plane to clear the torso.

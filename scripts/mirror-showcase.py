@@ -28,7 +28,7 @@ def font(size):
             return ImageFont.truetype(path, size)
     return ImageFont.load_default()
 
-NAMES = {"cat.vrm": "Chubby Tubby Cat", "juanita.vrm": "Juanita", "weirdcat.vrm": "WeirdCat", "cosmicbot.vrm": "CosmicBot", "froggy.vrm": "Froggy"}
+NAMES = {"cat.vrm": "Chubby Tubby Cat", "juanita.vrm": "Juanita", "cosmicbot.vrm": "CosmicBot", "froggy.vrm": "Froggy"}
 
 def region(frames, start, end):
     """Bounds (in image-height units) of every confident landmark in a time range: the panel zooms to where the person moves."""

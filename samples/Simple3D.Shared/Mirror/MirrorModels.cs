@@ -31,12 +31,6 @@ public static class MirrorModels
         {
             Face = new() { Mouth = MirrorFace.Table(("a", 1), ("o", 1), ("e", 1), ("u", .5f)), Smile = MirrorFace.Table(("fun", 1), ("i", 1)) },
         },
-        // The muzzle is dark brown inside and out, so no mouth shape reads; the strongest blend at least drops the chin.
-        // "joy" is invisible; "fun" lifts the lower lids.
-        new("WeirdCat", "weirdcat.vrm", "each eye, frown, head", "Polygonal Mind (100Avatars R3), CC0")
-        {
-            Face = new() { Mouth = MirrorFace.Table(("a", 1), ("o", 1), ("e", 1), ("u", 1), ("i", 1)), Smile = MirrorFace.Table(("fun", 1)) },
-        },
         // The visor mouth glows: "a" plus "o" makes a large teal oval. "joy" curves the eyes into happy arcs.
         new("CosmicBot", "cosmicbot.vrm", "mouth, each eye, smile, frown, head", "Polygonal Mind (100Avatars R3), CC0")
         {
