@@ -355,6 +355,8 @@ public sealed class MirrorPage : ContentPage
                 "Get into the frame: your whole body, from the waist up, or just your head for face tracking";
         _guidePill.MaximumWidthRequest = Math.Max(1, width - 48);
         _lostHint.MaximumWidthRequest = Math.Max(1, width - 48);
+        // Debug stats wrap left of the camera inset.
+        _status.MaximumWidthRequest = Math.Max(1, width - (live ? landscape ? 240 : 160 : 36));
         // Keep transient zoom feedback below the top buttons and camera inset.
         _zoomPill.Margin = new Thickness(0, live && landscape ? 132 : 168, 0, 0);
     }
