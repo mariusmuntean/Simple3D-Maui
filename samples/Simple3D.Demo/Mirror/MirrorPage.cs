@@ -239,8 +239,8 @@ public sealed class MirrorPage : ContentPage
                 "M50,4 A13,13 0 1 1 49.9,4 Z M30,36 L70,36 Q80,36 82,46 L90,100 Q91,106 85,107 Q80,107 79,101 L72,60 L72,112 L68,190 " +
                 "Q67,196 61,196 Q55,196 55,190 L52,124 L48,124 L45,190 Q45,196 39,196 Q33,196 32,190 L28,112 L28,60 L21,101 Q20,107 15,107 " +
                 "Q9,106 10,100 L18,46 Q20,36 30,36 Z")!,
-            Aspect = Stretch.Uniform, Fill = Color.FromRgba(255, 255, 255, 40), Stroke = Color.FromRgba(255, 255, 255, 200),
-            StrokeThickness = 2, StrokeDashArray = [4, 3], Margin = new Thickness(0, 90, 0, 120), InputTransparent = true
+            Aspect = Stretch.Uniform, Fill = Color.FromRgba(255, 255, 255, 22), Stroke = Color.FromRgba(255, 255, 255, 200),
+            StrokeThickness = 2, StrokeDashArray = [4, 3], Margin = new Thickness(0, 150, 0, 110), InputTransparent = true
         };
         return new Grid
         {
