@@ -16,6 +16,8 @@ internal sealed class AppleGpuView : MTKView
     {
         _owner = owner;
         Paused = true; EnableSetNeedsDisplay = true; ColorPixelFormat = MTLPixelFormat.BGRA8Unorm;
+        // Never below the screen's rate: frames are drawn on demand, as fast as the app's changes arrive.
+        PreferredFramesPerSecond = UIScreen.MainScreen.MaximumFramesPerSecond;
         DepthStencilPixelFormat = MTLPixelFormat.Invalid;
         FramebufferOnly = true; UserInteractionEnabled = false; Opaque = true;
         _drawDelegate = new DrawDelegate(this); Delegate = _drawDelegate;

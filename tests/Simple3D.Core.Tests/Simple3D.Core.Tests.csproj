@@ -7,7 +7,9 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Simple3D.Core/Simple3D.Core.csproj" />
-    <Compile Include="../../samples/Simple3D.Shared/*.cs" Link="Samples/%(Filename)%(Extension)" />
+    <Compile Include="../../samples/Simple3D.Shared/**/*.cs" Link="Samples/%(Filename)%(Extension)" />
     <Compile Include="../Shared/RegressionScenes.cs" Link="RegressionScenes.cs" />
+    <None Include="../../samples/Simple3D.Demo/Resources/Raw/*.vrm" Link="Assets/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../Fixtures/**" Link="Fixtures/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

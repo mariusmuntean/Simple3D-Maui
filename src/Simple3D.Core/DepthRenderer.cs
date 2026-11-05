@@ -202,7 +202,8 @@ public sealed class DepthRenderer
             var material = shape.Material;
             var geometry = shape.Geometry;
             var texture = material.Texture;
-            var smooth = material.Lit && geometry?.Normals is not null;
+            var shadingNormals = shape.ShadingNormals;
+            var smooth = material.Lit && shadingNormals is not null;
             var normalTransform = Matrix4x4.Identity;
             if (smooth)
             {
@@ -240,7 +241,7 @@ public sealed class DepthRenderer
                         var vertexColor = flatColor;
                         if (smooth)
                         {
-                            var transformed = Vector3.TransformNormal(geometry.Normals![index], normalTransform);
+                            var transformed = Vector3.TransformNormal(shadingNormals![index], normalTransform);
                             var max = MathF.Max(MathF.Abs(transformed.X), MathF.Max(MathF.Abs(transformed.Y), MathF.Abs(transformed.Z)));
                             var vertexNormal = max > 0 && float.IsFinite(max) ? Vector3.Normalize(transformed / max) : normal;
                             if (facing < 0 && max > 0 && float.IsFinite(max)) vertexNormal = -vertexNormal;

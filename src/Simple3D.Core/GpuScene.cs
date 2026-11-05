@@ -7,17 +7,26 @@ namespace Simple3D.Core;
 internal sealed class GpuGeometry
 {
     internal const int FloatsPerVertex = 16;
-    // The expanded upload is 64 bytes per non-indexed vertex (~11x the indexed source). It is built
+    internal int VertexStrideFloats => IsSkinned ? 28 : FloatsPerVertex;
+    internal bool IsSkinned => _skinned is not null;
+    // The expanded upload is 64 bytes per rigid vertex, 112 per skinned vertex. It is built
     // on demand for each native upload and not retained, so a resident mesh costs GPU memory only.
     private readonly IReadOnlyList<Triangle3> _triangles;
     private readonly Mesh? _attributes;
+    private readonly SkinnedMesh? _skinned;
     internal int VertexCount { get; }
-    internal long ByteSize => (long)VertexCount * FloatsPerVertex * sizeof(float);
+    internal int MorphVertexCount => _skinned is { MorphTargets.Count: > 0 } ? _skinned.Mesh.Vertices.Count : 0;
+    internal long MorphByteSize => (long)MorphVertexCount * (_skinned?.MorphTargets.Count ?? 0) * 32;
+    internal int MorphTextureWidth => (int)Math.Ceiling(Math.Sqrt(MorphByteSize / 16));
+    internal int MorphTextureHeight => MorphTextureWidth == 0 ? 0 : (int)((MorphByteSize / 16 + MorphTextureWidth - 1) / MorphTextureWidth);
+    internal long MorphResourceBytes => (long)MorphTextureWidth * MorphTextureHeight * 16;
+    internal long ByteSize => (long)VertexCount * VertexStrideFloats * sizeof(float);
     internal Vector3 Min { get; }
     internal Vector3 Max { get; }
     internal GpuGeometry(Shape shape)
     {
-        _triangles = shape.Mesh;
+        _skinned = shape.SkinnedMesh;
+        _triangles = _skinned?.Mesh.Triangles ?? shape.Mesh;
         _attributes = shape.Geometry;
         VertexCount = checked(shape.TriangleCount * 3);
         var min = new Vector3(float.PositiveInfinity);
@@ -29,10 +38,10 @@ internal sealed class GpuGeometry
         }
         Min = min; Max = max;
     }
-    /// <summary>Builds the interleaved upload (position, normal, uv, color as float4 each). Callers drop it after upload.</summary>
+    /// <summary>Builds the interleaved upload (position, normal, uv, color, then optional joints, weights and source index as float4 each).</summary>
     internal float[] Expand()
     {
-        var vertices = new float[checked(VertexCount * FloatsPerVertex)];
+        var vertices = new float[checked(VertexCount * VertexStrideFloats)];
         var geometry = _attributes;
         for (var t = 0; t < _triangles.Count; t++)
         {
@@ -45,26 +54,82 @@ internal sealed class GpuGeometry
                 var n = geometry?.Normals?[index] ?? face;
                 var uv = geometry?.TextureCoordinates?[index] ?? default;
                 var color = geometry?.Colors?[index] ?? 0xFFFFFFFF;
-                var o = (t * 3 + v) * FloatsPerVertex;
+                var o = (t * 3 + v) * VertexStrideFloats;
                 Put(vertices, o, new(p, 1)); Put(vertices, o + 4, new(n, 0)); Put(vertices, o + 8, new(uv.X, uv.Y, 0, 0));
                 Put(vertices, o + 12, Rgba(color));
+                if (_skinned is { } skinned)
+                {
+                    var joints = skinned.JointIndices[index];
+                    Put(vertices, o + 16, new(joints.X, joints.Y, joints.Z, joints.W));
+                    Put(vertices, o + 20, skinned.Weights[index]);
+                    vertices[o + 24] = index;
+                }
             }
         }
         return vertices;
+    }
+    // Target-major float4 position/normal pairs, indexed using the original (unexpanded) vertex.
+    internal float[] ExpandMorphs()
+    {
+        var data = new float[checked((int)(MorphByteSize / sizeof(float)))];
+        if (_skinned is null) return data;
+        for (var t = 0; t < _skinned.MorphTargets.Count; t++)
+        {
+            var target = _skinned.MorphTargets[t];
+            for (var v = 0; v < MorphVertexCount; v++)
+            {
+                var offset = (t * MorphVertexCount + v) * 8;
+                Put(data, offset, new(target.PositionDeltas[v], 0));
+                Put(data, offset + 4, new(_skinned.Mesh.Normals is null ? Vector3.Zero : target.NormalDeltas?[v] ?? Vector3.Zero, 0));
+            }
+        }
+        return data;
     }
     private static void Put(float[] vertices, int offset, Vector4 v)
     { vertices[offset] = v.X; vertices[offset + 1] = v.Y; vertices[offset + 2] = v.Z; vertices[offset + 3] = v.W; }
     internal static Vector4 Rgba(uint c) => new(((c >> 16) & 255) / 255f, ((c >> 8) & 255) / 255f, (c & 255) / 255f, 1);
 }
 
-internal readonly record struct GpuItem(Shape Shape, GpuGeometry Geometry, Matrix4x4 World, Matrix4x4 Normal);
+internal readonly record struct GpuItem(Shape Shape, GpuGeometry Geometry, Matrix4x4 World, Matrix4x4 Normal, Matrix4x4[]? Joints = null, GpuMorphs Morphs = default);
+
+// Fixed-size per-item selection: no allocation or CPU deformation on weight changes.
+internal struct GpuMorphs
+{
+    internal const int MaximumActive = 8;
+    internal Vector4 Indices0, Indices1, Weights0, Weights1;
+    internal int Count;
+    internal static GpuMorphs Select(float[]? weights)
+    {
+        if (weights is null) return default;
+        Span<int> indices = stackalloc int[MaximumActive];
+        Span<float> active = stackalloc float[MaximumActive];
+        var count = 0;
+        for (var t = 0; t < weights.Length; t++)
+        {
+            var weight = weights[t];
+            if (weight == 0) continue;
+            var at = count;
+            while (at > 0 && weight > active[at - 1]) at--;
+            if (at == MaximumActive) continue;
+            for (var i = Math.Min(count, MaximumActive - 1); i > at; i--)
+            { active[i] = active[i - 1]; indices[i] = indices[i - 1]; }
+            active[at] = weight; indices[at] = t;
+            count = Math.Min(count + 1, MaximumActive);
+        }
+        var result = new GpuMorphs { Count = count };
+        for (var i = 0; i < count; i++)
+            if (i < 4) { result.Indices0[i] = indices[i]; result.Weights0[i] = active[i]; }
+            else { result.Indices1[i - 4] = indices[i]; result.Weights1[i - 4] = active[i]; }
+        return result;
+    }
+}
 
 /// <summary>The scene content cannot be prepared (for example it exceeds the triangle budget). Not a device failure.</summary>
 internal sealed class GpuSceneException(string message) : ArgumentException(message);
 
 internal sealed class GpuScene
 {
-    /// <summary>Cap on the distinct vertex and texture bytes one frame may keep resident on the GPU.</summary>
+    /// <summary>Cap on vertex, morph and texture bytes plus each skinned item's palette and morph constants.</summary>
     internal long ResourceBudgetBytes { get; init; } = 256L * 1024 * 1024;
     private readonly ConditionalWeakTable<object, GpuGeometry> _geometry = new();
     // Reused per frame: distinct resources counted against the budget.
@@ -94,27 +159,32 @@ internal sealed class GpuScene
         {
             triangles += shape.TriangleCount;
             if (triangles > DepthRenderer.MaximumTriangles) throw new GpuSceneException("Scene exceeds triangle budget.");
-            object key = shape.Geometry is { } mesh ? mesh : shape.Mesh;
+            object key = (object?)shape.SkinnedMesh ?? (object?)shape.Geometry ?? shape.Mesh;
             // TryGetValue/Add rather than GetValue(key, _ => ...): no closure per node per frame.
             if (!_geometry.TryGetValue(key, out var geometry)) _geometry.Add(key, geometry = new GpuGeometry(shape));
             // Like the software renderer, skip geometry whose transform overflows instead of
             // failing the whole frame. Bounds corners enclose every transformed vertex.
             var itemFar = far;
             var finite = true;
+            var (min, max) = shape.SkinnedMesh is { } skinned && shape.Pose is { } pose
+                ? skinned.PosedBounds(pose) : (geometry.Min, geometry.Max);
             for (var i = 0; i < 8 && finite; i++)
             {
-                var p = Vector3.Transform(new Vector3((i & 1) == 0 ? geometry.Min.X : geometry.Max.X,
-                    (i & 2) == 0 ? geometry.Min.Y : geometry.Max.Y, (i & 4) == 0 ? geometry.Min.Z : geometry.Max.Z), world);
+                var p = Vector3.Transform(new Vector3((i & 1) == 0 ? min.X : max.X,
+                    (i & 2) == 0 ? min.Y : max.Y, (i & 4) == 0 ? min.Z : max.Z), world);
                 finite = float.IsFinite(p.X) && float.IsFinite(p.Y) && float.IsFinite(p.Z);
                 if (finite) itemFar = Math.Max(itemFar, Vector3.Dot(p - eye, forward) + camera.NearPlane);
             }
             if (!finite || !float.IsFinite(itemFar)) continue;
             far = itemFar;
-            if (_budgetGeometry.Add(geometry)) resourceBytes += geometry.ByteSize;
+            if (_budgetGeometry.Add(geometry)) resourceBytes += geometry.ByteSize + geometry.MorphResourceBytes;
+            var joints = shape.Pose?.SkinningMatrices;
+            if (joints is not null) resourceBytes += (long)joints.Length * 64;
+            if (geometry.MorphVertexCount > 0) resourceBytes += 80;
             if (shape.Material.Texture is { } texture && _budgetTextures.Add(texture)) resourceBytes += (long)texture.Width * texture.Height * 4;
             // Checked here, before any upload, so it is a recoverable scene error like the triangle budget.
             if (resourceBytes > ResourceBudgetBytes) throw new GpuSceneException($"Scene GPU resources exceed {ResourceBudgetBytes / (1024 * 1024)} MiB.");
-            Items.Add(new(shape, geometry, world, NormalMatrix(world)));
+            Items.Add(new(shape, geometry, world, NormalMatrix(world), joints, GpuMorphs.Select((shape.Mesh as PosedGeometry)?.MorphWeights)));
         }
         var view = new Matrix4x4(right.X, up.X, forward.X, 0,
             right.Y, up.Y, forward.Y, 0, right.Z, up.Z, forward.Z, 0,

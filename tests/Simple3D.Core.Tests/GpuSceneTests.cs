@@ -37,6 +37,152 @@ internal static class GpuSceneTests
         RunReversedDepth();
         Console.WriteLine("PASS GPU geometry reuse, visibility picking, clipping, labels and projection");
         RunSceneContentTolerance();
+        RunSkinning();
+        RunMorphs();
+    }
+
+    private static void RunMorphs()
+    {
+        var (bar, skeleton) = SkinningTests.Bar();
+        var targets = Enumerable.Range(0, 10).Select(t => new MorphTarget($"target{t}",
+            bar.Mesh.Vertices.Select((v, i) => new Vector3(i * .01f, t * .02f, 0)),
+            t == 3 ? bar.Mesh.Vertices.Select(v => new Vector3(.1f, 0, .2f)) : null)).ToArray();
+        var mesh = new SkinnedMesh(bar.Mesh, skeleton, bar.Influences, targets);
+        var pose = SkeletonPose.Create(skeleton, [Quaternion.Identity, Quaternion.CreateFromAxisAngle(Vector3.UnitZ, .7f)]);
+        var rest = Shape.FromSkinnedMesh(mesh).WithPose(pose);
+        var frame = new GpuScene(); var camera = new Camera(6, 0, 0);
+        var scene = new Scene().Add(rest);
+        frame.Update(scene, camera, 120, 120);
+        var geometry = frame.Items[0].Geometry;
+        Check(frame.Items[0].Morphs.Count == 0, "zero morphs must not be active");
+        var vertices = geometry.Expand(); var deltas = geometry.ExpandMorphs();
+        Check(geometry.MorphVertexCount == bar.Mesh.Vertices.Count && geometry.MorphByteSize == targets.Length * bar.Mesh.Vertices.Count * 32L,
+            "morph storage uses original vertices");
+        for (var corner = 0; corner < bar.Mesh.Indices.Count; corner++)
+            Check(vertices[corner * 28 + 24] == bar.Mesh.Indices[corner], "expanded corner source index");
+        for (var t = 0; t < targets.Length; t++) for (var v = 0; v < bar.Mesh.Vertices.Count; v++)
+        {
+            var at = (t * bar.Mesh.Vertices.Count + v) * 8;
+            Check(new Vector3(deltas[at], deltas[at + 1], deltas[at + 2]) == targets[t].PositionDeltas[v] && deltas[at + 3] == 0,
+                "target-major position deltas");
+            Check(new Vector3(deltas[at + 4], deltas[at + 5], deltas[at + 6]) == (targets[t].NormalDeltas?[v] ?? Vector3.Zero) && deltas[at + 7] == 0,
+                "target-major normal deltas");
+        }
+        var weights = Enumerable.Range(0, 10).Select(i => i / 10f).ToArray();
+        var morphed = rest.WithMorphWeights(mesh, weights);
+        scene.Replace(rest, morphed); frame.Update(scene, camera, 120, 120);
+        var item = frame.Items[0];
+        Check(ReferenceEquals(geometry, item.Geometry) && ReferenceEquals(item.Joints, pose.SkinningMatrices), "weights preserve geometry and pose palette");
+        Check(item.Morphs.Count == 8 && item.Morphs.Indices0 == new Vector4(9, 8, 7, 6) && item.Morphs.Indices1 == new Vector4(5, 4, 3, 2), "keep eight largest weights");
+        Check(item.Morphs.Weights0 == new Vector4(.9f, .8f, .7f, .6f) && item.Morphs.Weights1 == new Vector4(.5f, .4f, .3f, .2f), "carry selected weights");
+        var ties = GpuMorphs.Select(Enumerable.Repeat(.5f, 10).ToArray());
+        Check(ties.Indices0 == new Vector4(0, 1, 2, 3) && ties.Indices1 == new Vector4(4, 5, 6, 7), "ties retain target order");
+        Check(typeof(PosedGeometry).GetField("_deformed", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(morphed.Mesh) is null,
+            "morph preparation must never deform CPU geometry");
+        var budget = geometry.ByteSize + geometry.MorphResourceBytes + 2 * (skeleton.Joints.Count * 64L + 80);
+        scene.Add(rest.At(2, 0, 0));
+        new GpuScene { ResourceBudgetBytes = budget }.Update(scene, camera, 120, 120);
+        try { new GpuScene { ResourceBudgetBytes = budget - 1 }.Update(scene, camera, 120, 120); Check(false, "morph deltas and per-instance constants must count toward budget"); }
+        catch (GpuSceneException) { }
+        scene.Clear(); scene.Add(rest); frame.Update(scene, camera, 120, 120);
+        Check(frame.Items[0].Morphs.Count == 0 && frame.Items[0].Morphs.Weights0 == Vector4.Zero, "zero weights clear previous selection");
+        Console.WriteLine("PASS GPU morph source indices, delta layout, top-eight weights, pose reuse and resource budget");
+    }
+
+    private static void RunSkinning()
+    {
+        var (skinned, skeleton) = SkinningTests.Bar();
+        var rest = Shape.FromSkinnedMesh(skinned);
+        var bend = SkeletonPose.Create(skeleton, [Quaternion.Identity, Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI / 2)]);
+        var bent = rest.WithPose(bend);
+        var frame = new GpuScene();
+        var camera = new Camera(6, 0, 0) { Target = new(-.5f, 1, 0), Projection = CameraProjection.Orthographic };
+        var scene = new Scene().Add(rest);
+        frame.Update(scene, camera, 120, 120);
+        var geometry = frame.Items[0].Geometry;
+        Check(geometry.IsSkinned && geometry.VertexStrideFloats == 28 && geometry.ByteSize == geometry.VertexCount * 28L * sizeof(float), "skinned vertex size");
+        Check(ReferenceEquals(frame.Items[0].Joints, skeleton.RestPose.SkinningMatrices), "rest palette reference");
+        Check(((PosedGeometry)rest.Mesh).GetType().GetField("_deformed", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(rest.Mesh) is null,
+            "Update must not deform the rest mesh");
+        var expanded = geometry.Expand();
+        Check(expanded.Length == geometry.VertexCount * 28, "skinned upload length");
+        Check(expanded[0] == skinned.Mesh.Vertices[skinned.Mesh.Indices[0]].X && expanded[1] == skinned.Mesh.Vertices[skinned.Mesh.Indices[0]].Y,
+            "upload uses bind positions");
+        Check(expanded[16] == 0 && expanded[17] == 0 && expanded[20] == 1 && expanded[21] == 0,
+            "first vertex joint and weight");
+        var tipOffset = 0;
+        for (var i = 0; i < skinned.Mesh.Indices.Count; i++)
+            if (skinned.Mesh.Indices[i] >= 8) { tipOffset = i * 28; break; }
+        Check(expanded[tipOffset + 16] == 1 && expanded[tipOffset + 20] == 1,
+            "tip vertex joint and weight");
+        Check(((PosedGeometry)rest.Mesh).GetType().GetField("_deformed", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(rest.Mesh) is null,
+            "Expand must not deform the rest mesh");
+
+        scene.Replace(rest, bent);
+        frame.Update(scene, camera, 120, 120);
+        Check(ReferenceEquals(geometry, frame.Items[0].Geometry), "pose changes reuse bind geometry");
+        Check(ReferenceEquals(frame.Items[0].Joints, bend.SkinningMatrices) && !ReferenceEquals(frame.Items[0].Joints, skeleton.RestPose.SkinningMatrices),
+            "pose changes carry their own palette");
+        Check(Vector3.Distance(Vector3.Transform(new Vector3(0, 2, 0), frame.Items[0].Joints![1]), new(-1, 1, 0)) < 1e-4f,
+            "tip palette contains the bent transform");
+        Check(((PosedGeometry)bent.Mesh).GetType().GetField("_deformed", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(bent.Mesh) is null,
+            "Update must not deform bent mesh");
+        var tip = new WorldLabel("tip", new(-.9f, 1, 0));
+        scene.AddLabel(tip);
+        frame.Update(scene, camera, 120, 120);
+        var pixel = frame.Labels[0].Position;
+        Check(ReferenceEquals(frame.Pick(pixel.X, pixel.Y), bent), "posed tip must be pickable");
+        var distant = SkeletonPose.Create(skeleton, [Quaternion.Identity, Quaternion.Identity], new(0, 0, -20));
+        scene.Replace(bent, rest.WithPose(distant));
+        frame.Update(scene, camera, 120, 120);
+        var farPoint = Vector4.Transform(new Vector4(0, 1, -20, 1), frame.ViewProjection);
+        Check(farPoint.Z / farPoint.W >= 0 && farPoint.Z / farPoint.W <= 1, "posed bounds set orthographic far plane");
+
+        var one = geometry.ByteSize + skeleton.Joints.Count * 64L;
+        new GpuScene { ResourceBudgetBytes = one }.Update(new Scene().Add(rest), camera, 120, 120);
+        var two = new GpuScene { ResourceBudgetBytes = geometry.ByteSize + skeleton.Joints.Count * 128L };
+        two.Update(new Scene().Add(rest).Add(bent.At(2, 0, 0)), camera, 120, 120);
+        Check(ReferenceEquals(two.Items[0].Geometry, two.Items[1].Geometry) &&
+              ReferenceEquals(two.Items[0].Joints, skeleton.RestPose.SkinningMatrices) &&
+              ReferenceEquals(two.Items[1].Joints, bend.SkinningMatrices), "instances share geometry and retain separate palettes");
+        try
+        {
+            new GpuScene { ResourceBudgetBytes = geometry.ByteSize + skeleton.Joints.Count * 128L - 1 }.Update(new Scene().Add(rest).Add(bent.At(2, 0, 0)), camera, 120, 120);
+            Check(false, "each skinned instance must count its palette");
+        }
+        catch (GpuSceneException) { }
+        RunSkinnedAttributesAndCulling();
+        Console.WriteLine("PASS GPU bind geometry, pose palettes, bounds, picking and budget");
+    }
+
+    private static void RunSkinnedAttributesAndCulling()
+    {
+        var skeleton = new Skeleton([new Joint("root", -1, default, Quaternion.Identity, Vector3.One, Matrix4x4.Identity)]);
+        var mesh = new Mesh([new(-.5f, -.5f, 0), new(.5f, -.5f, 0), new(0, .5f, 0)], [0, 1, 2],
+            [new(.2f, .3f), new(.4f, .5f), new(.6f, .7f)],
+            [Vector3.UnitZ, Vector3.UnitZ, Vector3.UnitZ], [0xFF204060, 0xFFFFFFFF, 0xFFFFFFFF]);
+        var skinned = new SkinnedMesh(mesh, skeleton, Enumerable.Repeat(new VertexInfluence(new(0, 0, 0, 0), Vector4.UnitX), 3));
+        var front = Shape.FromSkinnedMesh(skinned, new Material(doubleSided: false));
+        var geometry = new GpuGeometry(front);
+        var data = geometry.Expand();
+        Check(data[4] == 0 && data[5] == 0 && data[6] == 1 && data[8] == .2f && data[9] == .3f,
+            "skinned normal and UV attributes");
+        Check(MathF.Abs(data[12] - 32 / 255f) < 1e-6f && MathF.Abs(data[13] - 64 / 255f) < 1e-6f &&
+              MathF.Abs(data[14] - 96 / 255f) < 1e-6f && data[15] == 1, "skinned vertex color");
+
+        var camera = new Camera(5, 0, 0) { Projection = CameraProjection.Orthographic, Target = new(1, 0, 0) };
+        var pose = SkeletonPose.Create(skeleton, [Quaternion.Identity], new(2, 0, 0));
+        var moved = front.WithPose(pose);
+        var scene = new Scene().Add(moved).AddLabel(new WorldLabel("moved", new(2, 0, 0)));
+        var frame = new GpuScene();
+        frame.Update(scene, camera, 120, 120);
+        var pixel = frame.Labels[0].Position;
+        Check(ReferenceEquals(frame.Pick(pixel.X, pixel.Y), moved), "front-facing posed triangle picks at moved location");
+        Check(frame.Pick(60, 60) is null, "bind location no longer picks");
+        var backMesh = new Mesh(mesh.Vertices, [0, 2, 1]);
+        var back = Shape.FromSkinnedMesh(new SkinnedMesh(backMesh, skeleton, skinned.Influences), new Material(doubleSided: false)).WithPose(pose);
+        frame.Update(new Scene().Add(back), camera, 120, 120);
+        Check(frame.Pick(pixel.X, pixel.Y) is null, "posed back face remains culled");
     }
 
     // Scene content the software renderer accepts must not fail GPU preparation; only real

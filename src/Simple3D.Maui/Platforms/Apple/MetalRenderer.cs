@@ -2,6 +2,7 @@
 using CoreAnimation;
 using Foundation;
 using Metal;
+using System.Numerics;
 using ObjCRuntime;
 using Simple3D.Core;
 namespace Simple3D.Maui;
@@ -11,17 +12,45 @@ internal sealed unsafe class MetalRenderer : IDisposable
     private const MTLPixelFormat OutputFormat = MTLPixelFormat.BGRA8Unorm;
     private readonly IMTLDevice _device;
     private IMTLCommandQueue? _queue;
-    private IMTLRenderPipelineState? _scenePipeline, _directPipeline, _screenPipeline;
+    private IMTLRenderPipelineState? _scenePipeline, _directPipeline, _skinnedPipeline, _skinnedDirectPipeline, _screenPipeline;
     private IMTLDepthStencilState? _depthState;
     private IMTLTexture? _color, _mask, _depth;
     private int _targetWidth, _targetHeight, _depthWidth, _depthHeight;
-    private readonly GpuResources<IMTLBuffer, (IMTLTexture Image, IMTLSamplerState Sampler)> _resources = new(
-        buffer => buffer.Dispose(), texture => { texture.Image.Dispose(); texture.Sampler.Dispose(); });
+    private readonly GpuResources<(IMTLBuffer Vertices, IMTLBuffer? Deltas), (IMTLTexture Image, IMTLSamplerState Sampler)> _resources = new(
+        mesh => { mesh.Vertices.Dispose(); mesh.Deltas?.Dispose(); }, texture => { texture.Image.Dispose(); texture.Sampler.Dispose(); });
     // Created once: reports failed command buffers (MTLCommandBufferError code, description).
     private readonly Action<IMTLCommandBuffer>? _completed;
+    // A slot is writable only after its previous command has completed.
+    private readonly PaletteSlot[] _palettes = [new(), new(), new()];
+    private int _paletteIndex;
+    private sealed class PaletteSlot : IDisposable
+    {
+        internal IMTLBuffer? Buffer;
+        internal readonly SemaphoreSlim Available = new(1, 1);
+        internal readonly Action<IMTLCommandBuffer> Completed;
+        internal PaletteSlot() => Completed = _ => Available.Release();
+        internal void Ensure(IMTLDevice device, int bytes)
+        {
+            if (Buffer is not null && Buffer.Length >= (nuint)bytes) return;
+            Buffer?.Dispose(); Buffer = null;
+            Buffer = device.CreateBuffer((nuint)bytes, MTLResourceOptions.StorageModeShared)
+                ?? throw new InvalidOperationException("Metal palette allocation failed.");
+        }
+        public void Dispose()
+        {
+            Available.Wait(); Buffer?.Dispose(); Buffer = null; Available.Release();
+        }
+    }
+    private static int PaletteBytes(Matrix4x4[] joints) => (joints.Length * sizeof(Matrix4x4) + 255) & ~255;
     internal string Name { get; }
     internal int GeometryUploads { get; private set; }
     internal int TextureUploads { get; private set; }
+    internal int DeltaUploads { get; private set; }
+    internal long DeltaUploadBytes { get; private set; }
+    internal int MorphUploads { get; private set; }
+    internal int MorphUploadBytes { get; private set; }
+    internal int PaletteUploads { get; private set; }
+    internal int PaletteUploadBytes { get; private set; }
     /// <summary>Always use the offscreen mask/outline composite. For validation that both paths match.</summary>
     internal bool ForceComposite { get; set; }
     /// <summary>Whether the last frame rendered straight to the output (no offscreen targets or fullscreen pass).</summary>
@@ -46,6 +75,8 @@ internal sealed unsafe class MetalRenderer : IDisposable
                 ?? throw new InvalidOperationException("Metal shader compilation: " + error?.LocalizedDescription);
             _scenePipeline = Pipeline(library, "sceneVertex", "sceneFragment", mask: true, depth: true);
             _directPipeline = Pipeline(library, "sceneVertex", "sceneFragmentDirect", mask: false, depth: true);
+            _skinnedPipeline = Pipeline(library, "skinnedVertex", "sceneFragment", mask: true, depth: true);
+            _skinnedDirectPipeline = Pipeline(library, "skinnedVertex", "sceneFragmentDirect", mask: false, depth: true);
             _screenPipeline = Pipeline(library, "screenVertex", "screenFragment", mask: false, depth: false);
             // Reversed Z (near = 1, far = 0) with a float depth buffer keeps precision roughly
             // proportional to distance instead of collapsing toward 1.
@@ -73,86 +104,136 @@ internal sealed unsafe class MetalRenderer : IDisposable
     internal void Render(GpuFrame frame, int width, int height, IMTLTexture output, ICAMetalDrawable? drawable = null,
         bool waitForCompletion = false, bool presentWithTransaction = false)
     {
-        GeometryUploads = TextureUploads = 0;
+        GeometryUploads = TextureUploads = PaletteUploads = PaletteUploadBytes = 0;
+        DeltaUploads = MorphUploads = MorphUploadBytes = 0;
+        DeltaUploadBytes = 0;
         _resources.Prepare(frame);
         var direct = !ForceComposite && frame.CanRenderDirect(width, height, (int)output.Width, (int)output.Height);
         LastFrameDirect = direct;
         EnsureDepth(width, height);
         if (!direct) EnsureTargets(width, height);
         using var command = _queue!.CommandBuffer() ?? throw new InvalidOperationException("Metal command buffer unavailable.");
-        var bg = GpuGeometry.Rgba(frame.Background);
-        using (var pass = new MTLRenderPassDescriptor())
+        var paletteBytes = 0;
+        foreach (var item in frame.Geometry.Items)
+            if (item.Joints is { } joints) paletteBytes = checked(paletteBytes + PaletteBytes(joints));
+        var palette = paletteBytes == 0 ? null : _palettes[_paletteIndex];
+        if (palette is not null) _paletteIndex = (_paletteIndex + 1) % _palettes.Length;
+        palette?.Available.Wait();
+        var submitted = false;
+        try
         {
-            Attachment(pass.ColorAttachments[0], direct ? output : _color!, MTLLoadAction.Clear, new MTLClearColor(bg.X, bg.Y, bg.Z, 1));
-            if (!direct) Attachment(pass.ColorAttachments[1], _mask!, MTLLoadAction.Clear, new MTLClearColor(0, 0, 0, 0));
-            pass.DepthAttachment!.Texture = _depth; pass.DepthAttachment.LoadAction = MTLLoadAction.Clear;
-            pass.DepthAttachment.StoreAction = MTLStoreAction.DontCare; pass.DepthAttachment.ClearDepth = 0;
-            using var encoder = command.CreateRenderCommandEncoder(pass) ?? throw new InvalidOperationException("Metal encoder unavailable.");
-            encoder.SetRenderPipelineState(direct ? _directPipeline! : _scenePipeline!); encoder.SetDepthStencilState(_depthState!);
-            encoder.SetFrontFacingWinding(MTLWinding.CounterClockwise);
-            var viewProjection = frame.Geometry.ReversedViewProjection;
-            IMTLTexture? boundTexture = null;
-            MTLCullMode? cullState = null;
-            var items = frame.Geometry.Items;
-            for (var i = 0; i < items.Count; i++)
+            palette?.Ensure(_device, paletteBytes);
+            var paletteOffset = 0;
+            var bg = GpuGeometry.Rgba(frame.Background);
+            using (var pass = new MTLRenderPassDescriptor())
             {
-                var item = items[i];
-                encoder.SetVertexBuffer(Mesh(item.Geometry), 0, 0);
-                // Metal copies these small per-draw constants into command-owned storage.
-                var u = GpuUniforms.Create(frame, item, viewProjection);
-                encoder.SetVertexBytes((nint)(&u), (nuint)sizeof(GpuUniforms), 1);
-                var texture = Texture(GpuResources.TextureOf(item));
-                if (!ReferenceEquals(texture.Image, boundTexture))
+                Attachment(pass.ColorAttachments[0], direct ? output : _color!, MTLLoadAction.Clear, new MTLClearColor(bg.X, bg.Y, bg.Z, 1));
+                if (!direct) Attachment(pass.ColorAttachments[1], _mask!, MTLLoadAction.Clear, new MTLClearColor(0, 0, 0, 0));
+                pass.DepthAttachment!.Texture = _depth; pass.DepthAttachment.LoadAction = MTLLoadAction.Clear;
+                pass.DepthAttachment.StoreAction = MTLStoreAction.DontCare; pass.DepthAttachment.ClearDepth = 0;
+                using var encoder = command.CreateRenderCommandEncoder(pass) ?? throw new InvalidOperationException("Metal encoder unavailable.");
+                encoder.SetDepthStencilState(_depthState!);
+                IMTLRenderPipelineState? boundPipeline = null;
+                encoder.SetFrontFacingWinding(MTLWinding.CounterClockwise);
+                var viewProjection = frame.Geometry.ReversedViewProjection;
+                IMTLTexture? boundTexture = null;
+                MTLCullMode? cullState = null;
+                var items = frame.Geometry.Items;
+                for (var i = 0; i < items.Count; i++)
                 {
-                    encoder.SetFragmentTexture(texture.Image, 0); encoder.SetFragmentSamplerState(texture.Sampler, 0);
-                    boundTexture = texture.Image;
+                    var item = items[i];
+                    var pipeline = item.Joints is null ? (direct ? _directPipeline! : _scenePipeline!)
+                        : (direct ? _skinnedDirectPipeline! : _skinnedPipeline!);
+                    if (!ReferenceEquals(pipeline, boundPipeline)) { encoder.SetRenderPipelineState(pipeline); boundPipeline = pipeline; }
+                    var mesh = Mesh(item.Geometry);
+                    encoder.SetVertexBuffer(mesh.Vertices, 0, 0);
+                    if (item.Joints is { } joints)
+                    {
+                        var bytes = joints.Length * sizeof(Matrix4x4);
+                        fixed (Matrix4x4* source = joints)
+                            Buffer.MemoryCopy(source, (byte*)palette!.Buffer!.Contents + paletteOffset, bytes, bytes);
+                        encoder.SetVertexBuffer(palette!.Buffer!, (nuint)paletteOffset, 2);
+                        // Metal requires a valid binding even when the shader skips the morph loop.
+                        encoder.SetVertexBuffer(mesh.Deltas ?? mesh.Vertices, 0, 3);
+                        paletteOffset += PaletteBytes(joints);
+                        PaletteUploads++; PaletteUploadBytes += bytes;
+                    }
+                    // Metal copies these small per-draw constants into command-owned storage.
+                    var u = GpuUniforms.Create(frame, item, viewProjection);
+                    encoder.SetVertexBytes((nint)(&u), (nuint)sizeof(GpuUniforms), 1);
+                    if (item.Geometry.MorphVertexCount > 0) { MorphUploads++; MorphUploadBytes += 80; }
+                    var texture = Texture(GpuResources.TextureOf(item));
+                    if (!ReferenceEquals(texture.Image, boundTexture))
+                    {
+                        encoder.SetFragmentTexture(texture.Image, 0); encoder.SetFragmentSamplerState(texture.Sampler, 0);
+                        boundTexture = texture.Image;
+                    }
+                    var cull = item.Shape.Material.DoubleSided ? MTLCullMode.None : MTLCullMode.Back;
+                    if (cull != cullState) { encoder.SetCullMode(cull); cullState = cull; }
+                    encoder.DrawPrimitives(MTLPrimitiveType.Triangle, 0, (nuint)item.Geometry.VertexCount);
                 }
-                var cull = item.Shape.Material.DoubleSided ? MTLCullMode.None : MTLCullMode.Back;
-                if (cull != cullState) { encoder.SetCullMode(cull); cullState = cull; }
-                encoder.DrawPrimitives(MTLPrimitiveType.Triangle, 0, (nuint)item.Geometry.VertexCount);
+                encoder.EndEncoding();
             }
-            encoder.EndEncoding();
+            if (!direct)
+            {
+                using var screenPass = new MTLRenderPassDescriptor();
+                // The fullscreen triangle overwrites every pixel: nothing to load.
+                Attachment(screenPass.ColorAttachments[0], output, MTLLoadAction.DontCare, default);
+                using var encoder = command.CreateRenderCommandEncoder(screenPass) ?? throw new InvalidOperationException("Metal presentation encoder unavailable.");
+                encoder.SetRenderPipelineState(_screenPipeline!); encoder.SetFragmentTexture(_color!, 0); encoder.SetFragmentTexture(_mask!, 1);
+                var radius = frame.OutlineRadius;
+                encoder.SetFragmentBytes((nint)(&radius), sizeof(int), 0);
+                encoder.DrawPrimitives(MTLPrimitiveType.Triangle, 0, 3); encoder.EndEncoding();
+            }
+            if (_completed is not null) command.AddCompletedHandler(_completed);
+            if (palette is not null) command.AddCompletedHandler(palette.Completed);
+            if (drawable is not null && presentWithTransaction)
+            {
+                command.Commit();
+                submitted = true;
+                command.WaitUntilScheduled();
+                drawable.Present();
+            }
+            else
+            {
+                if (drawable is not null) command.PresentDrawable(drawable);
+                command.Commit();
+                submitted = true;
+            }
+            if (waitForCompletion)
+            {
+                command.WaitUntilCompleted();
+                if (command.Status == MTLCommandBufferStatus.Error) throw new InvalidOperationException("Metal command failed: " + command.Error?.LocalizedDescription);
+            }
         }
-        if (!direct)
-        {
-            using var screenPass = new MTLRenderPassDescriptor();
-            // The fullscreen triangle overwrites every pixel: nothing to load.
-            Attachment(screenPass.ColorAttachments[0], output, MTLLoadAction.DontCare, default);
-            using var encoder = command.CreateRenderCommandEncoder(screenPass) ?? throw new InvalidOperationException("Metal presentation encoder unavailable.");
-            encoder.SetRenderPipelineState(_screenPipeline!); encoder.SetFragmentTexture(_color!, 0); encoder.SetFragmentTexture(_mask!, 1);
-            var radius = frame.OutlineRadius;
-            encoder.SetFragmentBytes((nint)(&radius), sizeof(int), 0);
-            encoder.DrawPrimitives(MTLPrimitiveType.Triangle, 0, 3); encoder.EndEncoding();
-        }
-        if (_completed is not null) command.AddCompletedHandler(_completed);
-        if (drawable is not null && presentWithTransaction)
-        {
-            command.Commit();
-            command.WaitUntilScheduled();
-            drawable.Present();
-        }
-        else
-        {
-            if (drawable is not null) command.PresentDrawable(drawable);
-            command.Commit();
-        }
-        if (waitForCompletion)
-        {
-            command.WaitUntilCompleted();
-            if (command.Status == MTLCommandBufferStatus.Error) throw new InvalidOperationException("Metal command failed: " + command.Error?.LocalizedDescription);
-        }
+        finally { if (!submitted) palette?.Available.Release(); }
     }
     private static void Attachment(MTLRenderPassColorAttachmentDescriptor attachment, IMTLTexture texture, MTLLoadAction load, MTLClearColor clear)
     { attachment.Texture = texture; attachment.LoadAction = load; attachment.StoreAction = MTLStoreAction.Store; attachment.ClearColor = clear; }
-    private IMTLBuffer Mesh(GpuGeometry geometry)
+    private (IMTLBuffer Vertices, IMTLBuffer? Deltas) Mesh(GpuGeometry geometry)
     {
-        if (_resources.Meshes.TryGetValue(geometry, out var buffer)) return buffer;
+        if (_resources.Meshes.TryGetValue(geometry, out var cached)) return cached;
         var vertices = geometry.Expand();
+        IMTLBuffer buffer;
         fixed (float* p = vertices) buffer = _device.CreateBuffer((nint)p, (nuint)(vertices.Length * sizeof(float)), MTLResourceOptions.StorageModeShared)
             ?? throw new InvalidOperationException("Metal vertex allocation failed.");
-        _resources.Meshes.Add(geometry, buffer);
-        GeometryUploads++;
-        return buffer;
+        IMTLBuffer? deltas = null;
+        try
+        {
+            if (geometry.MorphVertexCount > 0)
+            {
+                var values = geometry.ExpandMorphs();
+                var bytes = checked(values.Length * sizeof(float));
+                fixed (float* p = values) deltas = _device.CreateBuffer((nint)p, (nuint)bytes, MTLResourceOptions.StorageModeShared)
+                    ?? throw new InvalidOperationException("Metal morph allocation failed.");
+                DeltaUploads++; DeltaUploadBytes += bytes;
+            }
+            cached = (buffer, deltas);
+            _resources.Meshes.Add(geometry, cached);
+            GeometryUploads++;
+            return cached;
+        }
+        catch { buffer.Dispose(); deltas?.Dispose(); throw; }
     }
     private (IMTLTexture Image, IMTLSamplerState Sampler) Texture(Texture2D texture)
     {
@@ -203,10 +284,11 @@ internal sealed unsafe class MetalRenderer : IDisposable
     private void ReleaseTargets() { _color?.Dispose(); _mask?.Dispose(); _color = _mask = null; _targetWidth = _targetHeight = 0; }
     public void Dispose()
     {
+        foreach (var palette in _palettes) palette.Dispose();
         _resources.Clear();
         ReleaseTargets(); _depth?.Dispose(); _depth = null;
-        _depthState?.Dispose(); _scenePipeline?.Dispose(); _directPipeline?.Dispose(); _screenPipeline?.Dispose(); _queue?.Dispose();
-        _depthState = null; _scenePipeline = _directPipeline = _screenPipeline = null; _queue = null;
+        _depthState?.Dispose(); _scenePipeline?.Dispose(); _directPipeline?.Dispose(); _skinnedPipeline?.Dispose(); _skinnedDirectPipeline?.Dispose(); _screenPipeline?.Dispose(); _queue?.Dispose();
+        _depthState = null; _scenePipeline = _directPipeline = _skinnedPipeline = _skinnedDirectPipeline = _screenPipeline = null; _queue = null;
     }
 }
 #endif

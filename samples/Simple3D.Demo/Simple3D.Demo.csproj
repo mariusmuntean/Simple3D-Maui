@@ -33,16 +33,29 @@
     <UseInterpreter>true</UseInterpreter>
     <MtouchInterpreter>-all,Simple3D.Demo</MtouchInterpreter>
   </PropertyGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
+    <!-- The accurate model holds full-body tracking far better than the base model (see docs/DEVELOPMENT.md). -->
+    <PackageReference Include="Xamarin.Google.MLKit.PoseDetection.Accurate" Version="117.0.0.23" />
+    <!-- The face model released with the pose package above, so their shared dependencies agree. -->
+    <PackageReference Include="Xamarin.Google.MLKit.FaceDetection" Version="116.1.7.5" />
+    <PackageReference Include="Xamarin.AndroidX.Camera.Camera2" Version="1.5.2.1" />
+    <PackageReference Include="Xamarin.AndroidX.Camera.Lifecycle" Version="1.5.2.1" />
+    <PackageReference Include="Xamarin.AndroidX.Camera.View" Version="1.5.2.1" />
+    <!-- The multiplatform Compose annotation package pulls its JVM jar next to the Android aar; D8 rejects the duplicate classes. -->
+    <PackageReference Include="Xamarin.AndroidX.Compose.Runtime.Annotation.Jvm" Version="1.10.0.1" ExcludeAssets="all" PrivateAssets="all" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
     <PackageReference Include="Microsoft.Maui.Essentials" Version="$(MauiVersion)" />
     <ProjectReference Include="../../src/Simple3D.Maui/Simple3D.Maui.csproj" />
-    <Compile Include="../Simple3D.Shared/*.cs" Link="Samples/%(Filename)%(Extension)" />
+    <Compile Include="../Simple3D.Shared/**/*.cs" Link="Samples/%(Filename)%(Extension)" />
     <Compile Include="../../tests/Shared/NativeGpuValidation.cs" Link="Diagnostics/NativeGpuValidation.cs" Condition="'$(EnableNativeRenderProbe)' == 'true' or '$(Configuration)' == 'Debug'" />
     <Compile Include="../../tests/Shared/AppearancePerformanceProbe.cs" Link="Diagnostics/AppearancePerformanceProbe.cs" Condition="'$(EnableNativeRenderProbe)' == 'true' or '$(Configuration)' == 'Debug'" />
   </ItemGroup>
   <ItemGroup>
     <MauiIcon Include="Resources/AppIcon/appicon.svg" ForegroundFile="Resources/AppIcon/appiconfg.svg" Color="#101A2D" />
+    <!-- The Mirror scene's characters, all CC0: ToxSam's "Chubby Tubby Cat" and 100Avatars (Polygonal Mind) "Juanita", "CosmicBot", "Froggy". -->
+    <MauiAsset Include="Resources/Raw/**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
     <MauiSplashScreen Include="Resources/Splash/splash.svg" Color="#101A2D" BaseSize="128,128" />
   </ItemGroup>
 </Project>

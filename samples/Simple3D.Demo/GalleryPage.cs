@@ -20,9 +20,8 @@ public sealed class GalleryPage : ContentPage
     private int _hudFrames;
     private long _hudStarted;
     private DemoScene? _current;
-    private IDispatcherTimer? _animationTimer;
+    private readonly FrameClock _animationClock = new();
     private double _animationSeconds;
-    private long _lastAnimationTick;
 
     public GalleryPage()
     {
@@ -58,6 +57,13 @@ public sealed class GalleryPage : ContentPage
         var scenes = new HorizontalStackLayout { Spacing = 8 };
         foreach (var sample in _scenes)
             scenes.Add(SceneButton(sample.Name, () => Show(sample)));
+#if IOS || MACCATALYST || ANDROID
+        // Mirror needs the camera, so it opens as its own full-screen page instead of a gallery scene.
+        var mirror = SceneButton("Mirror ✦", () => Navigation.PushModalAsync(new Mirror.MirrorPage()));
+        mirror.BackgroundColor = Color.FromArgb("#2E7D5B");
+        SemanticProperties.SetHint(mirror, "Opens a camera scene in which a 3D frog copies your movement");
+        scenes.Add(mirror);
+#endif
         var tools = new HorizontalStackLayout { Spacing = 8 };
         tools.Add(SceneButton("−", () => _view.Zoom(.8f)));
         tools.Add(SceneButton("Fit", () => _view.Camera.FitToScene(_view.Scene, (float)Math.Max(.1, _view.Width / Math.Max(1, _view.Height)))));
@@ -222,32 +228,27 @@ public sealed class GalleryPage : ContentPage
 
     private void ToggleAnimation()
     {
-        if (_animationTimer?.IsRunning == true) { StopAnimation(); return; }
+        if (_animationClock.IsRunning) { StopAnimation(); return; }
         if (_current is null) return;
-        _animationTimer ??= Dispatcher.CreateTimer();
-        _animationTimer.Interval = TimeSpan.FromMilliseconds(1000d / 60);
-        _animationTimer.Tick -= AdvanceAnimation;
-        _animationTimer.Tick += AdvanceAnimation;
-        _lastAnimationTick = Stopwatch.GetTimestamp();
+        // Once per display refresh, at the screen's real rate.
+        _animationClock.Tick -= AdvanceAnimation;
+        _animationClock.Tick += AdvanceAnimation;
         _view.MaximumRenderDimension = 768;
         _animationButton.Text = "Pause";
-        _animationTimer.Start();
+        _animationClock.Start();
     }
 
-    private void AdvanceAnimation(object? sender, EventArgs args)
+    private void AdvanceAnimation(TimeSpan elapsed, TimeSpan delta)
     {
-        if (_animationTimer?.IsRunning != true) return;
         if (_current is null) { StopAnimation(); return; }
-        var now = Stopwatch.GetTimestamp();
-        var seconds = Math.Min(Stopwatch.GetElapsedTime(_lastAnimationTick, now).TotalSeconds, .1);
-        _lastAnimationTick = now;
-        _animationSeconds += seconds;
+        // A long pause (backgrounding, a slow frame) must not make the animation jump.
+        _animationSeconds += Math.Min(delta.TotalSeconds, .1);
         _current.Animate((float)_animationSeconds);
     }
 
     internal void StopAnimation()
     {
-        _animationTimer?.Stop();
+        _animationClock.Stop();
         _view.MaximumRenderDimension = DepthRenderer.MaximumDimension;
         _animationButton.Text = "Animate";
     }
