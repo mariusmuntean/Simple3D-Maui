@@ -20,7 +20,8 @@ public sealed class MirrorPage : ContentPage
     private readonly View _intro, _guide, _blocked, _lostHint;
     private readonly Label _blockedText = Text("", 16), _status = Text("", 12, "#A9B8D4");
     private readonly Button _blockedAction, _switchCamera;
-    private readonly View _characters;
+    private readonly ScrollView _characters;
+    private readonly StackLayout _characterRow = new() { Spacing = 10 };
     private readonly Label _introCharacter = Text("", 15, "#FFD27A", bold: true);
     private readonly List<(MirrorModel Model, Border Chip)> _chips = [];
     private MirrorModel _model = MirrorModels.Find(Preferences.Default.Get<string?>("mirror.character", null));
@@ -355,7 +356,15 @@ public sealed class MirrorPage : ContentPage
                 "Get into the frame: your whole body, from the waist up, or just your head for face tracking";
         _guidePill.MaximumWidthRequest = Math.Max(1, width - 48);
         _lostHint.MaximumWidthRequest = Math.Max(1, width - 48);
+        // The carousel runs along the bottom in portrait and down the left edge in landscape, clear of the character's feet.
+        _characterRow.Orientation = landscape ? StackOrientation.Vertical : StackOrientation.Horizontal;
+        _characterRow.Padding = landscape ? new Thickness(0, 8) : new Thickness(16, 0);
+        _characters.Orientation = landscape ? ScrollOrientation.Vertical : ScrollOrientation.Horizontal;
+        _characters.HorizontalOptions = landscape ? LayoutOptions.Start : LayoutOptions.Center;
+        _characters.VerticalOptions = landscape ? LayoutOptions.Center : LayoutOptions.End;
+        _characters.Margin = landscape ? new Thickness(22, 64, 0, 12) : new Thickness(0, 0, 0, 22);
         // Debug stats wrap left of the camera inset.
+        _status.Margin = new Thickness(landscape ? 100 : 18, landscape ? 24 : 68, 0, 0);
         _status.MaximumWidthRequest = Math.Max(1, width - (live ? landscape ? 240 : 160 : 36));
         // Keep transient zoom feedback below the top buttons and camera inset.
         _zoomPill.Margin = new Thickness(0, live && landscape ? 132 : 168, 0, 0);
@@ -459,15 +468,16 @@ public sealed class MirrorPage : ContentPage
     }
 
     // A strip of character thumbnails along the bottom; the chosen one is outlined.
-    private View Carousel()
+    private ScrollView Carousel()
     {
-        var row = new HorizontalStackLayout { Spacing = 10, Padding = new Thickness(16, 0) };
+        var row = _characterRow;
         foreach (var model in MirrorModels.All)
         {
             var image = new Image { WidthRequest = 56, HeightRequest = 56, Aspect = Aspect.AspectFill, Source = Thumbnail(model) };
             var chip = new Border
             {
                 Padding = 3, StrokeThickness = 2.5, BackgroundColor = Color.FromRgba(8, 12, 22, 190),
+                WidthRequest = 67, HeightRequest = 67, HorizontalOptions = LayoutOptions.Start, VerticalOptions = LayoutOptions.Start,
                 StrokeShape = new RoundRectangle { CornerRadius = 18 }, Content = new Border { StrokeThickness = 0, StrokeShape = new RoundRectangle { CornerRadius = 15 }, Content = image }
             };
             SemanticProperties.SetHint(chip, "Switches to this character");
@@ -479,11 +489,7 @@ public sealed class MirrorPage : ContentPage
             row.Add(chip);
         }
         HighlightCharacter();
-        return new ScrollView
-        {
-            Orientation = ScrollOrientation.Horizontal, HorizontalScrollBarVisibility = ScrollBarVisibility.Never,
-            HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.End, Margin = new Thickness(0, 0, 0, 22), Content = row
-        };
+        return new ScrollView { HorizontalScrollBarVisibility = ScrollBarVisibility.Never, VerticalScrollBarVisibility = ScrollBarVisibility.Never, Content = row };
     }
 
     private void HighlightCharacter()
