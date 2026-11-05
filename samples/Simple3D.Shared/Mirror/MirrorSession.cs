@@ -1,4 +1,3 @@
-using System.Numerics;
 using Simple3D.Core;
 
 namespace Simple3D.Shared.Mirror;
@@ -54,15 +53,12 @@ public sealed class MirrorSession
         // Exponential easing: frame-rate independent; a long gap (backgrounded app) snaps to the target.
         var t = dt is > 0 and < .5f ? 1 - MathF.Exp(-dt / FollowSeconds) : 1;
         if (t >= 1) { Show(target, _targetExpressions); return; }
-        var rotations = _rotations ??= new Quaternion[target.Rotations.Count];
-        for (var i = 0; i < rotations.Length; i++) rotations[i] = Quaternion.Slerp(shown.Rotations[i], target.Rotations[i], t);
-        var offset = Vector3.Lerp(shown.RootOffset, target.RootOffset, t);
         var expressions = new Dictionary<string, float>(_targetExpressions.Count);
         foreach (var (name, value) in _targetExpressions)
             expressions[name] = _shownExpressions.TryGetValue(name, out var current) ? current + (value - current) * t : value;
         foreach (var (name, value) in _shownExpressions)
             if (!_targetExpressions.ContainsKey(name)) expressions[name] = value * (1 - t);
-        Show(SkeletonPose.Create(target.Skeleton, rotations, offset), expressions);
+        Show(SkeletonPose.Blend(shown, target, t), expressions);
     }
 
     private void Show(SkeletonPose pose, IReadOnlyDictionary<string, float> expressions)
@@ -80,7 +76,6 @@ public sealed class MirrorSession
     public const float FollowSeconds = .05f;
     private SkeletonPose? _target, _shown;
     private IReadOnlyDictionary<string, float> _targetExpressions = Neutral, _shownExpressions = Neutral;
-    private Quaternion[]? _rotations;
 
     private static readonly IReadOnlyDictionary<string, float> Neutral = new Dictionary<string, float>();
 
@@ -91,7 +86,6 @@ public sealed class MirrorSession
         Stage.Swap(character);
         // Poses belong to the old skeleton; the next tracked frame snaps the new character into place.
         _target = _shown = null;
-        _rotations = null;
         _retargeter = new HumanoidRetargeter(character.Skeleton, character.HumanoidBones, Stage.CharacterToView) { TorsoRadius = character.TorsoRadius };
     }
 
