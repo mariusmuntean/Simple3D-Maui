@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0-preview.1 · unreleased
 
 - Skinned meshes: `Skeleton`, `SkeletonPose`, `SkinnedMesh`, `Shape.FromSkinnedMesh`, `Shape.WithPose` and `SkeletonPose.Blend`. Metal and GLES skin in the vertex shader (one joint palette upload per pose); software rendering, picking and bounds skin on the CPU.
 - `GltfReader` (Core) and `GltfLoader` (MAUI) load binary glTF 2.0 and VRM: meshes, base color materials, node hierarchy, skins and the VRM humanoid bone map.

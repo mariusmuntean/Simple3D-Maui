@@ -45,10 +45,28 @@ Require((center & 255) > 0 && ((center >> 8) & 255) > 0 && ((center >> 16) & 255
     "Packaged UVs, smooth normals, directional light or vertex colors are missing");
 Console.WriteLine("PACKAGE_APPEARANCE_PASS: OBJ, calculated normals, texture, directional light and vertex colors");
 
+// 0.3.0: a two-joint skinned bar with one morph target, posed, blended and morphed through the public API.
+var skeleton = new Skeleton([
+    new Joint("root", -1, Vector3.Zero, Quaternion.Identity, Vector3.One, Matrix4x4.Identity),
+    new Joint("tip", 0, new(0, 1, 0), Quaternion.Identity, Vector3.One, Matrix4x4.CreateTranslation(0, -1, 0))]);
+var barVertices = new[] { new Vector3(-.1f, 0, 0), new Vector3(.1f, 0, 0), new Vector3(-.1f, 2, 0), new Vector3(.1f, 2, 0) };
+var bar = new SkinnedMesh(new Mesh(barVertices, [0, 1, 3, 0, 3, 2]), skeleton,
+    [new(new(0, 0, 0, 0), Vector4.UnitX), new(new(0, 0, 0, 0), Vector4.UnitX), new(new(1, 0, 0, 0), Vector4.UnitX), new(new(1, 0, 0, 0), Vector4.UnitX)],
+    [new MorphTarget("wide", [Vector3.Zero, Vector3.Zero, new(-.4f, 0, 0), new(.4f, 0, 0)])]);
+var bent = SkeletonPose.Create(skeleton, [Quaternion.Identity, Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI / 2)]);
+var half = SkeletonPose.Blend(skeleton.RestPose, bent, .5f);
+var posed = Shape.FromSkinnedMesh(bar).WithPose(half);
+var morphed = posed.WithMorphWeights(bar, [1f]);
+Require(ReferenceEquals(posed.Pose, half) && morphed.MorphWeights![0] == 1, "Packaged skinning, blending or morph weights failed");
+var top = morphed.Mesh.SelectMany(t => new[] { t.A, t.B, t.C }).Max(v => v.Y);
+Require(top < 1.95f, "Packaged skinning did not bend the bar");
+Require(ReferenceEquals(new Scene().Add(morphed).Shapes[0], morphed), "Packaged skinned shape cannot join a scene");
+Console.WriteLine("PACKAGE_SKINNING_PASS: skeleton, pose blend, skinned mesh and morph target");
+
 if (args.Length == 0) return;
 foreach (var name in new[] { "Simple3D.Core", "Simple3D.Maui" })
 {
-    var path = Path.Combine(args[0], $"{name}.0.2.0-preview.1.nupkg");
+    var path = Path.Combine(args[0], $"{name}.0.3.0-preview.1.nupkg");
     using var package = ZipFile.OpenRead(path);
     var nuspec = XDocument.Load(package.Entries.Single(e => e.FullName.EndsWith(".nuspec")).Open());
     var metadata = nuspec.Root!.Elements().Single(e => e.Name.LocalName == "metadata");
