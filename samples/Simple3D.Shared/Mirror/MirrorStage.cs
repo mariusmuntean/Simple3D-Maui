@@ -85,6 +85,8 @@ public sealed class MirrorStage
     public MirrorCharacter Character { get; private set; }
     /// <summary>Rotation from the character's skeleton space to view space, for <see cref="HumanoidRetargeter"/>.</summary>
     public Quaternion CharacterToView { get; private set; }
+    /// <summary>The character as currently posed, without the stage's placement.</summary>
+    public Shape CharacterShape => _body;
     /// <summary>Whether a character swap is animating; drive <see cref="Animate"/> at the display rate meanwhile.</summary>
     public bool IsSwapping => _swapStart is not null;
 

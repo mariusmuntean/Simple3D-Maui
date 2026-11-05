@@ -30,6 +30,9 @@ public sealed class PoseTracker
     private readonly bool[] _visible = new bool[PoseFrame.JointCount];
     private readonly int[] _jumps = new int[PoseFrame.JointCount];
     private const float HideBelow = .2f, TrustedConfidence = .6f, JumpLimit = .35f;
+    private float? _smileBaseline;
+    private float _browBaseline;
+    private double? _lastFace;
     private int _acquireFrames;
     private TimeSpan _lastTorso;
 
@@ -67,6 +70,7 @@ public sealed class PoseTracker
             {
                 foreach (var filter in _filters.Concat(_faceFilters)) filter.Reset();
                 Array.Clear(_visible);
+                _smileBaseline = null; _lastFace = null;
             }
             Smooth(frame);
             updated = true;
@@ -117,7 +121,20 @@ public sealed class PoseTracker
         else
         {
             float F(int i, float value) => _faceFilters[i].Filter(value, seconds);
-            Face = new(F(0, face.Yaw), F(1, face.Pitch), F(2, face.Roll), F(3, face.MouthOpen), F(4, face.Smile), F(5, face.Brows), F(6, face.BlinkLeft), F(7, face.BlinkRight));
+            // Neutral brow height and mouth width differ between people (and bangs hide brows), so both are measured
+            // against this person's own neutral: the smile baseline drops quickly to their least smiling value and rises
+            // very slowly, so a held smile still counts; the brow baseline follows slowly both ways.
+            var dt = _lastFace is { } last ? Math.Clamp((float)(seconds - last), 0, .5f) : 0;
+            _lastFace = seconds;
+            if (_smileBaseline is not { } smileBase) { _smileBaseline = face.Smile; _browBaseline = face.Brows; }
+            else
+            {
+                _smileBaseline = smileBase + (face.Smile - smileBase) * (1 - MathF.Exp(-dt / (face.Smile < smileBase ? 1f : 30f)));
+                _browBaseline += (face.Brows - _browBaseline) * (1 - MathF.Exp(-dt / 10f));
+            }
+            var smile = Math.Clamp((face.Smile - _smileBaseline!.Value) / MathF.Max(.25f, 1 - _smileBaseline.Value), 0, 1);
+            var brows = Math.Clamp(face.Brows - _browBaseline, -1, 1);
+            Face = new(F(0, face.Yaw), F(1, face.Pitch), F(2, face.Roll), F(3, face.MouthOpen), F(4, smile), F(5, brows), F(6, face.BlinkLeft), F(7, face.BlinkRight));
         }
         // Typical body size in this frame, to judge whether a joint moved implausibly far.
         var scale = BodyScale(frame);

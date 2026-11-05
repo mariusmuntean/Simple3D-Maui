@@ -272,12 +272,86 @@ internal static class MirrorTests
         lag.Sort();
         return (Stats(eased), Stats(raw), lag[lag.Count / 2]);
         static float Degrees(Quaternion a, Quaternion b) => 2 * MathF.Acos(Math.Clamp(MathF.Abs(Quaternion.Dot(a, b)), 0, 1)) * 180 / MathF.PI;
-        static Shape Leaf(MirrorSession s)
+        static Shape Leaf(MirrorSession s) => Find(s.Stage.CharacterShape)!;
+        static Shape? Find(Shape s) => s.Pose is not null ? s : s.Children.Select(Find).FirstOrDefault(c => c is not null);
+    }
+
+    private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
+}
+
+/// <summary>End to end on real faces: Apple Vision fixtures of three Mixkit clips drive the cat through a full
+/// MirrorSession, and the cat's own mouth, blink and wink weights and head angles must follow the person.</summary>
+internal static class MirrorFaceTests
+{
+    internal static void Run()
+    {
+        using var asset = File.OpenRead(Path.Combine(AppContext.BaseDirectory, "Assets", "cat.vrm"));
+        var model = GltfReader.Read(asset);
+        int Target(string expression) => model.Expressions[expression].Binds[0].Target;
+
+        // 46379: neutral 0–3.3 s, mouth wide open 3.6–7.9 s, eyes closed 8.4–12 s (head and shoulders, body visible).
+        var talk = Replay(model, "face-46379");
+        float Mean(IEnumerable<Sample> s, Func<Sample, float> v) => s.Any() ? s.Average(v) : float.NaN;
+        var neutral = talk.Where(s => s.Time is > 1 and < 3.3);
+        var open = talk.Where(s => s.Time is > 4 and < 7.6);
+        Check(Mean(open, s => s.Weights[Target("a")]) > .4f && Mean(neutral, s => s.Weights[Target("a")]) < .15f,
+            $"mouth: open {Mean(open, s => s.Weights[Target("a")]):0.00}, neutral {Mean(neutral, s => s.Weights[Target("a")]):0.00}");
+        // She blinks repeatedly while talking (8.4–12 s): the cat's eyes must close and open with hers.
+        float Eyes(Sample s) => (s.Weights[Target("blink_l")] + s.Weights[Target("blink_r")]) / 2;
+        Check(Correlation(talk, s => s.FaceBlink, Eyes) > .7f && Mean(neutral, Eyes) < .25f,
+            $"eyes follow blinks: r={Correlation(talk, s => s.FaceBlink, Eyes):0.00}, open {Mean(neutral, Eyes):0.00}");
+
+        // 11519: face only (no body detected); a wink with her right eye at 4.1–4.5 s; head tilts.
+        var girl = Replay(model, "face-11519");
+        Check(girl.Count > 200, $"face-only framing must track: {girl.Count} frames");
+        var wink = girl.Where(s => s.Time is > 4.15 and < 4.45);
+        Check(Mean(wink, s => s.Weights[Target("blink_r")]) > Mean(wink, s => s.Weights[Target("blink_l")]) + .3f,
+            $"wink: right {Mean(wink, s => s.Weights[Target("blink_r")]):0.00}, left {Mean(wink, s => s.Weights[Target("blink_l")]):0.00}");
+        Check(Correlation(girl, s => s.FaceRoll, s => s.HeadRoll) > .8f, $"head tilt follows: r={Correlation(girl, s => s.FaceRoll, s => s.HeadRoll):0.00}");
+        Check(Mean(girl, s => s.Weights[Target("angry")]) < .2f, $"bangs over the brows must not read as a frown: {Mean(girl, s => s.Weights[Target("angry")]):0.00}");
+
+        // 43829: laughing, head turned and nodding.
+        var laugh = Replay(model, "face-43829");
+        Check(Correlation(laugh, s => s.FaceYaw, s => s.HeadYaw) > .7f && Correlation(laugh, s => s.FacePitch, s => s.HeadPitch) > .7f,
+            $"head turn and nod follow: yaw r={Correlation(laugh, s => s.FaceYaw, s => s.HeadYaw):0.00}, pitch r={Correlation(laugh, s => s.FacePitch, s => s.HeadPitch):0.00}");
+        Console.WriteLine($"PASS mirror face end to end (cat): mouth {Mean(open, s => s.Weights[Target("a")]):0.00} open vs {Mean(neutral, s => s.Weights[Target("a")]):0.00}, " +
+            $"blinks r={Correlation(talk, s => s.FaceBlink, Eyes):0.00}, wink, head tilt r={Correlation(girl, s => s.FaceRoll, s => s.HeadRoll):0.00}, " +
+            $"turn r={Correlation(laugh, s => s.FaceYaw, s => s.HeadYaw):0.00}, nod r={Correlation(laugh, s => s.FacePitch, s => s.HeadPitch):0.00}");
+    }
+
+    private sealed record Sample(double Time, float[] Weights, float FaceBlink, float FaceYaw, float FacePitch, float FaceRoll, float HeadYaw, float HeadPitch, float HeadRoll);
+
+    private static List<Sample> Replay(GltfModel model, string fixture)
+    {
+        var session = new MirrorSession(MirrorCharacter.FromVrm(model, model.CreateShape()));
+        var bones = model.HumanoidBones;
+        var samples = new List<Sample>();
+        foreach (var frame in MirrorTests.Fixture(fixture))
         {
-            var node = s.Stage.Scene.Shapes.First(x => x.Name is null && x.Children.Count == 1);
-            while (node.Pose is null) node = node.Children[0];
-            return node;
+            session.Apply(frame, mirrored: false);
+            for (var i = 0; i < 4; i++) session.Present(TimeSpan.FromSeconds(1 / 100d));
+            if (session.Tracker.State != TrackingState.Tracking || session.Tracker.Face is not { } face) continue;
+            var leaf = Leaf(session.Stage.CharacterShape)!;
+            var world = leaf.Pose!.WorldTransforms;
+            // Head orientation relative to the chest, in view space (the character faces the camera).
+            var toView = session.Stage.CharacterToView;
+            var head = Quaternion.CreateFromRotationMatrix(world[bones["head"]]);
+            var chest = Quaternion.CreateFromRotationMatrix(world[bones[bones.ContainsKey("upperChest") ? "upperChest" : "chest"]]);
+            var relative = toView * Quaternion.Conjugate(chest) * head * Quaternion.Conjugate(toView);
+            var forward = Vector3.Transform(Vector3.UnitZ, relative);
+            var up = Vector3.Transform(Vector3.UnitY, relative);
+            samples.Add(new(frame.Timestamp.TotalSeconds, leaf.MorphWeights?.ToArray() ?? new float[32], (face.BlinkLeft + face.BlinkRight) / 2, face.Yaw, face.Pitch, face.Roll,
+                MathF.Atan2(forward.X, forward.Z), MathF.Asin(Math.Clamp(forward.Y, -1, 1)), MathF.Atan2(-up.X, up.Y)));
         }
+        return samples;
+        static Shape? Leaf(Shape s) => s.Pose is not null ? s : s.Children.Select(Leaf).FirstOrDefault(c => c is not null);
+    }
+
+    private static float Correlation(IReadOnlyList<Sample> s, Func<Sample, float> a, Func<Sample, float> b)
+    {
+        double ma = s.Average(a), mb = s.Average(b), ab = 0, aa = 0, bb = 0;
+        foreach (var x in s) { var da = a(x) - ma; var db = b(x) - mb; ab += da * db; aa += da * da; bb += db * db; }
+        return (float)(ab / Math.Sqrt(aa * bb + 1e-12));
     }
 
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
