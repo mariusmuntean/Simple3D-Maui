@@ -29,9 +29,15 @@ public sealed class HumanoidRetargeter
     private const float LengthMemory = .995f;
     private const float FacingSmoothing = .35f;
     private const float PelvisShare = .25f;
+    private const float OccludedConfidence = .5f;
     private const float BowDeadZone = .3f; // radians of apparent bend (about 17°) treated as noise
     private float _torsoFull;
     private readonly float[] _spineShare, _headShare;
+    private readonly Matrix4x4[] _matrices;
+    private readonly float[] _boneLength;
+    private readonly float[] _side; // per limb: +1 in front of the body, -1 behind, for the tilt fallback
+    private readonly int _spineTop;
+    private Vector2 _shoulderSpan, _hipSpan;
     private float _facing, _frontWidth, _turnSign = 1, _torsoLength;
 
     private readonly Skeleton _skeleton;
@@ -50,6 +56,9 @@ public sealed class HumanoidRetargeter
 
     /// <summary>How far, in skeleton units, the character moves sideways when the person reaches the image edge.</summary>
     public float SidewaysRange { get; init; } = .6f;
+
+    /// <summary>Radius of the character's torso in skeleton units; arms are kept outside it. 0 turns the check off.</summary>
+    public float TorsoRadius { get; init; }
 
     /// <summary>Landmarks below this confidence are treated as hidden.</summary>
     public float MinimumConfidence { get; init; } = .3f;
@@ -92,6 +101,10 @@ public sealed class HumanoidRetargeter
             return (joint, Vector3.Transform(restDirection, Quaternion.Conjugate(_restWorld[joint])), limb.From, limb.To, limb.DepthSign);
         }).ToArray();
         _limbOfJoint = Enumerable.Repeat(-1, restWorld.Count).ToArray();
+        _matrices = new Matrix4x4[restWorld.Count];
+        _boneLength = Limbs.Select(l => Vector3.Distance(_restPositions[Bone(l.Bone)], _restPositions[Bone(l.Child)])).ToArray();
+        _side = Enumerable.Repeat(1f, Limbs.Length).ToArray();
+        _spineTop = new[] { "upperChest", "chest", "spine" }.Where(humanoidBones.ContainsKey).Select(Bone).DefaultIfEmpty(_hips).First();
         for (var i = 0; i < _limbs.Length; i++) _limbOfJoint[_limbs[i].Joint] = i;
         _feet = new[] { "leftFoot", "rightFoot", "leftToes", "rightToes" }
             .Where(humanoidBones.ContainsKey).Select(Bone).ToArray();
@@ -111,6 +124,7 @@ public sealed class HumanoidRetargeter
         ForgetLengths();
         _facing = 0; _turnSign = 1;
         _skeleton.RestPose.Rotations.ToArray().CopyTo(_held, 0);
+        Array.Fill(_side, 1f);
     }
 
     /// <summary>Computes a pose from landmarks of the upright, unmirrored image.</summary>
@@ -161,6 +175,7 @@ public sealed class HumanoidRetargeter
             side = 2 * shoulders;
         }
         var facing = Facing(landmarks, P(BodyJoint.Nose) - shoulderCenter, _torsoLength, side);
+        _shoulderSpan = shoulderCenter; _hipSpan = hipCenter;
         // The upper body turns about the vertical axis, bows about its own side-to-side axis, then leans within the image
         // plane along the spine. The pelvis takes a share; the spine bones split the rest so the back curves.
         var lean = MathF.Atan2(-up.X, up.Y);
@@ -185,6 +200,13 @@ public sealed class HumanoidRetargeter
         var joints = _skeleton.Joints;
         for (var j = 0; j < joints.Count; j++)
         {
+            PoseJoint(j);
+            // Full transforms, so later joints can test their limbs against the torso.
+            _matrices[j] = joints[j].Local(_local[j]) * (joints[j].Parent < 0 ? _skeleton.RootTransform : _matrices[joints[j].Parent]);
+        }
+
+        void PoseJoint(int j)
+        {
             var parent = joints[j].Parent < 0 ? _rootRotation : _world[joints[j].Parent];
             if (j == _hips || _spineShare[j] > 0 || _headShare[j] > 0)
             {
@@ -195,21 +217,22 @@ public sealed class HumanoidRetargeter
                 var delta = _headShare[j] > 0 ? Quaternion.Normalize(chest) : Quaternion.Normalize(bend * pelvis);
                 _world[j] = Quaternion.Normalize(turn * delta * _restWorld[j]);
                 _local[j] = Quaternion.Normalize(Quaternion.Conjugate(parent) * _world[j]);
-                continue;
+                return;
             }
             _local[j] = _skeleton.RestPose.Rotations[j];
             _world[j] = parent * _local[j];
             var limb = _limbOfJoint[j];
-            if (limb < 0) continue;
+            if (limb < 0) return;
             var (_, localDirection, from, to, depthSign) = _limbs[limb];
             // A hidden limb holds its last rotation (the rest pose after a reset) rather than following stale landmarks.
             if (landmarks[(int)from].Confidence < MinimumConfidence || landmarks[(int)to].Confidence < MinimumConfidence)
             {
                 _local[j] = _held[j];
                 _world[j] = parent * _local[j];
-                continue;
+                return;
             }
-            var target = Target(limb, P(to) - P(from), depthSign * forward);
+            var origin = Vector3.Transform(joints[j].Translation, joints[j].Parent < 0 ? _skeleton.RootTransform : _matrices[joints[j].Parent]);
+            var target = BodyAwareTarget(limb, P(to) - P(from), depthSign * forward, origin, landmarks[(int)to].Confidence, P(to));
             var current = Vector3.Transform(localDirection, _world[j]);
             _world[j] = Quaternion.Normalize(FromTo(current, Vector3.Transform(target, _fromView)) * _world[j]);
             _local[j] = _held[j] = Quaternion.Normalize(Quaternion.Conjugate(parent) * _world[j]);
@@ -244,6 +267,44 @@ public sealed class HumanoidRetargeter
         var delta = MathF.IEEERemainder(target - _facing, 2 * MathF.PI);
         _facing = MathF.IEEERemainder(_facing + delta * FacingSmoothing, 2 * MathF.PI);
         return _facing;
+    }
+
+    // Chooses the limb's depth so it stays outside the torso. From a 2D image a limb could point in front of the body or
+    // behind it: prefer in front, unless the detector barely sees the far end where it overlaps the torso in the image
+    // (then it is probably hidden behind it), and take the other side when the preferred one passes through the torso.
+    // If both do, tilt the limb out of the image plane, on the side it was last on, until it clears the body.
+    private Vector3 BodyAwareTarget(int limb, Vector2 segment, float preferredSign, Vector3 origin, float endConfidence, Vector2 end)
+    {
+        var front = Target(limb, segment, MathF.Abs(preferredSign));
+        if (TorsoRadius <= 0 || limb >= 4 || segment.LengthSquared() < 1e-8f) return Target(limb, segment, preferredSign);
+        var forwardSign = MathF.Sign(preferredSign) is var sign && sign != 0 ? sign : 1;
+        var overTorso = MathF.Abs(end.X - (_shoulderSpan.X + _hipSpan.X) / 2) < .5f * Vector2.Distance(_shoulderSpan, _hipSpan) &&
+            end.Y < _shoulderSpan.Y && end.Y > _hipSpan.Y;
+        var preferred = overTorso && endConfidence < OccludedConfidence ? -1f : 1f;
+        Vector3 WithSide(float s) => new(front.X, front.Y, front.Z * s * forwardSign);
+        bool Clear(Vector3 direction) => Outside(origin + Vector3.Transform(direction, _fromView) * _boneLength[limb]) &&
+            Outside(origin + Vector3.Transform(direction, _fromView) * _boneLength[limb] * .5f);
+        foreach (var s in new[] { preferred, -preferred })
+            if (Clear(WithSide(s))) { _side[limb] = s; return WithSide(s); }
+        // Neither side clears the body: swing further out of the image plane, behind when the hand looks hidden,
+        // otherwise on the side the limb was last on.
+        if (preferred < 0) _side[limb] = -1;
+        var flat = new Vector2(front.X, front.Y);
+        for (var angle = .3f; angle < 1.5f; angle += .15f)
+        {
+            var tilted = new Vector3(flat * MathF.Cos(angle) / MathF.Max(flat.Length(), 1e-6f), MathF.Sin(angle) * _side[limb] * forwardSign);
+            if (Clear(tilted)) return tilted;
+        }
+        return WithSide(_side[limb]);
+    }
+
+    // Outside a capsule around the spine, from the hips to the top of the chest.
+    private bool Outside(Vector3 point)
+    {
+        Vector3 a = _matrices[_hips].Translation, b = _matrices[_spineTop].Translation;
+        var axis = b - a;
+        var t = axis.LengthSquared() > 1e-8f ? Math.Clamp(Vector3.Dot(point - a, axis) / axis.LengthSquared(), 0, 1) : 0;
+        return Vector3.Distance(point, a + axis * t) >= TorsoRadius;
     }
 
     private Vector3 Target(int limb, Vector2 segment, float depthSign)

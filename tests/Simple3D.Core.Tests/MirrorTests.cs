@@ -118,6 +118,24 @@ internal static class MirrorTests
         Vector3 Up(string bone) => Vector3.TransformNormal(Vector3.UnitY, bowPose[bones[bone]]);
         Check(Up("chest").Z > .5f && Up("hips").Z is > 0 and < .4f, $"bow: chest up {Up("chest")}, pelvis up {Up("hips")}");
 
+        // Arms across the body: a forearm drawn over the chest stays outside the torso, in front when the hand is seen,
+        // behind when the detector barely sees it over the torso (hidden behind the body).
+        var across = raised.ToArray();
+        across[(int)BodyJoint.LeftElbow] = new(.6f, .38f, 1);
+        across[(int)BodyJoint.LeftWrist] = new(.47f, .36f, 1);
+        float WristZ(Landmark[] lm)
+        {
+            var solid = new HumanoidRetargeter(skeleton, bones, Quaternion.Identity) { TorsoRadius = .12f };
+            var world = solid.Retarget(lm, 1, mirrored: false).WorldTransforms;
+            var (hand, hips, chest) = (world[bones["leftHand"]].Translation, world[bones["hips"]].Translation, world[bones["chest"]].Translation);
+            var t = Math.Clamp(Vector3.Dot(hand - hips, chest - hips) / (chest - hips).LengthSquared(), 0, 1);
+            Check(Vector3.Distance(hand, hips + (chest - hips) * t) >= .119f, $"hand inside the torso: {hand}");
+            return hand.Z;
+        }
+        Check(WristZ(across) > 0, "a visible hand across the chest is in front of the body");
+        across[(int)BodyJoint.LeftWrist] = across[(int)BodyJoint.LeftWrist] with { Confidence = .35f };
+        Check(WristZ(across) < 0, "a barely seen hand over the torso is behind the body");
+
         // A character modeled facing -Z (here through a rotated root) is turned to the camera by toView.
         var turned = Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI);
         var awaySkeleton = new Skeleton(skeleton.Joints, Matrix4x4.CreateFromQuaternion(turned));

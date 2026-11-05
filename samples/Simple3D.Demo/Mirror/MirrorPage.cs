@@ -106,18 +106,17 @@ public sealed class MirrorPage : ContentPage
     private async Task LoadAsync()
     {
         // Decoding the models and their textures takes a moment; keep it off the UI thread.
-        _session = new MirrorSession([await Character("froggy.vrm", 1.6f), await Character("cat.vrm", 1.25f)]);
+        _session = new MirrorSession(await Character("cat.vrm"));
         _session.StateChanged += OnTrackingChanged;
         _view.Scene = _session.Stage.Scene;
         _view.Camera = _session.Stage.Camera;
     }
 
-    private static async Task<MirrorCharacter> Character(string file, float height)
+    private static async Task<MirrorCharacter> Character(string file)
     {
         await using var stream = await FileSystem.OpenAppPackageFileAsync(file);
         var loaded = await GltfLoader.LoadAsync(stream);
-        // Both bundled models are VRM 0.x, which face -Z.
-        return new(loaded.Shape, loaded.Model.Skeletons[0], loaded.Model.HumanoidBones, FacesPositiveZ: false, height);
+        return MirrorCharacter.FromVrm(loaded.Model, loaded.Shape);
     }
 
     private async void Start()

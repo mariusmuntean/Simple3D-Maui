@@ -16,7 +16,9 @@ internal static class MirrorRender
         var every = args.Length > 1 ? int.Parse(args[1]) : 5;
         var fixture = args.Length > 2 ? args[2] : "mirror-landmarks";
         Directory.CreateDirectory(output);
-        var session = new MirrorSession([Character("froggy.vrm", 1.6f), Character("cat.vrm", 1.25f)]);
+        var character = Character("cat.vrm");
+        Console.WriteLine($"MIRROR_CHARACTER faces {(character.FacesPositiveZ ? "+Z" : "-Z")}, torso radius {character.TorsoRadius:0.000}");
+        var session = new MirrorSession(character);
         var renderer = new DepthRenderer();
         var gpu = new GpuScene();
         var timeline = new List<string>();
@@ -51,11 +53,11 @@ internal static class MirrorRender
     private static double Median(List<double> values) { values.Sort(); return values[values.Count / 2]; }
     private static double P95(List<double> values) { values.Sort(); return values[(int)(values.Count * .95)]; }
 
-    internal static MirrorCharacter Character(string file, float height)
+    internal static MirrorCharacter Character(string file)
     {
         using var asset = File.OpenRead(Path.Combine(AppContext.BaseDirectory, "Assets", file));
         var loaded = GltfLoader.Load(asset);
-        return new(loaded.Shape, loaded.Model.Skeletons[0], loaded.Model.HumanoidBones, FacesPositiveZ: false, height);
+        return MirrorCharacter.FromVrm(loaded.Model, loaded.Shape);
     }
 
     private static IReadOnlyList<PoseFrame> Frames(string fixture)
