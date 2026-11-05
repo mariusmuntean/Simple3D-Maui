@@ -34,7 +34,8 @@
     <MtouchInterpreter>-all,Simple3D.Demo</MtouchInterpreter>
   </PropertyGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
-    <PackageReference Include="Xamarin.Google.MLKit.PoseDetection" Version="117.0.0.23" />
+    <!-- The accurate model holds full-body tracking far better than the base model (see docs/DEVELOPMENT.md). -->
+    <PackageReference Include="Xamarin.Google.MLKit.PoseDetection.Accurate" Version="117.0.0.23" />
     <PackageReference Include="Xamarin.AndroidX.Camera.Camera2" Version="1.5.2.1" />
     <PackageReference Include="Xamarin.AndroidX.Camera.Lifecycle" Version="1.5.2.1" />
     <PackageReference Include="Xamarin.AndroidX.Camera.View" Version="1.5.2.1" />

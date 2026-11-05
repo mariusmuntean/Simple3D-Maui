@@ -5,7 +5,7 @@ using Java.Util.Concurrent;
 using Simple3D.Shared.Mirror;
 using Xamarin.Google.MLKit.Vision.Common;
 using Xamarin.Google.MLKit.Vision.Pose;
-using Xamarin.Google.MLKit.Vision.Pose.Defaults;
+using Xamarin.Google.MLKit.Vision.Pose.Accurate;
 using GmsTask = Android.Gms.Tasks.Task;
 
 namespace Simple3D.Demo.Mirror;
@@ -27,18 +27,21 @@ internal sealed class MlKitPoseDetector(bool stream) : IDisposable
         PoseLandmark.LeftAnkle, PoseLandmark.RightAnkle
     ];
 
-    private const string BuilderClass = "com/google/mlkit/vision/pose/defaults/PoseDetectorOptions$Builder";
+    private const string BuilderClass = "com/google/mlkit/vision/pose/accurate/AccuratePoseDetectorOptions$Builder";
     private readonly IPoseDetector detector = PoseDetection.GetClient(CreateOptions(stream));
 
     private static PoseDetectorOptionsBase CreateOptions(bool stream)
     {
         // Stream mode tracks the person between frames; single-image mode re-detects every decoded frame.
+        // The accurate model (larger download, slower) keeps the whole body far more reliably than the base model.
         // The binding's SetDetectorMode targets an erased (I)Ljava/lang/Object; signature that does not exist; call the real one.
-        using var builder = new PoseDetectorOptions.Builder();
+        using var builder = new AccuratePoseDetectorOptions.Builder();
         var method = JNIEnv.GetMethodID(builder.Class.Handle, "setDetectorMode", "(I)L" + BuilderClass + ";");
         JNIEnv.DeleteLocalRef(JNIEnv.CallObjectMethod(builder.Handle, method,
             new JValue(stream ? PoseDetectorOptionsBase.StreamMode : PoseDetectorOptionsBase.SingleImageMode)));
-        return builder.Build();
+        // The binding omits build() as well.
+        var build = JNIEnv.GetMethodID(builder.Class.Handle, "build", "()Lcom/google/mlkit/vision/pose/accurate/AccuratePoseDetectorOptions;");
+        return Java.Lang.Object.GetObject<AccuratePoseDetectorOptions>(JNIEnv.CallObjectMethod(builder.Handle, build), JniHandleOwnership.TransferLocalRef)!;
     }
 
     /// <summary>Detects in <paramref name="image"/>, whose upright size is <paramref name="width"/>×<paramref name="height"/>.</summary>
