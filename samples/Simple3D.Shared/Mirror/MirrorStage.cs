@@ -32,7 +32,7 @@ public sealed record MirrorCharacter(Shape Shape, Skeleton Skeleton, IReadOnlyDi
         };
     }
 
-    // Distance from the spine axis that most torso vertices lie within, in the rest pose.
+    // Distance from the spine axis that most torso vertices lie beyond, in the rest pose.
     private static float EstimateTorsoRadius(Shape shape, Skeleton skeleton, IReadOnlyDictionary<string, int> bones)
     {
         var torso = new[] { "hips", "spine", "chest", "upperChest" }.Where(bones.ContainsKey).Select(b => bones[b]).ToHashSet();
@@ -51,7 +51,8 @@ public sealed record MirrorCharacter(Shape Shape, Skeleton Skeleton, IReadOnlyDi
             }
         if (distances.Count == 0) return 0;
         distances.Sort();
-        return distances[(int)(distances.Count * .8f)];
+        // The core, not the widest part (bellies, sleeves): limbs may graze the outside, but must not cross the middle.
+        return distances[(int)(distances.Count * .6f)];
         static IEnumerable<Shape> Leaves(Shape s) => s.Children.Count == 0 ? [s] : s.Children.SelectMany(Leaves);
     }
 

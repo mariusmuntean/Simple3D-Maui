@@ -28,6 +28,7 @@ internal static class MirrorRender
         {
             var started = Stopwatch.GetTimestamp();
             if (session.Apply(frame, mirrored: false)) pose.Add(Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+            session.Present(TimeSpan.FromSeconds(1 / 25d));
             session.Stage.Animate((float)frame.Timestamp.TotalSeconds);
             timeline.Add($"{index} {frame.Timestamp.TotalSeconds:0.00} {session.Tracker.State}");
             // What a GPU frame costs on the CPU: scene preparation with joint palettes, no skinning.
@@ -67,6 +68,7 @@ internal static class MirrorRender
         {
             var t = i / 60f;
             session.Apply(frames.Count > 0 ? PoseRecording.Nearest(frames, TimeSpan.FromSeconds(5 + t)) with { Timestamp = TimeSpan.FromSeconds(t) } : frames[0], mirrored: false);
+            session.Present(TimeSpan.FromSeconds(1 / 60d));
             session.Stage.Animate(t);
             if (!swapped && t >= 2) { session.SwitchCharacter(next); swapped = true; }
             if (t < 1.95f || t > 3.0f || i % 3 != 0) continue;

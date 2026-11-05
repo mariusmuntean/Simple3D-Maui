@@ -1,3 +1,4 @@
+using System.Numerics;
 namespace Simple3D.Shared.Mirror;
 
 /// <summary>Whether a person is being followed.</summary>
@@ -12,8 +13,9 @@ public enum TrackingState
 }
 
 /// <summary>Turns detector frames into stable tracking states and smoothed landmarks. Not thread safe; feed frames in order.</summary>
-/// <remarks>Acquiring needs shoulders plus hips or elbows for several consecutive frames, so a passer-by's arm does not
-/// start tracking. While tracking, visible shoulders are enough to continue, so a hand leaving the frame does not interrupt it.</remarks>
+/// <remarks>Acquiring needs a face, or shoulders plus hips or elbows, for several consecutive frames, so a passer-by's arm
+/// does not start tracking. While tracking, visible shoulders or a face are enough to continue, so a hand leaving the
+/// frame does not interrupt it.</remarks>
 public sealed class PoseTracker
 {
     /// <summary>Consecutive whole-body frames needed to start or resume tracking.</summary>
@@ -25,6 +27,9 @@ public sealed class PoseTracker
 
     private readonly OneEuroFilter[] _filters = Enumerable.Range(0, PoseFrame.JointCount * 2).Select(_ => new OneEuroFilter()).ToArray();
     private readonly Landmark[] _smoothed = new Landmark[PoseFrame.JointCount];
+    private readonly bool[] _visible = new bool[PoseFrame.JointCount];
+    private readonly int[] _jumps = new int[PoseFrame.JointCount];
+    private const float HideBelow = .2f, TrustedConfidence = .6f, JumpLimit = .35f;
     private int _acquireFrames;
     private TimeSpan _lastTorso;
 
@@ -45,7 +50,7 @@ public sealed class PoseTracker
     {
         ArgumentNullException.ThrowIfNull(frame);
         var acquirable = CanAcquire(frame);
-        var torso = acquirable || HasShoulders(frame);
+        var torso = acquirable || HasShoulders(frame) || frame.Face is not null;
         _acquireFrames = acquirable ? _acquireFrames + 1 : 0;
         if (torso) _lastTorso = frame.Timestamp;
         var next = State switch
@@ -58,7 +63,11 @@ public sealed class PoseTracker
         if (torso && (State == TrackingState.Tracking || next == TrackingState.Tracking))
         {
             // Reset smoothing on (re)acquisition so the first pose snaps instead of sliding from a stale one.
-            if (State != TrackingState.Tracking) foreach (var filter in _filters.Concat(_faceFilters)) filter.Reset();
+            if (State != TrackingState.Tracking)
+            {
+                foreach (var filter in _filters.Concat(_faceFilters)) filter.Reset();
+                Array.Clear(_visible);
+            }
             Smooth(frame);
             updated = true;
         }
@@ -80,9 +89,10 @@ public sealed class PoseTracker
         StateChanged?.Invoke(State);
     }
 
-    /// <summary>Whether enough of a person is in frame to start: both shoulders, plus both hips or both elbows.
-    /// A whole body, the waist up, or the torso and arms all qualify; legs that are out of frame keep the character standing.</summary>
-    public bool CanAcquire(PoseFrame frame) => HasShoulders(frame) &&
+    /// <summary>Whether enough of a person is in frame to start: a face, or both shoulders plus both hips or both elbows.
+    /// A whole body, the waist up, the torso and arms, or just head and face all qualify; whatever is out of frame
+    /// keeps its last pose (legs standing, for a start).</summary>
+    public bool CanAcquire(PoseFrame frame) => frame.Face is not null || HasShoulders(frame) &&
         (Visible(frame, BodyJoint.LeftHip, BodyJoint.RightHip) || Visible(frame, BodyJoint.LeftElbow, BodyJoint.RightElbow));
 
     private bool HasShoulders(PoseFrame frame) => frame.Landmarks is not null && Visible(frame, BodyJoint.LeftShoulder, BodyJoint.RightShoulder);
@@ -109,17 +119,44 @@ public sealed class PoseTracker
             float F(int i, float value) => _faceFilters[i].Filter(value, seconds);
             Face = new(F(0, face.Yaw), F(1, face.Pitch), F(2, face.Roll), F(3, face.MouthOpen), F(4, face.Smile), F(5, face.Brows), F(6, face.BlinkLeft), F(7, face.BlinkRight));
         }
+        // Typical body size in this frame, to judge whether a joint moved implausibly far.
+        var scale = BodyScale(frame);
         for (var i = 0; i < PoseFrame.JointCount; i++)
         {
-            var landmark = frame.Landmarks![i];
-            if (!(landmark.Confidence >= MinimumConfidence) || !float.IsFinite(landmark.X) || !float.IsFinite(landmark.Y))
+            var landmark = frame.Landmarks?[i] ?? default;
+            var finite = float.IsFinite(landmark.X) && float.IsFinite(landmark.Y);
+            var wasVisible = _visible[i];
+            // Hysteresis: a joint hovering around the threshold must not flicker between hidden and visible.
+            var visible = finite && landmark.Confidence >= (wasVisible ? HideBelow : MinimumConfidence);
+            if (visible && wasVisible && landmark.Confidence < TrustedConfidence &&
+                Vector2.Distance(new(landmark.X, landmark.Y), new(_smoothed[i].X, _smoothed[i].Y)) > JumpLimit * scale && ++_jumps[i] < 2)
+                continue; // An uncertain joint leaping across the body is usually a misdetection; believe it only if it persists.
+            _jumps[i] = 0;
+            _visible[i] = visible;
+            if (!visible)
             {
-                // Hidden joints keep their last position but report the low confidence.
-                _smoothed[i] = _smoothed[i] with { Confidence = landmark.Confidence };
+                // Hidden joints keep their last position and report zero confidence.
+                _smoothed[i] = _smoothed[i] with { Confidence = 0 };
                 continue;
             }
-            _smoothed[i] = new(_filters[i * 2].Filter(landmark.X, seconds), _filters[i * 2 + 1].Filter(landmark.Y, seconds), landmark.Confidence);
+            if (!wasVisible) { _filters[i * 2].Reset(); _filters[i * 2 + 1].Reset(); }
+            var x = _filters[i * 2].Filter(landmark.X, seconds);
+            var y = _filters[i * 2 + 1].Filter(landmark.Y, seconds);
+            // Uncertain positions move the result less.
+            var weight = wasVisible ? Math.Clamp(landmark.Confidence / TrustedConfidence, .35f, 1) : 1;
+            _smoothed[i] = new(_smoothed[i].X + (x - _smoothed[i].X) * weight, _smoothed[i].Y + (y - _smoothed[i].Y) * weight,
+                MathF.Max(landmark.Confidence, MinimumConfidence));
         }
+    }
+
+    private float BodyScale(PoseFrame frame)
+    {
+        if (frame.Landmarks is not { } lm) return .25f;
+        Vector2 At(BodyJoint j) => new(lm[(int)j].X, lm[(int)j].Y);
+        var shoulders = (At(BodyJoint.LeftShoulder) + At(BodyJoint.RightShoulder)) / 2;
+        if (HasShoulders(frame) && Visible(frame, BodyJoint.LeftHip, BodyJoint.RightHip))
+            return Vector2.Distance(shoulders, (At(BodyJoint.LeftHip) + At(BodyJoint.RightHip)) / 2);
+        return HasShoulders(frame) ? 1.5f * Vector2.Distance(At(BodyJoint.LeftShoulder), At(BodyJoint.RightShoulder)) : .25f;
     }
 }
 

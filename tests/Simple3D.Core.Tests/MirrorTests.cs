@@ -126,6 +126,8 @@ internal static class MirrorTests
         float WristZ(Landmark[] lm)
         {
             var solid = new HumanoidRetargeter(skeleton, bones, Quaternion.Identity) { TorsoRadius = .12f };
+            // Switching to behind needs a few consistent frames, so a single misdetection cannot flip the arm.
+            for (var i = 0; i < 3; i++) solid.Retarget(lm, 1, mirrored: false);
             var world = solid.Retarget(lm, 1, mirrored: false).WorldTransforms;
             var (hand, hips, chest) = (world[bones["leftHand"]].Translation, world[bones["hips"]].Translation, world[bones["chest"]].Translation);
             var t = Math.Clamp(Vector3.Dot(hand - hips, chest - hips) / (chest - hips).LengthSquared(), 0, 1);
@@ -135,6 +137,12 @@ internal static class MirrorTests
         Check(WristZ(across) > 0, "a visible hand across the chest is in front of the body");
         across[(int)BodyJoint.LeftWrist] = across[(int)BodyJoint.LeftWrist] with { Confidence = .35f };
         Check(WristZ(across) < 0, "a barely seen hand over the torso is behind the body");
+
+        // Smoothness at a 120 Hz display with 25 Hz detector frames: easing must remove the steps without lagging behind.
+        var (eased, raw, lag) = Smoothness(frames, skeleton, bones);
+        Check(eased.P99 < 10 && eased.Max < 25 && eased.P99 < raw.P99 * .5f && lag < 8,
+            $"display-rate easing: eased step p99 {eased.P99:0.0}° max {eased.Max:0.0}°, raw p99 {raw.P99:0.0}° max {raw.Max:0.0}°, median lag {lag:0.0}°");
+        Console.WriteLine($"PASS mirror smoothness at 120 Hz: largest limb step per frame p99 {eased.P99:0.0}° (raw {raw.P99:0.0}°), max {eased.Max:0.0}° (raw {raw.Max:0.0}°), median lag {lag:0.0}°");
 
         // A character modeled facing -Z (here through a rotated root) is turned to the camera by toView.
         var turned = Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI);
@@ -185,6 +193,44 @@ internal static class MirrorTests
         Console.WriteLine($"PASS mirror waist-up framing: arms follow ({upperErrors.Count} samples), legs stand");
         Console.WriteLine($"PASS mirror turning: character faces away in {backRight}/{backFrames} back views and toward the camera in {frontRight}/{frontFrames} front views");
         Console.WriteLine($"PASS mirror tracking ({summary}) and retargeting (median {errors[errors.Count / 2]:0.00}°)");
+    }
+
+    // Replays the clip at its 25 Hz through a full MirrorSession, presenting at 120 Hz, and measures the largest per-frame
+    // rotation change of any arm or leg joint, with easing and without (the target pose itself), plus the eased lag.
+    private static ((float P99, float Max) Eased, (float P99, float Max) Raw, float Lag) Smoothness(IReadOnlyList<PoseFrame> frames, Skeleton skeleton, Dictionary<string, int> bones)
+    {
+        var mesh = new Mesh([new(0, 0, 0), new(.2f, 0, 0), new(0, 1.6f, 0)], [0, 1, 2]);
+        var shape = Shape.FromSkinnedMesh(new SkinnedMesh(mesh, skeleton, Enumerable.Repeat(new VertexInfluence(new(bones["hips"], 0, 0, 0), Vector4.UnitX), 3)));
+        var session = new MirrorSession(new MirrorCharacter(shape, skeleton, bones, FacesPositiveZ: true));
+        var limbs = new[] { "leftUpperArm", "leftLowerArm", "rightUpperArm", "rightLowerArm", "leftUpperLeg", "leftLowerLeg", "rightUpperLeg", "rightLowerLeg" }.Select(b => bones[b]).ToArray();
+        Quaternion[]? previousShown = null, previousTarget = null;
+        List<float> eased = [], raw = [], lag = [];
+        var next = 0;
+        for (var tick = 0; tick < frames[^1].Timestamp.TotalSeconds * 120; tick++)
+        {
+            var now = TimeSpan.FromSeconds(tick / 120d);
+            var applied = false;
+            while (next < frames.Count && frames[next].Timestamp <= now) applied |= session.Apply(frames[next++], mirrored: false);
+            session.Present(TimeSpan.FromSeconds(1 / 120d));
+            // Losing and finding the person legitimately snaps the pose; measure only continuous tracking.
+            if (session.Tracker.State != TrackingState.Tracking) { previousShown = previousTarget = null; continue; }
+            var shown = Leaf(session).Pose!.Rotations.ToArray();
+            var target = session.TargetPose!.Rotations.ToArray();
+            if (previousShown is not null) eased.Add(limbs.Max(j => Degrees(previousShown[j], shown[j])));
+            if (previousTarget is not null) raw.Add(limbs.Max(j => Degrees(previousTarget[j], target[j])));
+            lag.Add(limbs.Average(j => Degrees(shown[j], target[j])));
+            (previousShown, previousTarget) = (shown, target);
+        }
+        (float, float) Stats(List<float> v) { v.Sort(); return (v[(int)(v.Count * .99)], v[^1]); }
+        lag.Sort();
+        return (Stats(eased), Stats(raw), lag[lag.Count / 2]);
+        static float Degrees(Quaternion a, Quaternion b) => 2 * MathF.Acos(Math.Clamp(MathF.Abs(Quaternion.Dot(a, b)), 0, 1)) * 180 / MathF.PI;
+        static Shape Leaf(MirrorSession s)
+        {
+            var node = s.Stage.Scene.Shapes.First(x => x.Name is null && x.Children.Count == 1);
+            while (node.Pose is null) node = node.Children[0];
+            return node;
+        }
     }
 
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }

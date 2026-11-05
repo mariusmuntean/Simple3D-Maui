@@ -61,7 +61,7 @@ public sealed class MirrorPage : ContentPage
         _intro = Card("Mirror", "Your camera lets a 3D frog copy your moves in real time.\nVideo stays on this device.",
             ("Start", Start), ("Back", Close));
         _guide = Guide();
-        _lostHint = Pill("Step back into the frame");
+        _lostHint = Pill("Step back into the frame: whole body, waist up, or your face");
         _blockedAction = PrimaryButton("Open Settings", CameraAccess.OpenSettings);
         _blocked = new Border
         {
@@ -281,6 +281,7 @@ public sealed class MirrorPage : ContentPage
     {
         if (_session is null || _source is null) return;
         var seconds = Stopwatch.GetElapsedTime(_started).TotalSeconds;
+        _session.Present(delta);
         _session.Stage.Animate((float)seconds);
         // A stalled camera delivers no frames, so no frame can report the person gone: report an empty one.
         // Two seconds, well beyond ordinary detector hiccups, which the tracker already rides out.
@@ -388,7 +389,7 @@ public sealed class MirrorPage : ContentPage
         return new Grid
         {
             InputTransparent = true,
-            Children = { silhouette, Pill("Point the camera at someone: whole body, or from the waist up", top: true) }
+            Children = { silhouette, Pill("Get into the frame: your whole body, from the waist up, or just your head for face tracking", top: true) }
         };
     }
 

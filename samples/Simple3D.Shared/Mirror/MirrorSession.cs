@@ -1,3 +1,4 @@
+using System.Numerics;
 using Simple3D.Core;
 
 namespace Simple3D.Shared.Mirror;
@@ -33,14 +34,53 @@ public sealed class MirrorSession
     /// <param name="mirrored">Whether the person sees a mirrored preview.</param>
     public bool Apply(PoseFrame frame, bool mirrored)
     {
+        var tracking = Tracker.State == TrackingState.Tracking;
         if (!Tracker.Update(frame)) return false;
         var face = Tracker.Face;
-        var expressions = face is null ? Neutral : Expressions(face, mirrored);
-        var pose = _retargeter.Retarget(Tracker.Landmarks, Tracker.ImageAspect, mirrored, face);
-        var express = Stage.Character.Express;
-        Stage.Update(shape => express is null ? shape.WithPose(pose) : express(shape.WithPose(pose), expressions));
+        _target = _retargeter.Retarget(Tracker.Landmarks, Tracker.ImageAspect, mirrored, face);
+        _targetExpressions = face is null ? Neutral : Expressions(face, mirrored);
+        // A fresh acquisition snaps; while tracking, Present eases toward each new target.
+        if (!tracking || _shown is null) Show(_target, _targetExpressions);
         return true;
     }
+
+    /// <summary>Advances the shown pose toward the latest target. Call once per displayed frame with the time since the
+    /// previous one: the detector delivers poses at camera rate (often 25–30 Hz), and easing between them at the display's
+    /// rate turns those steps into smooth motion, independent of the frame rate.</summary>
+    public void Present(TimeSpan elapsed)
+    {
+        if (_target is not { } target || _shown is not { } shown) return;
+        var dt = (float)elapsed.TotalSeconds;
+        // Exponential easing: frame-rate independent; a long gap (backgrounded app) snaps to the target.
+        var t = dt is > 0 and < .5f ? 1 - MathF.Exp(-dt / FollowSeconds) : 1;
+        if (t >= 1) { Show(target, _targetExpressions); return; }
+        var rotations = _rotations ??= new Quaternion[target.Rotations.Count];
+        for (var i = 0; i < rotations.Length; i++) rotations[i] = Quaternion.Slerp(shown.Rotations[i], target.Rotations[i], t);
+        var offset = Vector3.Lerp(shown.RootOffset, target.RootOffset, t);
+        var expressions = new Dictionary<string, float>(_targetExpressions.Count);
+        foreach (var (name, value) in _targetExpressions)
+            expressions[name] = _shownExpressions.TryGetValue(name, out var current) ? current + (value - current) * t : value;
+        foreach (var (name, value) in _shownExpressions)
+            if (!_targetExpressions.ContainsKey(name)) expressions[name] = value * (1 - t);
+        Show(SkeletonPose.Create(target.Skeleton, rotations, offset), expressions);
+    }
+
+    private void Show(SkeletonPose pose, IReadOnlyDictionary<string, float> expressions)
+    {
+        _shown = pose;
+        _shownExpressions = expressions;
+        var express = Stage.Character.Express;
+        Stage.Update(shape => express is null ? shape.WithPose(pose) : express(shape.WithPose(pose), expressions));
+    }
+
+    /// <summary>The latest tracked pose, which the shown pose eases toward; null before tracking starts.</summary>
+    public SkeletonPose? TargetPose => _target;
+
+    /// <summary>How quickly the shown pose catches up with the tracked one: about 63% of the way per this many seconds.</summary>
+    public const float FollowSeconds = .05f;
+    private SkeletonPose? _target, _shown;
+    private IReadOnlyDictionary<string, float> _targetExpressions = Neutral, _shownExpressions = Neutral;
+    private Quaternion[]? _rotations;
 
     private static readonly IReadOnlyDictionary<string, float> Neutral = new Dictionary<string, float>();
 
@@ -65,6 +105,9 @@ public sealed class MirrorSession
     public void SwitchCharacter(MirrorCharacter character)
     {
         Stage.Swap(character);
+        // Poses belong to the old skeleton; the next tracked frame snaps the new character into place.
+        _target = _shown = null;
+        _rotations = null;
         _retargeter = new HumanoidRetargeter(character.Skeleton, character.HumanoidBones, Stage.CharacterToView) { TorsoRadius = character.TorsoRadius };
     }
 
