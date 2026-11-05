@@ -16,8 +16,8 @@ internal sealed unsafe class MetalRenderer : IDisposable
     private IMTLDepthStencilState? _depthState;
     private IMTLTexture? _color, _mask, _depth;
     private int _targetWidth, _targetHeight, _depthWidth, _depthHeight;
-    private readonly GpuResources<IMTLBuffer, (IMTLTexture Image, IMTLSamplerState Sampler)> _resources = new(
-        buffer => buffer.Dispose(), texture => { texture.Image.Dispose(); texture.Sampler.Dispose(); });
+    private readonly GpuResources<(IMTLBuffer Vertices, IMTLBuffer? Deltas), (IMTLTexture Image, IMTLSamplerState Sampler)> _resources = new(
+        mesh => { mesh.Vertices.Dispose(); mesh.Deltas?.Dispose(); }, texture => { texture.Image.Dispose(); texture.Sampler.Dispose(); });
     // Created once: reports failed command buffers (MTLCommandBufferError code, description).
     private readonly Action<IMTLCommandBuffer>? _completed;
     // A slot is writable only after its previous command has completed.
@@ -45,6 +45,10 @@ internal sealed unsafe class MetalRenderer : IDisposable
     internal string Name { get; }
     internal int GeometryUploads { get; private set; }
     internal int TextureUploads { get; private set; }
+    internal int DeltaUploads { get; private set; }
+    internal long DeltaUploadBytes { get; private set; }
+    internal int MorphUploads { get; private set; }
+    internal int MorphUploadBytes { get; private set; }
     internal int PaletteUploads { get; private set; }
     internal int PaletteUploadBytes { get; private set; }
     /// <summary>Always use the offscreen mask/outline composite. For validation that both paths match.</summary>
@@ -101,6 +105,8 @@ internal sealed unsafe class MetalRenderer : IDisposable
         bool waitForCompletion = false, bool presentWithTransaction = false)
     {
         GeometryUploads = TextureUploads = PaletteUploads = PaletteUploadBytes = 0;
+        DeltaUploads = MorphUploads = MorphUploadBytes = 0;
+        DeltaUploadBytes = 0;
         _resources.Prepare(frame);
         var direct = !ForceComposite && frame.CanRenderDirect(width, height, (int)output.Width, (int)output.Height);
         LastFrameDirect = direct;
@@ -139,19 +145,23 @@ internal sealed unsafe class MetalRenderer : IDisposable
                     var pipeline = item.Joints is null ? (direct ? _directPipeline! : _scenePipeline!)
                         : (direct ? _skinnedDirectPipeline! : _skinnedPipeline!);
                     if (!ReferenceEquals(pipeline, boundPipeline)) { encoder.SetRenderPipelineState(pipeline); boundPipeline = pipeline; }
-                    encoder.SetVertexBuffer(Mesh(item.Geometry), 0, 0);
+                    var mesh = Mesh(item.Geometry);
+                    encoder.SetVertexBuffer(mesh.Vertices, 0, 0);
                     if (item.Joints is { } joints)
                     {
                         var bytes = joints.Length * sizeof(Matrix4x4);
                         fixed (Matrix4x4* source = joints)
                             Buffer.MemoryCopy(source, (byte*)palette!.Buffer!.Contents + paletteOffset, bytes, bytes);
                         encoder.SetVertexBuffer(palette!.Buffer!, (nuint)paletteOffset, 2);
+                        // Metal requires a valid binding even when the shader skips the morph loop.
+                        encoder.SetVertexBuffer(mesh.Deltas ?? mesh.Vertices, 0, 3);
                         paletteOffset += PaletteBytes(joints);
                         PaletteUploads++; PaletteUploadBytes += bytes;
                     }
                     // Metal copies these small per-draw constants into command-owned storage.
                     var u = GpuUniforms.Create(frame, item, viewProjection);
                     encoder.SetVertexBytes((nint)(&u), (nuint)sizeof(GpuUniforms), 1);
+                    if (item.Geometry.MorphVertexCount > 0) { MorphUploads++; MorphUploadBytes += 80; }
                     var texture = Texture(GpuResources.TextureOf(item));
                     if (!ReferenceEquals(texture.Image, boundTexture))
                     {
@@ -200,15 +210,30 @@ internal sealed unsafe class MetalRenderer : IDisposable
     }
     private static void Attachment(MTLRenderPassColorAttachmentDescriptor attachment, IMTLTexture texture, MTLLoadAction load, MTLClearColor clear)
     { attachment.Texture = texture; attachment.LoadAction = load; attachment.StoreAction = MTLStoreAction.Store; attachment.ClearColor = clear; }
-    private IMTLBuffer Mesh(GpuGeometry geometry)
+    private (IMTLBuffer Vertices, IMTLBuffer? Deltas) Mesh(GpuGeometry geometry)
     {
-        if (_resources.Meshes.TryGetValue(geometry, out var buffer)) return buffer;
+        if (_resources.Meshes.TryGetValue(geometry, out var cached)) return cached;
         var vertices = geometry.Expand();
+        IMTLBuffer buffer;
         fixed (float* p = vertices) buffer = _device.CreateBuffer((nint)p, (nuint)(vertices.Length * sizeof(float)), MTLResourceOptions.StorageModeShared)
             ?? throw new InvalidOperationException("Metal vertex allocation failed.");
-        _resources.Meshes.Add(geometry, buffer);
-        GeometryUploads++;
-        return buffer;
+        IMTLBuffer? deltas = null;
+        try
+        {
+            if (geometry.MorphVertexCount > 0)
+            {
+                var values = geometry.ExpandMorphs();
+                var bytes = checked(values.Length * sizeof(float));
+                fixed (float* p = values) deltas = _device.CreateBuffer((nint)p, (nuint)bytes, MTLResourceOptions.StorageModeShared)
+                    ?? throw new InvalidOperationException("Metal morph allocation failed.");
+                DeltaUploads++; DeltaUploadBytes += bytes;
+            }
+            cached = (buffer, deltas);
+            _resources.Meshes.Add(geometry, cached);
+            GeometryUploads++;
+            return cached;
+        }
+        catch { buffer.Dispose(); deltas?.Dispose(); throw; }
     }
     private (IMTLTexture Image, IMTLSamplerState Sampler) Texture(Texture2D texture)
     {

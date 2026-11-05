@@ -31,6 +31,7 @@ internal struct GpuUniforms
 {
     internal Matrix4x4 World, ViewProjection, Normal;
     internal Vector4 LightAmbient, LightColor, TintLit, Selection;
+    internal Vector4 MorphIndices0, MorphIndices1, MorphWeights0, MorphWeights1, MorphInfo;
     internal static GpuUniforms Create(GpuFrame frame, GpuItem item, in Matrix4x4 viewProjection)
     {
         var tint = GpuGeometry.Rgba(item.Shape.Color);
@@ -43,6 +44,9 @@ internal struct GpuUniforms
             LightAmbient = new(light?.Direction ?? Vector3.UnitZ, frame.Scene.AmbientLight),
             LightColor = new(light?.Rgb ?? Vector3.Zero, light?.Intensity ?? 0),
             TintLit = new(tint.X, tint.Y, tint.Z, item.Shape.Material.Lit ? 1 : 0),
+            MorphIndices0 = item.Morphs.Indices0, MorphIndices1 = item.Morphs.Indices1,
+            MorphWeights0 = item.Morphs.Weights0, MorphWeights1 = item.Morphs.Weights1,
+            MorphInfo = new(item.Geometry.MorphVertexCount, item.Morphs.Count, 0, 0),
             Selection = new(ReferenceEquals(item.Shape, frame.Selected) ? 1 : 0, item.Shape.Material.DoubleSided ? 1 : 0, 0, 0)
         };
     }

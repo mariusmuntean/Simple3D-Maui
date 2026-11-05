@@ -23,6 +23,7 @@ internal static unsafe class Gles
     internal const int GL_STREAM_DRAW = 0x88E0;
     internal const int GL_TEXTURE0 = 0x84C0;
     internal const int GL_TEXTURE1 = 0x84C1;
+    internal const int GL_TEXTURE2 = 0x84C2;
     internal const int GL_TEXTURE_2D = 0x0DE1;
     internal const int GL_CULL_FACE = 0x0B44;
     internal const int GL_TRIANGLES = 0x0004;
@@ -33,6 +34,7 @@ internal static unsafe class Gles
     internal const int GL_REPEAT = 0x2901;
     internal const int GL_CLAMP_TO_EDGE = 0x812F;
     internal const int GL_RGBA8 = 0x8058;
+    internal const int GL_RGBA32F = 0x8814;
     internal const int GL_DEPTH_COMPONENT24 = 0x81A6;
     internal const int GL_DEPTH_COMPONENT = 0x1902;
     internal const int GL_UNSIGNED_INT = 0x1405;

@@ -9,6 +9,9 @@ using Simple3D.Shared;
 /// <param name="SkipReadback">Return no pixels: measures rendering alone. A default instance reads back.</param>
 internal readonly record struct GpuProbeOptions(Shape? Selected = null, bool ForceComposite = false, int OutlineRadius = 1, bool SkipReadback = false);
 
+internal readonly record struct GpuUploadCounts(int Geometry, int Textures, int Palettes, int PaletteBytes,
+    int Deltas, long DeltaBytes, int Morphs, int MorphBytes);
+
 // Executes the real native API and readback. Timing includes completion/readback and is
 // intentionally distinct from the interactive view's CPU submission metric.
 internal static class NativeGpuValidation
@@ -17,7 +20,7 @@ internal static class NativeGpuValidation
     internal const uint Background = 0xFF18243B;
     /// <param name="lastFrameDirect">Whether the renderer's last frame skipped the offscreen composite.</param>
     internal static void Run(string backend, Func<Scene, Camera, GpuProbeOptions, uint[]> render, Func<bool> lastFrameDirect,
-        Func<(int Geometry, int Textures, int Palettes, int PaletteBytes)> uploads)
+        Func<GpuUploadCounts> uploads)
     {
         Console.WriteLine("GPU_PROBE_BACKEND: " + backend);
         var near = Shape.Box().WithMaterial(new Material(0xFFFF0000, lit: false)).At(0, 0, 1);
@@ -66,11 +69,12 @@ internal static class NativeGpuValidation
         }
         Skinning(render, uploads, 2);
         Skinning(render, uploads, Skeleton.MaximumJoints);
+        Morphing(render, uploads);
         if (render(new Scene(), camera, default).Any(pixel => pixel != Background)) throw new InvalidOperationException("GPU empty scene retained pixels.");
         Console.WriteLine("NATIVE_GPU_PROBE_PASS");
     }
     private static void Skinning(Func<Scene, Camera, GpuProbeOptions, uint[]> render,
-        Func<(int Geometry, int Textures, int Palettes, int PaletteBytes)> uploads, int jointCount)
+        Func<GpuUploadCounts> uploads, int jointCount)
     {
         var mesh = SkinnedBar(jointCount);
         var rotations = Enumerable.Repeat(Quaternion.Identity, jointCount).ToArray();
@@ -124,6 +128,59 @@ internal static class NativeGpuValidation
             if (counts.Geometry != 0 || counts.Textures != 0 || counts.Palettes != 2 || counts.PaletteBytes != jointCount * 64 * 2)
                 throw new InvalidOperationException($"Pose-only resource uploads: {counts}.");
         }
+    }
+    private static void Morphing(Func<Scene, Camera, GpuProbeOptions, uint[]> render, Func<GpuUploadCounts> uploads)
+    {
+        var bar = SkinnedBar(2);
+        var targets = Enumerable.Range(0, 10).Select(t => new MorphTarget($"target{t}",
+            bar.Mesh.Vertices.Select(p => new Vector3(.04f * (1 + p.Y) * (t % 2 == 0 ? 1 : -.4f), .01f * p.Y, .004f * t)),
+            bar.Mesh.Vertices.Select(p => new Vector3(.015f * t, -.01f, .02f)))).ToArray();
+        var mesh = new SkinnedMesh(bar.Mesh, bar.Skeleton, bar.Influences, targets);
+        var pose = SkeletonPose.Create(mesh.Skeleton, [Quaternion.Identity, Quaternion.CreateFromAxisAngle(Vector3.UnitZ, .8f)]);
+        var texture = new Texture2D(2, 2, new uint[] { 0xFFFFE0A0, 0xFF90C0FF, 0xFF90C0FF, 0xFFFFE0A0 });
+        var rest = Shape.FromSkinnedMesh(mesh, new Material(texture)).WithPose(pose).At(.6f, 0, 0);
+        var scene = new Scene().Add(rest).Add(rest.At(-.8f, 0, -.3f)).Add(Shape.Box().Scaled(.15f).At(0, -.2f, 0));
+        var camera = new Camera(5, .12f, .08f) { Target = new(0, .9f, 0) };
+        var current = rest;
+        uint[]? previous = null;
+        foreach (var weight in new[] { 0f, .5f, 1f, 0f })
+        {
+            var shape = rest.WithMorphWeights(mesh, Enumerable.Range(0, 10).Select(t => t < 2 ? 0 : weight).ToArray());
+            scene.Replace(current, shape); current = shape;
+            var actual = render(scene, camera, default);
+            var counts = uploads();
+            if (previous is null)
+            {
+                if (counts.Deltas != 1 || counts.DeltaBytes < targets.Length * mesh.Mesh.Vertices.Count * 32L)
+                    throw new InvalidOperationException($"Initial morph delta upload: {counts}.");
+            }
+            else if (counts.Geometry != 0 || counts.Textures != 0 || counts.Deltas != 0 || counts.DeltaBytes != 0)
+                throw new InvalidOperationException($"Weight-only resource uploads: {counts}.");
+            if (counts.Morphs != 2 || counts.MorphBytes != 160)
+                throw new InvalidOperationException($"Morph constants: {counts}.");
+            var expected = new DepthRenderer().Render(scene, camera, Size, Size, Background).Pixels.ToArray();
+            var differences = Mismatches(actual, expected);
+            if (differences > Size * Size * .03) throw new InvalidOperationException($"Morph {weight}: {differences} GPU pixels disagree with software.");
+            if (previous is not null && Mismatches(previous, actual) < 100) throw new InvalidOperationException("Morph weight did not visibly move geometry.");
+            var composite = render(scene, camera, new(ForceComposite: true));
+            if (Mismatches(actual, composite) > Size * Size * .001) throw new InvalidOperationException("Morph direct/composite paths differ.");
+            if (Count(render(scene, camera, new(shape)), OutlineColor) == 0) throw new InvalidOperationException("Morph selection mask missing.");
+            Console.WriteLine($"PASS GPU morph weight={weight:0.0} bent pose: {differences} mismatches; direct/composite and selection");
+            previous = actual;
+        }
+        Console.WriteLine("PASS GPU morph weight-only reuse: 0 vertex/texture/delta uploads; 2 morph blocks/160B per frame");
+        var cancel = new SkinnedMesh(bar.Mesh, bar.Skeleton, bar.Influences,
+            [new MorphTarget("cancel-normal", bar.Mesh.Vertices.Select(_ => Vector3.Zero), bar.Mesh.Normals!.Select(n => -n))]);
+        var cancelled = Shape.FromSkinnedMesh(cancel).WithPose(pose).WithMorphWeights(cancel, [1f]).At(1.2f, 0, 0);
+        scene.Clear();
+        scene.Add(current.At(-1.2f, 0, 0)).Add(cancelled).Add(Shape.FromSkinnedMesh(bar).WithPose(pose));
+        var mixed = render(scene, camera, default);
+        var mixedExpected = new DepthRenderer().Render(scene, camera, Size, Size, Background).Pixels.ToArray();
+        var mixedDifferences = Mismatches(mixed, mixedExpected);
+        if (mixedDifferences > Size * Size * .03) throw new InvalidOperationException($"Mixed morph meshes and cancelled normals: {mixedDifferences} pixels disagree.");
+        render(scene, camera, default);
+        if (uploads().Deltas != 0 || uploads().Geometry != 0) throw new InvalidOperationException("Mixed morph meshes did not retain their uploads.");
+        Console.WriteLine($"PASS GPU morph mixed meshes and cancelled normals: {mixedDifferences} mismatches; cached deltas");
     }
     private static SkinnedMesh SkinnedBar(int jointCount)
     {

@@ -17,11 +17,14 @@ internal static class GlesShaders
         #ifdef SKINNED
         layout(location=4) in vec4 jointIndices;
         layout(location=5) in vec4 jointWeights;
+        layout(location=6) in vec4 sourceVertex;
+        uniform highp sampler2D morphDeltas;
         layout(std140) uniform Joints { mat4 joints[128]; };
         #endif
         layout(std140) uniform Params {
             mat4 world; mat4 vp; mat4 normals;
             vec4 lightAmbient; vec4 lightColor; vec4 tintLit; vec4 selection;
+            vec4 morphIndices0; vec4 morphIndices1; vec4 morphWeights0; vec4 morphWeights1; vec4 morphInfo;
         };
         out vec2 texCoord;
         out vec3 frontColor;
@@ -30,9 +33,21 @@ internal static class GlesShaders
         void main() {
             vec4 localPosition=position; vec3 localNormal=normal.xyz;
         #ifdef SKINNED
+            int width=textureSize(morphDeltas,0).x;
+            for(int i=0;i<int(morphInfo.y);i++) {
+                int lane=i&3;
+                int target=int(i<4?morphIndices0[lane]:morphIndices1[lane]);
+                float weight=i<4?morphWeights0[lane]:morphWeights1[lane];
+                int texel=2*(target*int(morphInfo.x)+int(sourceVertex.x));
+                localPosition.xyz+=weight*texelFetch(morphDeltas,ivec2(texel%width,texel/width),0).xyz;
+                texel++;
+                localNormal+=weight*texelFetch(morphDeltas,ivec2(texel%width,texel/width),0).xyz;
+            }
             ivec4 j=ivec4(jointIndices);
             mat4 skin=joints[j.x]*jointWeights.x+joints[j.y]*jointWeights.y+joints[j.z]*jointWeights.z+joints[j.w]*jointWeights.w;
-            localPosition=skin*position; localNormal=(skin*vec4(normal.xyz,0)).xyz;
+            localPosition=skin*localPosition; localNormal=(skin*vec4(localNormal,0)).xyz;
+            float normalLength=length(localNormal);
+            localNormal=normalLength>0.0&&!isinf(normalLength)&&!isnan(normalLength)?localNormal/normalLength:normal.xyz;
         #endif
             vec4 p=world*localPosition;
             gl_Position=vp*p;

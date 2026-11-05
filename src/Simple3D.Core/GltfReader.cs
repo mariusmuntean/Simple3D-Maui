@@ -15,6 +15,17 @@ public sealed class GltfImage
     internal GltfImage(byte[] bytes, string mimeType) => (Bytes, MimeType) = (bytes, mimeType);
 }
 
+/// <summary>A VRM expression's morph contributions. Material and texture binds are ignored.</summary>
+public sealed class GltfExpression
+{
+    /// <summary>Target weights in [0,1], resolved to every affected skinned primitive.</summary>
+    public IReadOnlyList<(SkinnedMesh Mesh, int Target, float Weight)> Binds { get; }
+    /// <summary>Whether intensity is 1 above 0.5, and 0 otherwise.</summary>
+    public bool IsBinary { get; }
+    internal GltfExpression((SkinnedMesh Mesh, int Target, float Weight)[] binds, bool isBinary) =>
+        (Binds, IsBinary) = (Array.AsReadOnly(binds), isBinary);
+}
+
 /// <summary>A binary glTF asset, with reusable geometry, skeletons and embedded images.</summary>
 public sealed class GltfModel
 {
@@ -27,13 +38,40 @@ public sealed class GltfModel
     /// <summary>Encoded images in glTF order.</summary>
     public IReadOnlyList<GltfImage> Images { get; }
 
+    /// <summary>VRM expressions, keyed by lowercase preset or exact custom name. VRM 1 presets also expose VRM 0 aliases.</summary>
+    public IReadOnlyDictionary<string, GltfExpression> Expressions { get; }
+
     internal GltfModel(Shape scene, Skeleton[] skeletons, Dictionary<string, int> bones,
-        GltfImage[] images, Dictionary<Material, int> textures)
+        GltfImage[] images, Dictionary<Material, int> textures, Dictionary<string, GltfExpression> expressions)
     {
         _scene = scene; _textures = textures;
         Skeletons = Array.AsReadOnly(skeletons);
         HumanoidBones = new ReadOnlyDictionary<string, int>(bones);
         Images = Array.AsReadOnly(images);
+        Expressions = new ReadOnlyDictionary<string, GltfExpression>(expressions);
+    }
+
+    /// <summary>Blends named expressions into every node of <paramref name="shape"/> (at any depth) that uses a bound mesh,
+    /// keeping the pose and transforms. Unknown names and nonfinite intensities are ignored.</summary>
+    /// <remarks>Intensities clamp to [0,1]; binary expressions snap at 0.5. Contributions sum and clamp per target. Replaces all
+    /// weights (including <c>mesh.weights</c> defaults) on meshes bound by the supplied expressions, so pass every expression each
+    /// frame; a zero intensity still resets its meshes. Other meshes keep their weights. Meshes absent from the shape are skipped.</remarks>
+    public Shape ApplyExpressions(Shape shape, IReadOnlyDictionary<string, float> intensities)
+    {
+        ArgumentNullException.ThrowIfNull(shape); ArgumentNullException.ThrowIfNull(intensities);
+        var weights = new Dictionary<SkinnedMesh, float[]>();
+        foreach (var (name, value) in intensities)
+        {
+            if (!float.IsFinite(value) || !Expressions.TryGetValue(name, out var expression)) continue;
+            var intensity = expression.IsBinary ? (value > .5f ? 1f : 0f) : Math.Clamp(value, 0, 1);
+            foreach (var (mesh, target, weight) in expression.Binds)
+            {
+                if (!weights.TryGetValue(mesh, out var values)) weights[mesh] = values = new float[mesh.MorphTargets.Count];
+                values[target] = Math.Min(1, values[target] + intensity * weight);
+            }
+        }
+        foreach (var (mesh, values) in weights) shape = shape.WithMorphWeights(mesh, values, required: false);
+        return shape;
     }
 
     /// <summary>Creates the default scene. Without a decoder, textures use only their base color.</summary>
@@ -70,8 +108,9 @@ public static class GltfReader
 
     /// <summary>Reads a GLB with one JSON and one BIN chunk, leaving the stream open.</summary>
     /// <remarks>Supports triangles, base color, UV0, vertex colors, normals, node TRS/matrices and skins.
-    /// Morphs, animations, cameras, lights, PBR, texture transforms, nontriangle modes and influences beyond JOINTS_0/WEIGHTS_0 are ignored.
-    /// Alpha is opaque. External/data URIs, sparse accessors and required geometry compression are rejected.</remarks>
+    /// Supports skinned morph targets and VRM expressions. Rigid morphs, animations, cameras, lights, PBR, texture transforms,
+    /// nontriangle modes and influences beyond JOINTS_0/WEIGHTS_0 are ignored.
+    /// Alpha is opaque. External/data URIs, sparse accessors outside morph targets and required geometry compression are rejected.</remarks>
     /// <exception cref="InvalidDataException">Malformed, oversized or unsupported input.</exception>
     public static GltfModel Read(Stream glb)
     {
@@ -146,12 +185,13 @@ public static class GltfReader
     {
         internal Matrix4x4 Local => Matrix4x4.CreateScale(Scale) * Matrix4x4.CreateFromQuaternion(Rotation) * Matrix4x4.CreateTranslation(Translation);
     }
-    private sealed record Part(Mesh Mesh, Material Material, Int4[]? Joints, Vector4[]? Weights);
+    private sealed record Part(Mesh Mesh, Material Material, Int4[]? Joints, Vector4[]? Weights, MorphTarget[] Targets, float[]? Defaults);
     private readonly record struct View(int Offset, int Length, int Stride);
-    private sealed record Accessor(ReadOnlyMemory<byte> Data, int Count, int Components, int ComponentType, int Size, int Stride, bool Normalized)
+    private sealed record Accessor(ReadOnlyMemory<byte> Data, int Count, int Components, int ComponentType, int Size, int Stride, bool Normalized, Sparse? Sparse = null)
     {
         internal double Get(int row, int column)
         {
+            if (Data.IsEmpty) return 0;
             var bytes = Data.Span[(row * Stride + column * Size)..];
             double value = ComponentType switch
             {
@@ -170,12 +210,14 @@ public static class GltfReader
         }
         internal Vector3 V3(int row) => new(F(row, 0), F(row, 1), F(row, 2));
         internal Vector4 V4(int row) => new(F(row, 0), F(row, 1), F(row, 2), F(row, 3));
-        internal void Require(int components, bool integer = false)
+        internal void Require(int components, bool integer = false, bool morph = false)
         {
-            if (Components != components || (integer && (ComponentType == 5126 || Normalized)))
+            if ((!morph && Sparse is not null) || Components != components || (integer && (ComponentType == 5126 || Normalized)))
                 throw Error("Invalid accessor format.");
         }
     }
+
+    private sealed record Sparse(Accessor Indices, Accessor Values);
 
     private sealed class Parser(JsonElement root, ReadOnlyMemory<byte> binary)
     {
@@ -188,7 +230,9 @@ public static class GltfReader
         private Dictionary<int, int>[] jointMaps = [];  // per skeleton: glTF node → joint
         private int[][] remaps = [];
         private readonly Dictionary<Material, int> textures = [];
-        private int vertexBudget, indexBudget;
+        private int vertexBudget, indexBudget, morphBudget;
+        private readonly HashSet<int> morphAccessors = [];
+        private readonly Dictionary<int, List<SkinnedMesh>> meshInstances = [], nodeInstances = [];
 
         internal GltfModel Read()
         {
@@ -206,17 +250,22 @@ public static class GltfReader
             if (bufferLength < 0 || bufferLength > binary.Length || binary.Length - bufferLength > 3) throw Error("Invalid buffer length.");
             binary = binary[..bufferLength];
             views = Array(root, "bufferViews").Select(ReadView).ToArray();
-            accessors = Array(root, "accessors").Select(ReadAccessor).ToArray();
+            foreach (var mesh in Array(root, "meshes"))
+                foreach (var primitive in Array(mesh, "primitives"))
+                    foreach (var target in Array(primitive, "targets", SkinnedMesh.MaximumMorphTargets))
+                        foreach (var attribute in target.EnumerateObject())
+                            if (attribute.Name is "POSITION" or "NORMAL" or "TANGENT") morphAccessors.Add(attribute.Value.GetInt32());
+            accessors = Array(root, "accessors").Select((a, i) => ReadAccessor(a, morphAccessors.Contains(i))).ToArray();
             nodes = Array(root, "nodes").Select(ReadNode).ToArray();
             ReadHierarchy();
             ReadSkins();
             var images = ReadImages();
             var materials = ReadMaterials(images);
             var meshes = Array(root, "meshes").Select(m => Array(m, "primitives").Where(p => Int(p, "mode", 4) == 4)
-                .Select(p => ReadPart(p, materials)).ToArray()).ToArray();
+                .Select(p => ReadPart(p, m, materials)).ToArray()).ToArray();
             var scene = ReadScene(meshes);
             ValidateBounds(scene, Matrix4x4.Identity);
-            return new(scene, skeletons, ReadBones(), images, textures);
+            return new(scene, skeletons, ReadBones(), images, textures, ReadExpressions(meshes));
         }
 
         // Rejects transforms that overflow, like Scene.GetBounds, but uses per-joint bounds so loading never skins on the CPU.
@@ -241,10 +290,12 @@ public static class GltfReader
             return new(offset, length, stride);
         }
 
-        private Accessor ReadAccessor(JsonElement a)
+        private Accessor ReadAccessor(JsonElement a, bool morph)
         {
-            if (a.TryGetProperty("sparse", out _)) throw Error("Sparse accessors are unsupported.");
-            var view = At(views, Int(a, "bufferView", -1));
+            var hasSparse = a.TryGetProperty("sparse", out var sparse);
+            if (hasSparse && !morph) throw Error("Sparse accessors are supported only for morph targets.");
+            var hasView = a.TryGetProperty("bufferView", out var viewIndex);
+            var view = hasView ? At(views, viewIndex.GetInt32()) : default;
             var type = Int(a, "componentType");
             var size = type switch { 5121 => 1, 5123 => 2, 5125 or 5126 => 4, _ => throw Error("Unsupported accessor component type.") };
             var components = a.GetProperty("type").GetString() switch
@@ -257,9 +308,37 @@ public static class GltfReader
             var normalized = a.TryGetProperty("normalized", out var n) && n.GetBoolean();
             if (count < 1 || count > Mesh.MaximumElements * (components == 1 ? 3 : 1) || offset < 0 ||
                 offset % size != 0 || (view.Offset + (long)offset) % size != 0 || stride < components * size || stride % size != 0 ||
-                (long)offset + (long)(count - 1) * stride + components * size > view.Length ||
+                (hasView ? (long)offset + (long)(count - 1) * stride + components * size > view.Length : !hasSparse || offset != 0) ||
                 (normalized && type is not (5121 or 5123))) throw Error("Invalid accessor count, offset, stride or normalization.");
-            return new(binary.Slice(view.Offset + offset, view.Length - offset), count, components, type, size, stride, normalized);
+            Sparse? replacements = null;
+            if (hasSparse)
+            {
+                if (type != 5126 || components != 3) throw Error("Morph deltas must be float VEC3 accessors.");
+                var sparseCount = Int(sparse, "count", -1);
+                if (sparseCount < 1 || sparseCount > count) throw Error("Invalid sparse count.");
+                var indices = sparse.GetProperty("indices"); var indexType = Int(indices, "componentType");
+                var indexSize = indexType switch { 5121 => 1, 5123 => 2, 5125 => 4, _ => throw Error("Invalid sparse index type.") };
+                var ix = Packed(indices, sparseCount, 1, indexType, indexSize);
+                var values = Packed(sparse.GetProperty("values"), sparseCount, 3, 5126, 4);
+                var previous = -1;
+                for (var i = 0; i < sparseCount; i++)
+                {
+                    var index = ix.Index(i);
+                    if (index <= previous || index >= count) throw Error("Sparse indices must increase and stay within the accessor.");
+                    previous = index;
+                }
+                replacements = new(ix, values);
+            }
+            return new(hasView ? binary.Slice(view.Offset + offset, view.Length - offset) : default,
+                count, components, type, size, stride, normalized, replacements);
+        }
+
+        private Accessor Packed(JsonElement a, int count, int components, int type, int size)
+        {
+            var view = At(views, Int(a, "bufferView", -1)); var offset = Int(a, "byteOffset");
+            if (view.Stride != 0 || offset < 0 || (view.Offset + (long)offset) % size != 0 || offset % size != 0 ||
+                (long)offset + (long)count * components * size > view.Length) throw Error("Invalid sparse buffer range or alignment.");
+            return new(binary.Slice(view.Offset + offset, count * components * size), count, components, type, size, components * size, false);
         }
 
         private static Node ReadNode(JsonElement n)
@@ -433,7 +512,7 @@ public static class GltfReader
             }).ToArray();
         }
 
-        private Part ReadPart(JsonElement p, Material[] materials)
+        private Part ReadPart(JsonElement p, JsonElement source, Material[] materials)
         {
             var attributes = p.GetProperty("attributes");
             var position = At(accessors, attributes.GetProperty("POSITION").GetInt32()); position.Require(3);
@@ -473,18 +552,44 @@ public static class GltfReader
                 color is null ? null : Enumerable.Range(0, count).Select(i => Color(color.F(i, 0), color.F(i, 1), color.F(i, 2))));
             if (normals is null) mesh = mesh.WithCalculatedNormals();
             var material = p.TryGetProperty("material", out var mat) ? At(materials, mat.GetInt32()) : new Material(0xFFFFFFFF, doubleSided: false);
+            var targets = joints is null ? [] : ReadTargets(p, source, count);
+            var defaults = targets.Length != 0 && source.TryGetProperty("weights", out var dw) ? Floats(dw, targets.Length) : null;
+            if (defaults?.Any(w => w < 0 || w > 1) == true) throw Error("Morph weights must be in [0,1].");
             return new(mesh, material,
                 joints is null ? null : Enumerable.Range(0, count).Select(i => new Int4(joints.Index(i, 0), joints.Index(i, 1), joints.Index(i, 2), joints.Index(i, 3))).ToArray(),
-                weights is null ? null : Enumerable.Range(0, count).Select(weights.V4).ToArray());
+                weights is null ? null : Enumerable.Range(0, count).Select(weights.V4).ToArray(), targets, defaults);
 
             Accessor? Attribute(string name, int components, bool integer = false)
             {
                 if (!attributes.TryGetProperty(name, out var a)) return null;
                 var accessor = At(accessors, a.GetInt32());
-                if (components != 0) accessor.Require(components, integer);
+                accessor.Require(components == 0 ? accessor.Components : components, integer);
                 if (accessor.Count != count || (!integer && accessor.ComponentType != 5126 && !accessor.Normalized))
                     throw Error($"Invalid {name} accessor.");
                 return accessor;
+            }
+        }
+
+        private MorphTarget[] ReadTargets(JsonElement primitive, JsonElement mesh, int count)
+        {
+            var targets = Array(primitive, "targets", SkinnedMesh.MaximumMorphTargets);
+            var names = mesh.TryGetProperty("extras", out var extras) ? Array(extras, "targetNames", SkinnedMesh.MaximumMorphTargets) : [];
+            if (names.Length != 0 && names.Length != targets.Length) throw Error("Morph target names must match target count.");
+            // Sparse zero bases can expand far beyond file size. Bound retained deltas plus affected indices.
+            var entries = checked(targets.Length * count);
+            if (entries > MaximumFileSize / 32 - morphBudget) throw Error("Aggregate morph delta budget exceeded.");
+            morphBudget += entries;
+            return targets.Select((t, i) => new MorphTarget(names.Length == 0 ? null : names[i].GetString(),
+                Deltas(t, "POSITION") ?? new Vector3[count], Deltas(t, "NORMAL"))).ToArray();
+            Vector3[]? Deltas(JsonElement target, string semantic)
+            {
+                if (!target.TryGetProperty(semantic, out var a)) return null;
+                var accessor = At(accessors, a.GetInt32()); accessor.Require(3, morph: true);
+                if (accessor.ComponentType != 5126 || accessor.Count != count) throw Error("Invalid morph delta accessor.");
+                var result = Enumerable.Range(0, count).Select(accessor.V3).ToArray();
+                if (accessor.Sparse is { } sparse)
+                    for (var i = 0; i < sparse.Indices.Count; i++) result[sparse.Indices.Index(i)] = sparse.Values.V3(i);
+                return result;
             }
         }
 
@@ -521,12 +626,75 @@ public static class GltfReader
                                 influences[v] = w == Vector4.Zero ? new(default, Vector4.UnitX)
                                     : new(new(Remap(j.X, w.X), Remap(j.Y, w.Y), Remap(j.Z, w.Z), Remap(j.W, w.W)), w);
                             }
-                            skinned.Add(Shape.FromSkinnedMesh(new SkinnedMesh(part.Mesh, skeletons[skinGroups[node.Skin]], influences), part.Material).Named(node.Name));
+                            var mesh = new SkinnedMesh(part.Mesh, skeletons[skinGroups[node.Skin]], influences, part.Targets);
+                            var shape = Shape.FromSkinnedMesh(mesh, part.Material).Named(node.Name);
+                            if (part.Defaults is { } weights) shape = shape.WithMorphWeights(mesh, weights);
+                            skinned.Add(shape);
+                            if (!meshInstances.TryGetValue(node.Mesh, out var instances)) meshInstances[node.Mesh] = instances = [];
+                            instances.Add(mesh);
+                            if (!nodeInstances.TryGetValue(index, out var nodeParts)) nodeInstances[index] = nodeParts = [];
+                            nodeParts.Add(mesh);
                             int Remap(int joint, float weight) => weight == 0 ? 0 : At(map, joint);
                         }
                     }
                 parts.AddRange(node.Children.Select(Build));
                 return Shape.Group(parts.ToArray()).Named(node.Name).WithLocalTransform(node.Translation, node.Rotation, node.Scale);
+            }
+        }
+
+        private Dictionary<string, GltfExpression> ReadExpressions(Part[][] meshes)
+        {
+            var result = new Dictionary<string, GltfExpression>(StringComparer.Ordinal);
+            if (!root.TryGetProperty("extensions", out var extensions)) return result;
+            var bindBudget = 0;
+            if (extensions.TryGetProperty("VRM", out var vrm) && vrm.TryGetProperty("blendShapeMaster", out var master))
+                foreach (var group in Array(master, "blendShapeGroups"))
+                {
+                    var preset = group.TryGetProperty("presetName", out var p) ? p.GetString() : null;
+                    var name = !string.IsNullOrEmpty(preset) && !preset.Equals("unknown", StringComparison.OrdinalIgnoreCase)
+                        ? preset.ToLowerInvariant() : group.TryGetProperty("name", out var n) ? n.GetString() : null;
+                    if (!string.IsNullOrEmpty(name)) result[name] = Read(group, false);
+                }
+            if (extensions.TryGetProperty("VRMC_vrm", out var vrm1) && vrm1.TryGetProperty("expressions", out var expressions))
+            {
+                Add("preset", true); Add("custom", false);
+                void Add(string category, bool preset)
+                {
+                    if (!expressions.TryGetProperty(category, out var values)) return;
+                    foreach (var property in values.EnumerateObject())
+                    {
+                        if (result.Count >= MaximumNodes) throw Error("Too many expressions.");
+                        var name = preset ? property.Name.ToLowerInvariant() : property.Name;
+                        var expression = result[name] = Read(property.Value, true);
+                        var alias = preset ? name switch
+                        {
+                            "happy" => "joy", "sad" => "sorrow", "relaxed" => "fun", "aa" => "a", "ih" => "i",
+                            "ou" => "u", "ee" => "e", "oh" => "o", "blinkleft" => "blink_l", "blinkright" => "blink_r", _ => name
+                        } : name;
+                        result[alias] = expression;
+                    }
+                }
+            }
+            return result;
+            GltfExpression Read(JsonElement value, bool version1)
+            {
+                var binds = new List<(SkinnedMesh Mesh, int Target, float Weight)>();
+                foreach (var bind in Array(value, version1 ? "morphTargetBinds" : "binds"))
+                {
+                    var reference = Int(bind, version1 ? "node" : "mesh", -1);
+                    var meshIndex = version1 ? At(nodes, reference).Mesh : reference;
+                    var parts = At(meshes, meshIndex);
+                    var target = Int(bind, "index", -1);
+                    var weight = bind.GetProperty("weight").GetSingle() / (version1 ? 1 : 100);
+                    if (target < 0 || !float.IsFinite(weight) || weight < 0 || weight > 1 ||
+                        parts.Any(p => p.Joints is not null && target >= p.Targets.Length)) throw Error("Invalid expression bind.");
+                    var instances = version1 ? nodeInstances : meshInstances;
+                    if (!instances.TryGetValue(reference, out var affected)) continue;
+                    if (bindBudget > Mesh.MaximumElements - affected.Count) throw Error("Expression bind budget exceeded.");
+                    bindBudget += affected.Count;
+                    foreach (var mesh in affected) binds.Add((mesh, target, weight));
+                }
+                return new(binds.ToArray(), value.TryGetProperty("isBinary", out var binary) && binary.GetBoolean());
             }
         }
 
