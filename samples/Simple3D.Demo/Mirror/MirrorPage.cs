@@ -35,7 +35,10 @@ public sealed class MirrorPage : ContentPage
     private Step _step;
     private PoseFrame? _pending;
     private IDispatcherTimer? _timer;
-    private long _started;
+    private long _started, _lastFrame;
+    private TimeSpan _lastTimestamp;
+    private int _generation;
+    private Task _stopping = Task.CompletedTask;
     private int _frames, _poses;
     private double _detectMilliseconds;
 
@@ -90,11 +93,16 @@ public sealed class MirrorPage : ContentPage
     {
         if (_step is Step.Starting or Step.Guide or Step.Live) return;
         Show(Step.Starting);
+        // Closing or backgrounding during any await below invalidates this attempt.
+        var attempt = ++_generation;
+        bool Current() => attempt == _generation && _step == Step.Starting;
         try
         {
+            await _stopping;
             if (!IsRequested)
             {
                 var access = await CameraAccess.RequestAsync();
+                if (!Current()) return;
                 if (access != CameraAccessStatus.Granted)
                 {
                     Block(access == CameraAccessStatus.Restricted
@@ -104,26 +112,43 @@ public sealed class MirrorPage : ContentPage
                 }
             }
             await _loading!;
-            _source = VideoPath is not { } video ? PoseSources.CreateCamera() : PoseSources.CreateVideo(video, LandmarksPath);
-            _source.FrameAnalyzed += OnFrame;
-            if (_source is PoseSource diagnostics) diagnostics.DetectionMeasured += ms => _detectMilliseconds = ms;
-            _preview.Source = _source;
+            if (!Current()) return;
+            var source = _source = VideoPath is not { } video ? PoseSources.CreateCamera() : PoseSources.CreateVideo(video, LandmarksPath);
+            source.FrameAnalyzed += OnFrame;
+            if (source is PoseSource diagnostics)
+            {
+                diagnostics.DetectionMeasured += ms => _detectMilliseconds = ms;
+                diagnostics.Failed += error => Dispatcher.Dispatch(() => Fail(source, error));
+            }
+            _preview.Source = source;
             _session!.Reset();
-            await _source.StartAsync();
-            _started = Stopwatch.GetTimestamp();
+            await source.StartAsync();
+            if (!Current()) return;
+            _started = _lastFrame = Stopwatch.GetTimestamp();
             _timer ??= Dispatcher.CreateTimer();
             _timer.Interval = TimeSpan.FromMilliseconds(1000d / 30);
             _timer.Tick -= Animate; _timer.Tick += Animate;
             _timer.Start();
             Show(Step.Guide);
-            Log($"MIRROR_START source={(IsRequested ? "video" : "camera")} renderer={_view.ActiveRenderingBackend}");
+            Log($"MIRROR_START source={(IsRequested ? "video" : "camera")}");
         }
         catch (Exception error)
         {
-            await StopAsync();
+            if (attempt != _generation) return;
+            Stop();
+            await _stopping;
             Block($"The camera couldn't start: {error.Message}", settings: false);
             Log($"MIRROR_FAIL {error.GetType().Name}: {error.Message}");
         }
+    }
+
+    // A source that fails after starting (detector or playback error) stops the session and says why.
+    private void Fail(IPoseSource source, Exception error)
+    {
+        if (!ReferenceEquals(source, _source)) return;
+        Stop();
+        Block($"Tracking stopped: {error.Message}", settings: false);
+        Log($"MIRROR_FAIL {error.GetType().Name}: {error.Message}");
     }
 
     // Detector thread: keep only the newest frame, so a slow UI never builds a queue of stale poses.
@@ -136,6 +161,8 @@ public sealed class MirrorPage : ContentPage
     {
         if (Interlocked.Exchange(ref _pending, null) is not { } frame || _session is null || _source is null) return;
         _frames++;
+        _lastFrame = Stopwatch.GetTimestamp();
+        _lastTimestamp = frame.Timestamp;
         if (_session.Apply(frame, _source.IsMirrored)) _poses++;
     }
 
@@ -160,14 +187,19 @@ public sealed class MirrorPage : ContentPage
 
     private void Animate(object? sender, EventArgs e)
     {
-        if (_session is null) return;
+        if (_session is null || _source is null) return;
         var seconds = Stopwatch.GetElapsedTime(_started).TotalSeconds;
         _session.Stage.Animate((float)seconds);
+        // A stalled camera delivers no frames, so no frame can report the person gone: report an empty one.
+        // Two seconds, well beyond ordinary detector hiccups, which the tracker already rides out.
+        var silence = Stopwatch.GetElapsedTime(_lastFrame);
+        if (_step == Step.Live && silence > TimeSpan.FromSeconds(2))
+            _session.Apply(new PoseFrame(_lastTimestamp + silence, 1, 1, null), _source.IsMirrored);
         // About once a second: pose rate, detection latency, renderer and how closely the limbs follow.
         if ((int)(seconds * 30) % 30 != 0 || seconds < 1) return;
         var line = $"{_frames / seconds:0} poses/s · detect {_detectMilliseconds:0} ms · {_view.ActiveRenderingBackend} {_view.LastFrameMilliseconds:0.0} ms";
         _status.Text = line;
-        if (_step == Step.Live) Log($"MIRROR_STATS t={seconds:0.0} analyzed={_frames} posed={_poses} detect_ms={_detectMilliseconds:0.0} render_ms={_view.LastFrameMilliseconds:0.0} limb_error_deg={_session.LimbError:0.0} backend={_view.ActiveRenderingBackend}");
+        if (_step == Step.Live) Log($"MIRROR_STATS t={seconds:0.0} analyzed={_frames} posed={_poses} detect_ms={_detectMilliseconds:0.0} render_ms={_view.LastFrameMilliseconds:0.0} backend={_view.ActiveRenderingBackend}");
     }
 
     private void Show(Step step)
@@ -202,18 +234,26 @@ public sealed class MirrorPage : ContentPage
 
     private async void Close()
     {
-        await StopAsync();
+        Stop();
+        await _stopping;
         if (Navigation.ModalStack.Contains(this)) await Navigation.PopModalAsync();
     }
 
-    private async Task StopAsync()
+    // Stops capture now and lets disposal finish in the background; the next Start waits for it.
+    private void Stop()
     {
+        _generation++;
         _timer?.Stop();
-        if (_source is { } source)
+        _pending = null;
+        if (_source is not { } source) return;
+        _source = null;
+        source.FrameAnalyzed -= OnFrame;
+        _preview.Source = null;
+        var previous = _stopping;
+        _stopping = DisposeAfter(previous, source);
+        static async Task DisposeAfter(Task previous, IPoseSource source)
         {
-            _source = null;
-            source.FrameAnalyzed -= OnFrame;
-            _preview.Source = null;
+            try { await previous; } catch { }
             await source.DisposeAsync();
         }
     }
@@ -234,7 +274,7 @@ public sealed class MirrorPage : ContentPage
     // Leaving the page or sending the app to the background releases the camera; Start resumes from the intro.
     private void OnStopped(object? sender, EventArgs e)
     {
-        _ = StopAsync();
+        Stop();
         if (_step is Step.Guide or Step.Live) Show(Step.Intro);
     }
 

@@ -16,7 +16,7 @@ internal interface IAndroidPosePreview
     event Action<Bitmap>? ImageReady;
 }
 
-/// <summary>ML Kit base pose model. Not reentrant: callers analyze one image at a time.</summary>
+/// <summary>ML Kit accurate pose model. Not reentrant: callers analyze one image at a time.</summary>
 internal sealed class MlKitPoseDetector(bool stream) : IDisposable
 {
     private static readonly int[] LandmarkTypes =

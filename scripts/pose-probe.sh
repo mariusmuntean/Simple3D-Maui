@@ -11,8 +11,10 @@ cd "$(dirname "$0")/.."
 mkdir -p artifacts
 log="artifacts/$platform-pose-probe.log"
 : > "$log"
-device=2BAE44EE-B0AA-4B3F-B0FC-7776FD52A89F
-serial=emulator-5580
+# Override with POSE_IOS_DEVICE (simulator UDID) or POSE_ANDROID_SERIAL / POSE_ANDROID_AVD.
+device="${POSE_IOS_DEVICE:-2BAE44EE-B0AA-4B3F-B0FC-7776FD52A89F}"
+serial="${POSE_ANDROID_SERIAL:-emulator-5580}"
+avd_name="${POSE_ANDROID_AVD:-Pixel_5_API_33_Android_13}"
 sdk="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
 adb="$sdk/platform-tools/adb"
 booted=false
@@ -61,7 +63,7 @@ case "$platform" in
         SIMCTL_CHILD_SIMPLE3D_POSE_PROBE="$remote_video" xcrun simctl launch --terminate-running-process --console "$device" dev.simple3d.gallery > "$log" 2>&1 & runner_pid=$! ;;
     android)
         if ! "$adb" -s "$serial" get-state >/dev/null 2>&1; then
-            "$sdk/emulator/emulator" -avd Pixel_5_API_33_Android_13 -no-window -no-audio -port 5580 > artifacts/pose-emulator.log 2>&1 & emulator_pid=$!
+            "$sdk/emulator/emulator" -avd "$avd_name" -no-window -no-audio -port "${serial#emulator-}" > artifacts/pose-emulator.log 2>&1 & emulator_pid=$!
             booted=true
         fi
         ready=false
@@ -71,7 +73,7 @@ case "$platform" in
         done
         "$ready" || { echo 'Android emulator did not boot' >&2; exit 1; }
         avd="$("$adb" -s "$serial" emu avd name | tr -d '\r' | head -1)"
-        [ "$avd" = Pixel_5_API_33_Android_13 ] || { echo "Refusing unexpected AVD on $serial: $avd" >&2; exit 1; }
+        [ "$avd" = "$avd_name" ] || { echo "Refusing unexpected AVD on $serial: $avd" >&2; exit 1; }
         abi="$("$adb" -s "$serial" shell getprop ro.product.cpu.abi | tr -d '\r')"
         case "$abi" in arm64-v8a) rid=android-arm64 ;; x86_64) rid=android-x64 ;; *) echo "Unsupported ABI $abi" >&2; exit 1 ;; esac
         app="$(find samples/Simple3D.Demo/bin/Debug/net10.0-android -type f -name '*-Signed.apk' -path "*/$rid/*" -print -quit)"

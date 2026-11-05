@@ -16,6 +16,7 @@ public sealed class CameraPoseSource : PoseSource
     private AVCaptureSession? _session;
     private Delegate? _delegate;
     private bool _mirrored = true;
+    private Task _running = Task.CompletedTask;
 
     public override bool IsMirrored => _mirrored;
     /// <summary>The running capture session, for the preview layer; null when stopped.</summary>
@@ -28,10 +29,29 @@ public sealed class CameraPoseSource : PoseSource
         var device = AVCaptureDevice.GetDefaultDevice(AVCaptureDeviceType.BuiltInWideAngleCamera, AVMediaTypes.Video, AVCaptureDevicePosition.Front)
             ?? AVCaptureDevice.GetDefaultDevice(AVMediaTypes.Video)
             ?? throw new InvalidOperationException("This device has no camera.");
-        _mirrored = device.Position != AVCaptureDevicePosition.Back;
+        // Only the front camera's preview is mirrored; external or back cameras show the scene as is.
+        _mirrored = device.Position == AVCaptureDevicePosition.Front;
         var input = AVCaptureDeviceInput.FromDevice(device, out var inputError)
             ?? throw new InvalidOperationException($"The camera could not be opened: {inputError?.LocalizedDescription}");
         var session = new AVCaptureSession();
+        try { Configure(session, input); }
+        catch
+        {
+            // Release a half-configured session; nothing else holds it yet.
+            session.Dispose(); input.Dispose(); _delegate?.Dispose(); _delegate = null;
+            throw;
+        }
+        _session = session;
+        // startRunning blocks; never call it on the UI thread. Stop waits for this task.
+        return _running = Task.Run(() =>
+        {
+            session.StartRunning();
+            MainThread.BeginInvokeOnMainThread(() => SessionChanged?.Invoke());
+        });
+    }
+
+    private void Configure(AVCaptureSession session, AVCaptureDeviceInput input)
+    {
         session.BeginConfiguration();
         // Vision's body model works on small images; 640×480 keeps detection fast and memory low.
         session.SessionPreset = session.CanSetSessionPreset(AVCaptureSession.Preset640x480) ? AVCaptureSession.Preset640x480 : AVCaptureSession.PresetMedium;
@@ -57,13 +77,6 @@ public sealed class CameraPoseSource : PoseSource
         _delegate = new Delegate(this);
         output.SetSampleBufferDelegate(_delegate, _queue);
         session.CommitConfiguration();
-        _session = session;
-        // startRunning blocks; never call it on the UI thread.
-        return Task.Run(() =>
-        {
-            session.StartRunning();
-            MainThread.BeginInvokeOnMainThread(() => SessionChanged?.Invoke());
-        });
     }
 
     public override Task StopAsync()
@@ -72,8 +85,10 @@ public sealed class CameraPoseSource : PoseSource
         if (session is null) return Task.CompletedTask;
         _session = null;
         SessionChanged?.Invoke();
-        return Task.Run(() =>
+        var running = _running;
+        return Task.Run(async () =>
         {
+            try { await running.ConfigureAwait(false); } catch { }
             session.StopRunning();
             // Drain the analysis queue before releasing the detector it uses.
             _queue.DispatchSync(() => { });

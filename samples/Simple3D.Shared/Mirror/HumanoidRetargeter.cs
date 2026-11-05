@@ -39,15 +39,14 @@ public sealed class HumanoidRetargeter
     private readonly int[] _feet;
     private readonly float _restFloor;
     private readonly float[] _segmentLength;
-    private readonly Quaternion[] _local, _world;
+    private readonly Quaternion[] _local, _world, _held;
     private readonly Vector2[] _points = new Vector2[PoseFrame.JointCount];
 
     /// <summary>How far, in skeleton units, the character moves sideways when the person reaches the image edge.</summary>
     public float SidewaysRange { get; init; } = .6f;
 
-    /// <summary>Angle in degrees between each limb's on-screen direction and its target in the last pose, in limb order (arms, then legs).</summary>
-    public IReadOnlyList<float> LastErrors => _errors;
-    private readonly float[] _errors;
+    /// <summary>Landmarks below this confidence are treated as hidden.</summary>
+    public float MinimumConfidence { get; init; } = .3f;
 
     /// <summary>Prepares retargeting for a skeleton with VRM humanoid bone names.</summary>
     /// <param name="skeleton">The character's skeleton.</param>
@@ -85,8 +84,8 @@ public sealed class HumanoidRetargeter
             .Where(humanoidBones.ContainsKey).Select(Bone).ToArray();
         _restFloor = _feet.Min(f => ViewY(_restPositions[f]));
         _segmentLength = new float[_limbs.Length];
-        _errors = new float[_limbs.Length];
         _local = skeleton.RestPose.Rotations.ToArray();
+        _held = skeleton.RestPose.Rotations.ToArray();
         _world = new Quaternion[_local.Length];
     }
 
@@ -94,6 +93,7 @@ public sealed class HumanoidRetargeter
     public void Reset()
     {
         Array.Clear(_segmentLength);
+        _skeleton.RestPose.Rotations.ToArray().CopyTo(_held, 0);
     }
 
     /// <summary>Computes a pose from landmarks of the upright, unmirrored image.</summary>
@@ -140,12 +140,17 @@ public sealed class HumanoidRetargeter
             var limb = _limbOfJoint[j];
             if (limb < 0) continue;
             var (_, localDirection, from, to, depthSign) = _limbs[limb];
+            // A hidden limb holds its last rotation (the rest pose after a reset) rather than following stale landmarks.
+            if (landmarks[(int)from].Confidence < MinimumConfidence || landmarks[(int)to].Confidence < MinimumConfidence)
+            {
+                _local[j] = _held[j];
+                _world[j] = parent * _local[j];
+                continue;
+            }
             var target = Target(limb, P(to) - P(from), depthSign);
             var current = Vector3.Transform(localDirection, _world[j]);
             _world[j] = Quaternion.Normalize(FromTo(current, Vector3.Transform(target, _fromView)) * _world[j]);
-            _local[j] = Quaternion.Normalize(Quaternion.Conjugate(parent) * _world[j]);
-            var achieved = Vector3.Transform(Vector3.Transform(localDirection, _world[j]), _toView);
-            _errors[limb] = Angle(new Vector2(achieved.X, achieved.Y), P(to) - P(from));
+            _local[j] = _held[j] = Quaternion.Normalize(Quaternion.Conjugate(parent) * _world[j]);
         }
 
         // Ground the lowest foot, and follow the person across the image within a bounded stage range.
@@ -197,10 +202,4 @@ public sealed class HumanoidRetargeter
         return Quaternion.Normalize(new Quaternion(cross, 1 + dot));
     }
 
-    private static float Angle(Vector2 a, Vector2 b)
-    {
-        if (a.LengthSquared() < 1e-10f || b.LengthSquared() < 1e-10f) return 0;
-        var cos = Math.Clamp(Vector2.Dot(Vector2.Normalize(a), Vector2.Normalize(b)), -1, 1);
-        return MathF.Acos(cos) * 180 / MathF.PI;
-    }
 }

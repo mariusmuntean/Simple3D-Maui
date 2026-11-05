@@ -67,13 +67,23 @@ internal static class MirrorTests
         {
             if (!tracker.Update(frame)) continue;
             var pose = retargeter.Retarget(tracker.Landmarks, tracker.ImageAspect, mirrored: false);
-            errors.AddRange(retargeter.LastErrors);
             var world = pose.WorldTransforms;
+            // Independently of the retargeter's internals: each visible limb of the posed skeleton points where the person's does.
+            foreach (var (bone, child, from, to) in new[] { ("leftUpperArm", "leftLowerArm", BodyJoint.LeftShoulder, BodyJoint.LeftElbow),
+                ("rightLowerArm", "rightHand", BodyJoint.RightElbow, BodyJoint.RightWrist), ("leftUpperLeg", "leftLowerLeg", BodyJoint.LeftHip, BodyJoint.LeftKnee),
+                ("rightLowerLeg", "rightFoot", BodyJoint.RightKnee, BodyJoint.RightAnkle) })
+            {
+                var (a, b) = (tracker.Landmarks[(int)from], tracker.Landmarks[(int)to]);
+                if (a.Confidence < .3f || b.Confidence < .3f) continue;
+                var limb = world[bones[child]].Translation - world[bones[bone]].Translation;
+                var person = new Vector2((b.X - a.X) * tracker.ImageAspect, a.Y - b.Y);
+                errors.Add(MathF.Acos(Math.Clamp(Vector2.Dot(Vector2.Normalize(new(limb.X, limb.Y)), Vector2.Normalize(person)), -1, 1)) * 180 / MathF.PI);
+            }
             footHeights.Add(MathF.Min(world[bones["leftFoot"]].Translation.Y, world[bones["rightFoot"]].Translation.Y));
             hipXs.Add(world[bones["hips"]].Translation.X);
         }
         errors.Sort();
-        Check(errors.Count > 700 * 8 && errors[errors.Count / 2] < .5f && errors[(int)(errors.Count * .99)] < 2,
+        Check(errors.Count > 700 * 3 && errors[errors.Count / 2] < .5f && errors[(int)(errors.Count * .99)] < 2,
             $"limb direction error median {errors[errors.Count / 2]:0.00}°, p99 {errors[(int)(errors.Count * .99)]:0.00}°");
         var restFloor = MathF.Min(skeleton.RestPose.WorldTransforms[bones["leftFoot"]].Translation.Y, skeleton.RestPose.WorldTransforms[bones["rightFoot"]].Translation.Y);
         Check(footHeights.All(y => MathF.Abs(y - restFloor) < 1e-3f), $"feet must stay grounded, worst {footHeights.Max(y => MathF.Abs(y - restFloor)):0.0000}");

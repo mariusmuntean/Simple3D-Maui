@@ -37,7 +37,7 @@ The gallery's **Mirror ✦** button opens a full-screen scene in which a frog co
 | Pond scene from primitives | [MirrorStage.cs](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Mirror/MirrorStage.cs) |
 | Camera, detectors and page | [Simple3D.Demo/Mirror](https://github.com/mariusmuntean/Simple3D-Maui/tree/main/samples/Simple3D.Demo/Mirror) |
 
-Detection uses the platform's own models (Apple Vision on iOS and Mac Catalyst, Google ML Kit on Android), so the app ships no model file. Detectors report 2D landmarks: the retargeter turns each limb toward its landmark direction and estimates depth from foreshortening, so motion toward the camera is approximate. The character is [100Avatars "Froggy"](https://github.com/PolygonalMind/100Avatars) by Polygonal Mind (CC0), loaded with `GltfLoader`; see [skinned characters](skinned-characters.md).
+Detection runs on the device: Apple Vision is built into iOS and macOS; on Android, the ML Kit accurate pose model arrives with its NuGet package (a few megabytes in the APK). Detectors report 2D landmarks: the retargeter turns each limb toward its landmark direction and estimates depth from foreshortening, so motion toward the camera is approximate. The character is [100Avatars "Froggy"](https://github.com/PolygonalMind/100Avatars) by Polygonal Mind (CC0), loaded with `GltfLoader`; see [skinned characters](skinned-characters.md).
 
 ## Render without MAUI
 

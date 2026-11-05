@@ -42,9 +42,6 @@ public sealed class MirrorSession
         return true;
     }
 
-    /// <summary>Mean on-screen angle in degrees between the character's limbs and the person's, for the last pose.</summary>
-    public float LimbError => _retargeter.LastErrors.Average();
-
     /// <summary>Forgets the person and hides the character.</summary>
     public void Reset() => Tracker.Reset();
 }

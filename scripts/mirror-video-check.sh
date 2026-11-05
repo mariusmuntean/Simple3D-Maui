@@ -13,8 +13,10 @@ app=samples/Simple3D.Demo/bin/Debug/net10.0-ios/iossimulator-arm64/Simple3D.Demo
 mkdir -p "$output"
 booted=false
 if xcrun simctl list devices | grep "$device" | grep -q Shutdown; then xcrun simctl boot "$device"; booted=true; fi
+container=
 cleanup() {
     xcrun simctl terminate "$device" dev.simple3d.gallery 2>/dev/null || true
+    [ -z "$container" ] || rm -f "$container/tmp/mirror.mp4" "$container/tmp/mirror.jsonl"
     if "$booted"; then xcrun simctl shutdown "$device" || true; fi
 }
 trap cleanup EXIT

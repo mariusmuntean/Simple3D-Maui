@@ -62,13 +62,13 @@ public sealed class CameraPoseSource : PoseSource
         firstTimestamp = lastTicks = -1;
         // ML Kit's pose model downsamples anyway; 640×480 keeps conversion and detection cheap.
         var resolution = new ResolutionSelector.Builder()
-            .SetResolutionStrategy(new ResolutionStrategy(new Size(640, 480), ResolutionStrategy.FallbackRuleClosestHigherThenLower))
-            .Build();
-        var preview = new Preview.Builder().Build();
+            .SetResolutionStrategy(new ResolutionStrategy(new Size(640, 480), ResolutionStrategy.FallbackRuleClosestHigherThenLower))!
+            .Build()!;
+        var preview = new Preview.Builder().Build()!;
         analysis = new ImageAnalysis.Builder()
-            .SetResolutionSelector(resolution)
-            .SetBackpressureStrategy(ImageAnalysis.StrategyKeepOnlyLatest)
-            .Build();
+            .SetResolutionSelector(resolution)!
+            .SetBackpressureStrategy(ImageAnalysis.StrategyKeepOnlyLatest)!
+            .Build()!;
         analysis.SetAnalyzer(executor, new Analyzer(this));
         UseCase[] useCases = [preview, analysis];
         var bound = provider;
@@ -84,7 +84,7 @@ public sealed class CameraPoseSource : PoseSource
     {
         foreach (var (lens, front) in new[] { (CameraSelector.LensFacingFront, true), (CameraSelector.LensFacingBack, false), (CameraSelector.LensFacingExternal, false) })
         {
-            var selector = new CameraSelector.Builder().RequireLensFacing(lens).Build();
+            var selector = new CameraSelector.Builder().RequireLensFacing(lens)!.Build()!;
             try { if (provider.HasCamera(selector)) return (selector, front); }
             catch (Java.Lang.Exception) { /* CameraInfoUnavailableException: try the next lens. */ }
             selector.Dispose();
@@ -102,7 +102,7 @@ public sealed class CameraPoseSource : PoseSource
     {
         try
         {
-            using var info = proxy.ImageInfo;
+            using var info = proxy.ImageInfo!;
             var rotation = info.RotationDegrees;
             var (width, height) = rotation is 90 or 270 ? (proxy.Height, proxy.Width) : (proxy.Width, proxy.Height);
             if (firstTimestamp < 0) firstTimestamp = info.Timestamp;
@@ -159,7 +159,7 @@ public sealed class CameraPoseSource : PoseSource
 
     private sealed class Analyzer(CameraPoseSource owner) : Java.Lang.Object, ImageAnalysis.IAnalyzer
     {
-        public void Analyze(IImageProxy image) => owner.Analyze(image);
+        public void Analyze(IImageProxy? image) { if (image is not null) owner.Analyze(image); }
     }
 }
 #endif

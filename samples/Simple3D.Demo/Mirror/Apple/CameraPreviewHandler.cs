@@ -61,7 +61,9 @@ public sealed class CameraPreviewHandler() : ViewHandler<CameraPreview, CameraPr
             _cameraLayer?.RemoveFromSuperLayer();
             _cameraLayer?.Dispose();
             _cameraLayer = null;
+            var last = _imageLayer.Contents;
             _imageLayer.Contents = null;
+            last?.Dispose();
         }
 
         private void UpdateSession()

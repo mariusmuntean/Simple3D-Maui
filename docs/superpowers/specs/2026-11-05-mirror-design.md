@@ -21,7 +21,7 @@ Approved direction (2026-11-05): a new gallery scene, not the opening one, in wh
 ## Sample
 
 - Portable (`samples/Simple3D.Shared/Mirror`): `PoseFrame` (13 body landmarks in normalized image space with confidence), `PoseTracker` (searching/tracking/lost state machine with hysteresis), `OneEuroFilter` (landmark smoothing), `HumanoidRetargeter` (landmark directions → humanoid bone rotations, mirrored, with foreshortening-based depth), the stylized pond scene built from library primitives, and the bundled CC0 character (100Avatars "Froggy", Polygonal Mind).
-- Platform: camera frames (AVCaptureSession / CameraX) and video frames (AVAssetReader / MediaCodec) feed one detector: Apple Vision `VNDetectHumanBodyPoseRequest` (2D) or Google ML Kit Pose Detection. No model files ship with the app.
+- Platform: camera frames (AVCaptureSession / CameraX) and video frames (AVAssetReader / MediaMetadataRetriever) feed one detector: Apple Vision `VNDetectHumanBodyPoseRequest` (2D, built into the OS) or Google ML Kit Pose Detection (accurate model, bundled by its NuGet package).
 - Haptics: `UINotificationFeedbackGenerator` success/warning on Apple, `HapticFeedbackConstants.CONFIRM`/`REJECT` on Android (MAUI fallback).
 
 ## Assumptions checked during implementation
