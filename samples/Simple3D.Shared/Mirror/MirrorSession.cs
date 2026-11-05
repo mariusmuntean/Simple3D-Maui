@@ -42,6 +42,9 @@ public sealed class MirrorSession
         return true;
     }
 
+    /// <summary>Forgets the person's limb lengths, for example after the camera zoom changed their size in the image.</summary>
+    public void Recalibrate() => _retargeter.ForgetLengths();
+
     /// <summary>Forgets the person and hides the character.</summary>
     public void Reset() => Tracker.Reset();
 }

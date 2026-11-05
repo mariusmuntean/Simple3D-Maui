@@ -13,6 +13,10 @@ public abstract class PoseSource : IPoseSource
     public abstract Task StartAsync();
     public abstract Task StopAsync();
     public abstract ValueTask DisposeAsync();
+    /// <summary>Largest zoom factor the running camera supports; 1 for sources without zoom.</summary>
+    public virtual float MaximumZoom => 1;
+    /// <summary>Camera zoom (crops what the detector sees too), clamped to [1, <see cref="MaximumZoom"/>]. Set on the UI thread.</summary>
+    public virtual float Zoom { get => 1; set { } }
 
     protected void Publish(PoseFrame frame, double detectMilliseconds)
     {

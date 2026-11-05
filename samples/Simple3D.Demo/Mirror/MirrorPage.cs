@@ -22,6 +22,9 @@ public sealed class MirrorPage : ContentPage
     // The person's choice of camera; front by default, since people usually film themselves.
     private bool _frontCamera = Preferences.Default.Get("mirror.camera.front", true);
     private bool _switching;
+    private readonly Label _zoomText = Text("", 15, center: true);
+    private readonly Border _zoomPill;
+    private int _zoomShown;
     // Debug builds can replay a video instead of the camera (and on simulators without a body-pose model, recorded
     // landmarks instead of detection) through this same page, for development and automated checks.
 #if DEBUG
@@ -83,7 +86,18 @@ public sealed class MirrorPage : ContentPage
         _switchCamera.Clicked += (_, _) => SwitchCamera();
         _status.HorizontalOptions = LayoutOptions.End; _status.VerticalOptions = LayoutOptions.End;
         _status.Margin = new Thickness(0, 0, 16, 12); _status.InputTransparent = true;
-        Content = new Grid { Children = { _view, _previewFrame, _guide, _lostHint, _intro, _blocked, close, _switchCamera, _status } };
+        _zoomPill = new Border
+        {
+            IsVisible = false, InputTransparent = true, Padding = new Thickness(14, 6), Margin = new Thickness(0, 20, 0, 0),
+            HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Start,
+            BackgroundColor = Color.FromRgba(8, 12, 22, 200), StrokeShape = new RoundRectangle { CornerRadius = 14 }, Content = _zoomText
+        };
+        var root = new Grid { Children = { _view, _previewFrame, _guide, _lostHint, _intro, _blocked, close, _switchCamera, _zoomPill, _status } };
+        // Pinch anywhere to zoom the camera, for example to frame someone standing far away.
+        var pinch = new PinchGestureRecognizer();
+        pinch.PinchUpdated += OnPinch;
+        root.GestureRecognizers.Add(pinch);
+        Content = root;
         Show(Step.Intro);
         _loading = LoadAsync();
         if (IsRequested) Dispatcher.Dispatch(Start);
@@ -164,6 +178,25 @@ public sealed class MirrorPage : ContentPage
         _switching = true;
         _step = Step.Intro;
         Start();
+    }
+
+    private void OnPinch(object? sender, PinchGestureUpdatedEventArgs e)
+    {
+        if (_step is not (Step.Guide or Step.Live) || _source is not PoseSource { MaximumZoom: > 1 } source) return;
+        if (e.Status == GestureStatus.Running)
+        {
+            // Scale is relative to the previous update.
+            source.Zoom = source.Zoom * (float)e.Scale;
+            _zoomText.Text = $"{source.Zoom:0.0}×";
+            _zoomPill.IsVisible = true;
+        }
+        else if (e.Status is GestureStatus.Completed or GestureStatus.Canceled)
+        {
+            // The person's limbs changed size in the image; relearn their lengths for depth estimates.
+            _session?.Recalibrate();
+            var shown = ++_zoomShown;
+            Dispatcher.DispatchDelayed(TimeSpan.FromSeconds(1.2), () => { if (shown == _zoomShown) _zoomPill.IsVisible = false; });
+        }
     }
 
     // A source that fails after starting (detector or playback error) stops the session and says why.

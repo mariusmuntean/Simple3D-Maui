@@ -19,6 +19,19 @@ public sealed class CameraPoseSource(bool preferFront = true) : PoseSource
     private Task _running = Task.CompletedTask;
 
     public override bool IsMirrored => _mirrored;
+    private AVCaptureDevice? _device;
+    // Beyond a few times the image gets too soft for pose detection.
+    public override float MaximumZoom => _device is { } device ? (float)Math.Min(device.ActiveFormat.VideoMaxZoomFactor, 6) : 1;
+    public override float Zoom
+    {
+        get => _device is { } device ? (float)device.VideoZoomFactor : 1;
+        set
+        {
+            if (_device is not { } device || !device.LockForConfiguration(out _)) return;
+            device.VideoZoomFactor = Math.Clamp(value, 1, MaximumZoom);
+            device.UnlockForConfiguration();
+        }
+    }
     /// <summary>The running capture session, for the preview layer; null when stopped.</summary>
     internal AVCaptureSession? Session => _session;
     internal event Action? SessionChanged;
@@ -43,6 +56,7 @@ public sealed class CameraPoseSource(bool preferFront = true) : PoseSource
             throw;
         }
         _session = session;
+        _device = device;
         // startRunning blocks; never call it on the UI thread. Stop waits for this task.
         return _running = Task.Run(() =>
         {
@@ -85,6 +99,7 @@ public sealed class CameraPoseSource(bool preferFront = true) : PoseSource
         var session = _session;
         if (session is null) return Task.CompletedTask;
         _session = null;
+        _device = null;
         SessionChanged?.Invoke();
         var running = _running;
         return Task.Run(async () =>

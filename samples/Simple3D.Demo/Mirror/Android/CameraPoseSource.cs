@@ -25,6 +25,14 @@ public sealed class CameraPoseSource(bool preferFront = true) : PoseSource
     private bool mirrored = true;
 
     public override bool IsMirrored => mirrored;
+    private ICamera? camera;
+    // Beyond a few times the image gets too soft for pose detection.
+    public override float MaximumZoom => camera?.CameraInfo?.ZoomState?.Value is IZoomState state ? Math.Min(state.MaxZoomRatio, 6) : 1;
+    public override float Zoom
+    {
+        get => camera?.CameraInfo?.ZoomState?.Value is IZoomState state ? state.ZoomRatio : 1;
+        set => camera?.CameraControl?.SetZoomRatio(Math.Clamp(value, 1, MaximumZoom));
+    }
     /// <summary>The bound preview use case, for the preview handler; null when stopped. Changes on the UI thread.</summary>
     internal Preview? Preview { get; private set; }
     internal event Action? PreviewChanged;
@@ -75,7 +83,7 @@ public sealed class CameraPoseSource(bool preferFront = true) : PoseSource
         var bound = provider;
         await MainThread.InvokeOnMainThreadAsync(() =>
         {
-            bound.BindToLifecycle(owner, selector, useCases);
+            camera = bound.BindToLifecycle(owner, selector, useCases);
             Preview = preview;
             PreviewChanged?.Invoke();
         }).ConfigureAwait(false);
@@ -133,7 +141,7 @@ public sealed class CameraPoseSource(bool preferFront = true) : PoseSource
     private async Task StopCoreAsync()
     {
         var (bound, preview, stopped) = (provider, Preview, analysis);
-        provider = null; analysis = null;
+        provider = null; analysis = null; camera = null;
         if (bound is not null)
         {
             await MainThread.InvokeOnMainThreadAsync(() =>

@@ -89,10 +89,13 @@ public sealed class HumanoidRetargeter
         _world = new Quaternion[_local.Length];
     }
 
+    /// <summary>Forgets only the calibrated segment lengths, for example after a camera zoom changed the person's size in the image.</summary>
+    public void ForgetLengths() => Array.Clear(_segmentLength);
+
     /// <summary>Forgets calibrated segment lengths, for example when a different person appears.</summary>
     public void Reset()
     {
-        Array.Clear(_segmentLength);
+        ForgetLengths();
         _skeleton.RestPose.Rotations.ToArray().CopyTo(_held, 0);
     }
 
