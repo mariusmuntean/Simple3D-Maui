@@ -142,7 +142,8 @@ public sealed class Shape
     public IReadOnlyList<float>? MorphWeights => (Mesh as PosedGeometry)?.MorphWeights is { } weights ? Array.AsReadOnly(weights) : null;
     /// <summary>Returns a copy in which every node using <paramref name="mesh"/> blends its morph targets with <paramref name="weights"/>
     /// (one per target, each in [0,1]). Throws when no node uses the mesh.</summary>
-    public Shape WithMorphWeights(SkinnedMesh mesh, ReadOnlySpan<float> weights)
+    public Shape WithMorphWeights(SkinnedMesh mesh, ReadOnlySpan<float> weights) => WithMorphWeights(mesh, weights, required: true);
+    internal Shape WithMorphWeights(SkinnedMesh mesh, ReadOnlySpan<float> weights, bool required)
     {
         ArgumentNullException.ThrowIfNull(mesh);
         if (weights.Length != mesh.MorphTargets.Count) throw new ArgumentException("Supply one weight per morph target.", nameof(weights));
@@ -150,7 +151,7 @@ public sealed class Shape
         var copy = weights.ToArray();
         var matched = false;
         var result = Morphed(mesh, copy.All(w => w == 0) ? null : copy, ref matched);
-        if (!matched) throw new ArgumentException("No node in this shape uses the mesh.", nameof(mesh));
+        if (required && !matched) throw new ArgumentException("No node in this shape uses the mesh.", nameof(mesh));
         return result;
     }
     private Shape Morphed(SkinnedMesh target, float[]? weights, ref bool matched)

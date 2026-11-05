@@ -7,8 +7,10 @@ internal static class MetalShaders
         #include <metal_stdlib>
         using namespace metal;
         struct Vertex { float4 position, normal, uv, color; };
-        struct SkinnedVertex { Vertex rigid; float4 joints, weights; };
-        struct Params { float4x4 world, vp, normals; float4 lightAmbient, lightColor, tintLit, selection; };
+        struct SkinnedVertex { Vertex rigid; float4 joints, weights, source; };
+        struct MorphDelta { float4 position, normal; };
+        struct Params { float4x4 world, vp, normals; float4 lightAmbient, lightColor, tintLit, selection;
+            float4 morphIndices0, morphIndices1, morphWeights0, morphWeights1, morphInfo; };
         struct Varying { float4 position [[position]]; float2 uv; float3 frontColor, backColor; float selected [[flat]]; };
         struct Output { float4 color [[color(0)]]; float4 mask [[color(1)]]; };
         static Varying transformVertex(Vertex v, constant Params& p) {
@@ -25,10 +27,20 @@ internal static class MetalShaders
             return transformVertex(vertices[id],p);
         }
         vertex Varying skinnedVertex(const device SkinnedVertex* vertices [[buffer(0)]], constant Params& p [[buffer(1)]],
-            constant float4x4* joints [[buffer(2)]], uint id [[vertex_id]]) {
+            constant float4x4* joints [[buffer(2)]], const device MorphDelta* deltas [[buffer(3)]], uint id [[vertex_id]]) {
             SkinnedVertex s=vertices[id]; uint4 j=uint4(s.joints);
             float4x4 skin=joints[j.x]*s.weights.x+joints[j.y]*s.weights.y+joints[j.z]*s.weights.z+joints[j.w]*s.weights.w;
-            Vertex v=s.rigid; v.position=skin*v.position; v.normal=float4((skin*float4(v.normal.xyz,0)).xyz,0);
+            Vertex v=s.rigid;
+            for(uint i=0;i<uint(p.morphInfo.y);i++) {
+                uint lane=i&3;
+                uint target=uint(i<4?p.morphIndices0[lane]:p.morphIndices1[lane]);
+                float weight=i<4?p.morphWeights0[lane]:p.morphWeights1[lane];
+                MorphDelta d=deltas[target*uint(p.morphInfo.x)+uint(s.source.x)];
+                v.position.xyz+=weight*d.position.xyz; v.normal.xyz+=weight*d.normal.xyz;
+            }
+            v.position=skin*v.position; v.normal=float4((skin*float4(v.normal.xyz,0)).xyz,0);
+            float normalLength=length(v.normal.xyz);
+            v.normal.xyz=normalLength>0 && isfinite(normalLength)?v.normal.xyz/normalLength:s.rigid.normal.xyz;
             return transformVertex(v,p);
         }
         static float4 shade(Varying v, bool front, texture2d<float> image, sampler s) {

@@ -38,6 +38,55 @@ internal static class GpuSceneTests
         Console.WriteLine("PASS GPU geometry reuse, visibility picking, clipping, labels and projection");
         RunSceneContentTolerance();
         RunSkinning();
+        RunMorphs();
+    }
+
+    private static void RunMorphs()
+    {
+        var (bar, skeleton) = SkinningTests.Bar();
+        var targets = Enumerable.Range(0, 10).Select(t => new MorphTarget($"target{t}",
+            bar.Mesh.Vertices.Select((v, i) => new Vector3(i * .01f, t * .02f, 0)),
+            t == 3 ? bar.Mesh.Vertices.Select(v => new Vector3(.1f, 0, .2f)) : null)).ToArray();
+        var mesh = new SkinnedMesh(bar.Mesh, skeleton, bar.Influences, targets);
+        var pose = SkeletonPose.Create(skeleton, [Quaternion.Identity, Quaternion.CreateFromAxisAngle(Vector3.UnitZ, .7f)]);
+        var rest = Shape.FromSkinnedMesh(mesh).WithPose(pose);
+        var frame = new GpuScene(); var camera = new Camera(6, 0, 0);
+        var scene = new Scene().Add(rest);
+        frame.Update(scene, camera, 120, 120);
+        var geometry = frame.Items[0].Geometry;
+        Check(frame.Items[0].Morphs.Count == 0, "zero morphs must not be active");
+        var vertices = geometry.Expand(); var deltas = geometry.ExpandMorphs();
+        Check(geometry.MorphVertexCount == bar.Mesh.Vertices.Count && geometry.MorphByteSize == targets.Length * bar.Mesh.Vertices.Count * 32L,
+            "morph storage uses original vertices");
+        for (var corner = 0; corner < bar.Mesh.Indices.Count; corner++)
+            Check(vertices[corner * 28 + 24] == bar.Mesh.Indices[corner], "expanded corner source index");
+        for (var t = 0; t < targets.Length; t++) for (var v = 0; v < bar.Mesh.Vertices.Count; v++)
+        {
+            var at = (t * bar.Mesh.Vertices.Count + v) * 8;
+            Check(new Vector3(deltas[at], deltas[at + 1], deltas[at + 2]) == targets[t].PositionDeltas[v] && deltas[at + 3] == 0,
+                "target-major position deltas");
+            Check(new Vector3(deltas[at + 4], deltas[at + 5], deltas[at + 6]) == (targets[t].NormalDeltas?[v] ?? Vector3.Zero) && deltas[at + 7] == 0,
+                "target-major normal deltas");
+        }
+        var weights = Enumerable.Range(0, 10).Select(i => i / 10f).ToArray();
+        var morphed = rest.WithMorphWeights(mesh, weights);
+        scene.Replace(rest, morphed); frame.Update(scene, camera, 120, 120);
+        var item = frame.Items[0];
+        Check(ReferenceEquals(geometry, item.Geometry) && ReferenceEquals(item.Joints, pose.SkinningMatrices), "weights preserve geometry and pose palette");
+        Check(item.Morphs.Count == 8 && item.Morphs.Indices0 == new Vector4(9, 8, 7, 6) && item.Morphs.Indices1 == new Vector4(5, 4, 3, 2), "keep eight largest weights");
+        Check(item.Morphs.Weights0 == new Vector4(.9f, .8f, .7f, .6f) && item.Morphs.Weights1 == new Vector4(.5f, .4f, .3f, .2f), "carry selected weights");
+        var ties = GpuMorphs.Select(Enumerable.Repeat(.5f, 10).ToArray());
+        Check(ties.Indices0 == new Vector4(0, 1, 2, 3) && ties.Indices1 == new Vector4(4, 5, 6, 7), "ties retain target order");
+        Check(typeof(PosedGeometry).GetField("_deformed", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(morphed.Mesh) is null,
+            "morph preparation must never deform CPU geometry");
+        var budget = geometry.ByteSize + geometry.MorphResourceBytes + 2 * (skeleton.Joints.Count * 64L + 80);
+        scene.Add(rest.At(2, 0, 0));
+        new GpuScene { ResourceBudgetBytes = budget }.Update(scene, camera, 120, 120);
+        try { new GpuScene { ResourceBudgetBytes = budget - 1 }.Update(scene, camera, 120, 120); Check(false, "morph deltas and per-instance constants must count toward budget"); }
+        catch (GpuSceneException) { }
+        scene.Clear(); scene.Add(rest); frame.Update(scene, camera, 120, 120);
+        Check(frame.Items[0].Morphs.Count == 0 && frame.Items[0].Morphs.Weights0 == Vector4.Zero, "zero weights clear previous selection");
+        Console.WriteLine("PASS GPU morph source indices, delta layout, top-eight weights, pose reuse and resource budget");
     }
 
     private static void RunSkinning()
@@ -51,19 +100,19 @@ internal static class GpuSceneTests
         var scene = new Scene().Add(rest);
         frame.Update(scene, camera, 120, 120);
         var geometry = frame.Items[0].Geometry;
-        Check(geometry.IsSkinned && geometry.VertexStrideFloats == 24 && geometry.ByteSize == geometry.VertexCount * 24L * sizeof(float), "skinned vertex size");
+        Check(geometry.IsSkinned && geometry.VertexStrideFloats == 28 && geometry.ByteSize == geometry.VertexCount * 28L * sizeof(float), "skinned vertex size");
         Check(ReferenceEquals(frame.Items[0].Joints, skeleton.RestPose.SkinningMatrices), "rest palette reference");
         Check(((PosedGeometry)rest.Mesh).GetType().GetField("_deformed", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(rest.Mesh) is null,
             "Update must not deform the rest mesh");
         var expanded = geometry.Expand();
-        Check(expanded.Length == geometry.VertexCount * 24, "skinned upload length");
+        Check(expanded.Length == geometry.VertexCount * 28, "skinned upload length");
         Check(expanded[0] == skinned.Mesh.Vertices[skinned.Mesh.Indices[0]].X && expanded[1] == skinned.Mesh.Vertices[skinned.Mesh.Indices[0]].Y,
             "upload uses bind positions");
         Check(expanded[16] == 0 && expanded[17] == 0 && expanded[20] == 1 && expanded[21] == 0,
             "first vertex joint and weight");
         var tipOffset = 0;
         for (var i = 0; i < skinned.Mesh.Indices.Count; i++)
-            if (skinned.Mesh.Indices[i] >= 8) { tipOffset = i * 24; break; }
+            if (skinned.Mesh.Indices[i] >= 8) { tipOffset = i * 28; break; }
         Check(expanded[tipOffset + 16] == 1 && expanded[tipOffset + 20] == 1,
             "tip vertex joint and weight");
         Check(((PosedGeometry)rest.Mesh).GetType().GetField("_deformed", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(rest.Mesh) is null,

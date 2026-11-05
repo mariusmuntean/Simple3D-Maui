@@ -15,14 +15,18 @@ internal sealed unsafe class GlesRenderer : IDisposable
     private byte[] _uniformData = [], _paletteData = [];
     private int[] _paletteOffsets = [];
     // One VAO per resident mesh: attribute layout is specified once at upload, not per draw.
-    private readonly GpuResources<(uint Buffer, uint Vao), uint> _resources = new(
-        mesh => { var (buffer, vao) = mesh; glDeleteVertexArrays(1, ref vao); glDeleteBuffers(1, ref buffer); },
+    private readonly GpuResources<(uint Buffer, uint Vao, uint Deltas), uint> _resources = new(
+        mesh => { var (buffer, vao, deltas) = mesh; glDeleteTextures(1, ref deltas); glDeleteVertexArrays(1, ref vao); glDeleteBuffers(1, ref buffer); },
         texture => glDeleteTextures(1, ref texture));
     internal string Name { get; } = "";
     internal int GeometryUploads { get; private set; }
     internal int TextureUploads { get; private set; }
     internal int PaletteUploads { get; private set; }
     internal int PaletteUploadBytes { get; private set; }
+    internal int DeltaUploads { get; private set; }
+    internal long DeltaUploadBytes { get; private set; }
+    internal int MorphUploads { get; private set; }
+    internal int MorphUploadBytes { get; private set; }
     /// <summary>Always use the offscreen mask/outline composite. For validation that both paths match.</summary>
     internal bool ForceComposite { get; set; }
     /// <summary>Whether the last frame rendered straight to the window surface (no offscreen targets or fullscreen pass).</summary>
@@ -47,6 +51,8 @@ internal sealed unsafe class GlesRenderer : IDisposable
                     glUniformBlockBinding(program, glGetUniformBlockIndex(program, "Joints"), 1);
                 glUseProgram(program);
                 glUniform1i(glGetUniformLocation(program, "image"), 0);
+                if (program == _skinnedProgram || program == _skinnedMaskProgram)
+                    glUniform1i(glGetUniformLocation(program, "morphDeltas"), 2);
             }
             glUseProgram(_screenProgram);
             glUniform1i(glGetUniformLocation(_screenProgram, "sceneColor"), 0);
@@ -69,6 +75,7 @@ internal sealed unsafe class GlesRenderer : IDisposable
     internal void Render(GpuFrame frame, int width, int height, int outputWidth, int outputHeight)
     {
         GeometryUploads = TextureUploads = PaletteUploads = PaletteUploadBytes = 0;
+        DeltaUploads = MorphUploads = MorphUploadBytes = 0; DeltaUploadBytes = 0;
         _resources.Prepare(frame);
         UploadUniforms(frame);
         UploadPalettes(frame);
@@ -98,14 +105,20 @@ internal sealed unsafe class GlesRenderer : IDisposable
         glFrontFace(GL_CCW); glCullFace(GL_BACK);
         glActiveTexture(GL_TEXTURE0);
         var items = frame.Geometry.Items;
-        uint boundTexture = uint.MaxValue, boundProgram = 0;
+        uint boundTexture = uint.MaxValue, boundDeltas = uint.MaxValue, boundProgram = 0;
         var cullState = -1;
         for (var index = 0; index < items.Count; index++)
         {
             var item = items[index];
             var program = item.Joints is null ? (direct ? _program : _maskProgram) : (direct ? _skinnedProgram : _skinnedMaskProgram);
             if (program != boundProgram) { glUseProgram(program); boundProgram = program; }
-            glBindVertexArray(Mesh(item.Geometry));
+            var mesh = Mesh(item.Geometry);
+            glBindVertexArray(mesh.Vao);
+            if (mesh.Deltas != boundDeltas)
+            {
+                glActiveTexture(GL_TEXTURE2); glBindTexture(GL_TEXTURE_2D, mesh.Deltas); glActiveTexture(GL_TEXTURE0);
+                boundDeltas = mesh.Deltas;
+            }
             glBindBufferRange(GL_UNIFORM_BUFFER, 0, _uniform, (nint)index * _uniformStride, sizeof(GpuUniforms));
             if (item.Joints is not null)
                 glBindBufferRange(GL_UNIFORM_BUFFER, 1, _palette, _paletteOffsets[index], GlesShaders.PaletteBytes);
@@ -156,7 +169,11 @@ internal sealed unsafe class GlesRenderer : IDisposable
         var viewProjection = frame.Geometry.ViewProjection;
         fixed (byte* data = _uniformData)
         {
-            for (var i = 0; i < items.Count; i++) *(GpuUniforms*)(data + i * _uniformStride) = GpuUniforms.Create(frame, items[i], viewProjection);
+            for (var i = 0; i < items.Count; i++)
+            {
+                *(GpuUniforms*)(data + i * _uniformStride) = GpuUniforms.Create(frame, items[i], viewProjection);
+                if (items[i].Geometry.MorphVertexCount != 0) { MorphUploads++; MorphUploadBytes += 80; }
+            }
             glBindBuffer(GL_UNIFORM_BUFFER, _uniform);
             glBufferData(GL_UNIFORM_BUFFER, size, data, GL_STREAM_DRAW);
         }
@@ -187,18 +204,42 @@ internal sealed unsafe class GlesRenderer : IDisposable
         }
     }
     private int Align(int bytes) => (bytes + _uniformAlignment - 1) / _uniformAlignment * _uniformAlignment;
-    private uint Mesh(GpuGeometry geometry)
+    private (uint Buffer, uint Vao, uint Deltas) Mesh(GpuGeometry geometry)
     {
-        if (_resources.Meshes.TryGetValue(geometry, out var mesh)) return mesh.Vao;
-        glGenVertexArrays(1, out var vao); glGenBuffers(1, out var buffer); _resources.Meshes.Add(geometry, (buffer, vao));
+        if (_resources.Meshes.TryGetValue(geometry, out var mesh)) return mesh;
+        // Checked before allocating, so a rejected mesh leaves no half-built cache entry.
+        if (geometry.MorphTextureWidth > _maxTextureSize || geometry.MorphTextureHeight > _maxTextureSize)
+            throw new InvalidOperationException($"Morph deltas exceed this device's OpenGL ES texture limit of {_maxTextureSize}x{_maxTextureSize}.");
+        glGenVertexArrays(1, out var vao); glGenBuffers(1, out var buffer); _resources.Meshes.Add(geometry, (buffer, vao, 0));
         glBindVertexArray(vao); glBindBuffer(GL_ARRAY_BUFFER, buffer);
         var vertices = geometry.Expand();
         fixed (float* p = vertices) glBufferData(GL_ARRAY_BUFFER, vertices.Length * sizeof(float), p, GL_STATIC_DRAW);
-        // Skinned geometry appends joint indices and weights (attributes 4 and 5) to the rigid layout.
-        var attributes = geometry.IsSkinned ? 6u : 4u;
+        // Skinning appends joint indices, weights and the unexpanded source vertex index.
+        var attributes = geometry.IsSkinned ? 7u : 4u;
         for (uint a = 0; a < attributes; a++) { glEnableVertexAttribArray(a); glVertexAttribPointer(a, 4, GL_FLOAT, 0, geometry.VertexStrideFloats * sizeof(float), (nint)(a * 16)); }
         GeometryUploads++;
-        return vao;
+        mesh = (buffer, vao, MorphTexture(geometry));
+        _resources.Meshes[geometry] = mesh;
+        return mesh;
+    }
+    private uint MorphTexture(GpuGeometry geometry)
+    {
+        if (geometry.MorphVertexCount == 0) return 0;
+        var width = geometry.MorphTextureWidth; var height = geometry.MorphTextureHeight;
+        var deltas = geometry.ExpandMorphs();
+        // Pad the final row so the native upload never reads beyond the source array.
+        Array.Resize(ref deltas, checked(width * height * 4));
+        glGenTextures(1, out var texture); glActiveTexture(GL_TEXTURE2);
+        try
+        {
+            glBindTexture(GL_TEXTURE_2D, texture); Parameters(GL_NEAREST, GL_CLAMP_TO_EDGE);
+            fixed (float* p = deltas) glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, p);
+            Check();
+            DeltaUploads++; DeltaUploadBytes += (long)deltas.Length * sizeof(float);
+            return texture;
+        }
+        catch { glDeleteTextures(1, ref texture); throw; }
+        finally { glActiveTexture(GL_TEXTURE0); }
     }
     private uint Texture(Texture2D texture)
     {

@@ -21,8 +21,9 @@ Coordinates stay as authored: right-handed, +Y up, counterclockwise front faces.
 | --- | --- |
 | Triangle meshes, indices, normals, UV0, vertex colors | Points, lines, strips (skipped) |
 | Base color factor and texture; `doubleSided`; `KHR_materials_unlit` | PBR maps, alpha blending (drawn opaque), texture transforms |
-| Node hierarchy (TRS or matrix), skins with inverse bind matrices | Morph targets, animations, cameras, lights |
-| VRM 0.x / 1.0 humanoid bone names (`GltfModel.HumanoidBones`) | External or data URIs, sparse accessors, Draco/meshopt (rejected) |
+| Node hierarchy (TRS or matrix), skins with inverse bind matrices | Animations, cameras, lights |
+| Morph targets on skinned primitives (POSITION/NORMAL, dense or sparse, `targetNames`, default `weights`); VRM 0.x / 1.0 expressions | Morph targets on unskinned primitives, TANGENT deltas, expression material binds |
+| VRM 0.x / 1.0 humanoid bone names (`GltfModel.HumanoidBones`) | External or data URIs, sparse accessors outside morph targets, Draco/meshopt (rejected) |
 
 Input is bounded (64 MiB, `Mesh.MaximumElements`, node count and depth); malformed files throw `InvalidDataException`. Degenerate triangles are dropped.
 
@@ -40,13 +41,25 @@ scene.Replace(character.Shape, waved);
 
 Poses and shapes are immutable like the rest of the scene: `WithPose` returns a copy, updating every skinned descendant that uses the pose's skeleton, and `Scene.Replace` redraws. `SkeletonPose.WorldTransforms` gives joint transforms, for example to attach a prop to a hand.
 
+## Expressions and morph targets
+
+A `SkinnedMesh` carries up to 64 morph targets (blend shapes), blended before skinning. Set raw weights with `Shape.WithMorphWeights(mesh, weights)`, or drive VRM expressions by name:
+
+```csharp
+var face = new Dictionary<string, float> { ["joy"] = .8f, ["a"] = mouthOpen, ["blink_l"] = 1 };
+scene.Replace(current, current = character.Model.ApplyExpressions(current, face));
+```
+
+`GltfModel.Expressions` is keyed by lowercase VRM 0.x preset (`joy`, `angry`, `sorrow`, `fun`, `a`…`o`, `blink`, `blink_l`, `blink_r`, `lookup`…) or the custom name; VRM 1.0 presets keep their names and also answer to the VRM 0.x one (`happy`→`joy`, `aa`→`a`, `blinkLeft`→`blink_l`…). `ApplyExpressions` sums intensity × bind weight per target, clamps to [0,1], keeps pose and transforms, ignores unknown names, and replaces every weight of the meshes it touches, so pass the whole face each frame. Which presets exist depends on the model.
+
 ## Rendering cost
 
 | Renderer | What a new pose costs |
 | --- | --- |
 | Metal / OpenGL ES 3 | The bind-pose mesh uploads once and is shared by every pose and instance. Each frame uploads one joint palette (64 bytes per joint) per skinned instance; vertex shaders blend the joints. |
-| Software | The posed mesh is skinned on the CPU once per pose, then rasterized as usual. |
+| Metal / OpenGL ES 3, morphs | Deltas (32 bytes per target per source vertex) upload once per mesh: a Metal buffer, or an RGBA32F texture on OpenGL ES. A weight change uploads 80 bytes of per-item constants; the vertex shader adds the 8 largest nonzero weights (more are dropped on the GPU; the software renderer blends all). |
+| Software | The posed mesh is morphed and skinned on the CPU once per pose or weight change, then rasterized as usual. |
 
 Picking and `Scene.GetBounds` use the posed geometry and skin on the CPU on demand. Lighting skins normals by the blended joint matrix, which is exact for rotations and uniform scale.
 
-Measured with the 3,330-triangle, 65-joint Mirror character on an Apple M-series Mac (Release, CPU time only): tracking, retargeting and posing take 0.02 ms per frame, preparing a 720×1280 GPU frame 0.07 ms, and a 360×640 software frame including CPU skinning 16 ms. Native probes check skinned GPU output against the software renderer, up to 128 joints, and that a pose change uploads no vertex data.
+Measured with the 3,330-triangle, 65-joint Mirror character on an Apple M-series Mac (Release, CPU time only): tracking, retargeting and posing take 0.02 ms per frame, preparing a 720×1280 GPU frame 0.07 ms, and a 360×640 software frame including CPU skinning 16 ms. Native probes check skinned GPU output against the software renderer, up to 128 joints, morphs at several weights on a bent pose, and that a pose or weight change uploads no vertex or delta data.

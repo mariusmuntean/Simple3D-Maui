@@ -12,6 +12,8 @@ internal static class GltfReaderTests
         TexturedQuad();
         Hierarchy();
         Skin();
+        Morphs();
+        Expressions();
         Malformed();
         Smoke();
         Console.WriteLine("PASS binary glTF geometry, materials, transforms, skins, malformed input and VRM mapping");
@@ -143,6 +145,112 @@ internal static class GltfReaderTests
         Check(f.Read().Skeletons[0].Joints.All(j => j.InverseBind == Matrix4x4.Identity), "absent inverse binds");
     }
 
+    private static void Morphs()
+    {
+        var f = MorphFixture();
+        var model = f.Read(); var shape = Leaves(model.CreateShape()).Single();
+        var targets = shape.SkinnedMesh!.MorphTargets;
+        Check(targets.Count == 2 && targets[0].Name == "smile" && targets[1].Name == "blink", "named morph targets");
+        Near(targets[0].PositionDeltas[2], new(.4f, 0, 0), "dense morph positions");
+        Near(targets[0].NormalDeltas![2], new(.1f, 0, 0), "dense morph normals");
+        Near(targets[1].PositionDeltas[2], new(0, -.2f, 0), "sparse morph positions");
+        Check(targets[1].PositionDeltas[0] == Vector3.Zero, "sparse base is zero");
+        Check(shape.MorphWeights!.SequenceEqual([.5f, .25f]), "default mesh weights");
+        Near(shape.Mesh[0].C, new(.1f, 1.95f, 0), "default weights deform rest geometry");
+        Check(shape.TriangleCount == 2, "degenerate index removal preserves morph vertex indexing");
+        foreach (var mutate in new Action<Fixture>[] {
+            x => x.Accessors[^1]!["sparse"]!["count"] = 5,
+            x => x.Accessors[^1]!["sparse"]!["indices"]!["componentType"] = 5126,
+            x => x.Accessors[^1]!["sparse"]!["values"]!["byteOffset"] = 4,
+            x => x.Accessors[^1]!["count"] = 3,
+            x => x.Mesh["weights"] = Numbers(1),
+            x => x.Mesh["weights"] = Numbers(1.1f, 0),
+            x => x.Attributes["NORMAL"] = x.Accessors.Count - 1 })
+        { var bad = MorphFixture(); mutate(bad); Bad(bad.Build(), "malformed morph"); }
+        foreach (var indices in new byte[][] { [2, 2], [3, 2], [2, 4] })
+        {
+            var bad = MorphFixture();
+            bad.Accessors[^1]!["sparse"]!["indices"]!["bufferView"] = bad.View(indices);
+            Bad(bad.Build(), "sparse indices must be increasing and in range");
+        }
+        // Sparse replacements also overlay a dense base.
+        var denseBase = MorphFixture();
+        denseBase.Accessors[^1]!["bufferView"] = denseBase.View(Enumerable.Repeat(.05f, 12).SelectMany(BitConverter.GetBytes).ToArray());
+        Near(Leaves(denseBase.Read().CreateShape()).Single().SkinnedMesh!.MorphTargets[1].PositionDeltas[0], new(.05f), "sparse dense base");
+    }
+
+    private static void Expressions()
+    {
+        var f = MorphFixture();
+        f.Root["extensions"]!["VRM"]!["blendShapeMaster"] = JsonNode.Parse("""
+            {"blendShapeGroups":[
+            {"presetName":"Joy","name":"Smile","binds":[{"mesh":0,"index":0,"weight":75}]},
+            {"presetName":"unknown","name":"MySmile","binds":[{"mesh":0,"index":0,"weight":50}]},
+            {"presetName":"blink","isBinary":true,"binds":[{"mesh":0,"index":1,"weight":100}]}]}
+            """);
+        // One expression bind reaches every primitive and every instance of that mesh.
+        ((JsonArray)f.Mesh["primitives"]!).Add(f.Primitive.DeepClone());
+        ((JsonArray)f.Root["nodes"]!).Add(new JsonObject { ["mesh"] = 0, ["skin"] = 0 });
+        var model = f.Read();
+        Check(model.Expressions["joy"].Binds.Count == 4 && model.Expressions["joy"].Binds.All(b => b.Target == 0 && b.Weight == .75f), "VRM0 normalized mesh binds across primitives and nodes");
+        Check(model.Expressions.ContainsKey("MySmile") && model.Expressions["blink"].IsBinary, "custom name and binary flag");
+        var pose = SkeletonPose.Create(model.Skeletons[0], [Quaternion.Identity, Quaternion.CreateFromAxisAngle(Vector3.UnitZ, .7f)]);
+        var shape = model.CreateShape().WithPose(pose);
+        var changed = model.ApplyExpressions(shape, new Dictionary<string, float> { ["joy"] = .5f, ["MySmile"] = .5f, ["blink"] = .5f });
+        Check(Leaves(changed).All(p => ReferenceEquals(p.Pose, pose) && p.MorphWeights!.SequenceEqual([.625f, 0])), "expression contributions sum while preserving pose");
+        changed = model.ApplyExpressions(changed, new Dictionary<string, float> { ["joy"] = 1, ["MySmile"] = 1, ["blink"] = .5001f });
+        Check(Leaves(changed).All(p => p.MorphWeights!.SequenceEqual([1f, 1f])), "expression sum clamps and binary threshold");
+        changed = model.ApplyExpressions(changed, new Dictionary<string, float> { ["joy"] = 0 });
+        Check(Leaves(changed).All(p => p.MorphWeights is null && ReferenceEquals(p.Pose, pose)), "zero intensity resets affected mesh weights");
+        Check(ReferenceEquals(changed, model.ApplyExpressions(changed, new Dictionary<string, float> { ["missing"] = 1 })), "unknown expressions ignored");
+        Check(ReferenceEquals(shape, model.ApplyExpressions(shape, new Dictionary<string, float> { ["joy"] = float.NaN })), "nonfinite intensity ignored");
+        // As MirrorStage places a character: an extra transformed group around the model.
+        var placed = Shape.Group(shape).Named("Character").Scaled(.5f).Rotated(0, 30, 0).At(1, 2, 3);
+        var wrapped = model.ApplyExpressions(placed, new Dictionary<string, float> { ["joy"] = 1, ["blink_l"] = 1 });
+        Check(wrapped.Position == placed.Position && wrapped.Size == placed.Size && wrapped.Rotation == placed.Rotation && wrapped.Name == "Character" &&
+            Leaves(wrapped).All(p => ReferenceEquals(p.Pose, pose) && p.MorphWeights!.SequenceEqual([.75f, 0])), "expressions reach wrapped groups and keep transforms");
+        var box = Shape.Box();
+        Check(ReferenceEquals(box, model.ApplyExpressions(box, new Dictionary<string, float> { ["joy"] = 1 })), "shapes without bound meshes are left alone");
+
+        var one = MorphFixture();
+        var preset = new JsonObject();
+        foreach (var key in new[] { "happy", "sad", "relaxed", "aa", "ih", "ou", "ee", "oh", "blinkLeft", "blinkRight", "surprised", "lookUp" })
+            preset[key] = JsonNode.Parse("""{"morphTargetBinds":[{"node":3,"index":0,"weight":0.6}]}""");
+        one.Root["extensions"]!["VRMC_vrm"]!["expressions"] = new JsonObject { ["preset"] = preset,
+            ["custom"] = JsonNode.Parse("""{"CustomFace":{"morphTargetBinds":[{"node":3,"index":1,"weight":0.25}]}}""") };
+        ((JsonArray)one.Root["nodes"]!).Add(new JsonObject { ["mesh"] = 0, ["skin"] = 0 });
+        var vrm1 = one.Read();
+        foreach (var (source, alias) in new[] { ("happy", "joy"), ("sad", "sorrow"), ("relaxed", "fun"), ("aa", "a"), ("ih", "i"), ("ou", "u"), ("ee", "e"), ("oh", "o"), ("blinkleft", "blink_l"), ("blinkright", "blink_r") })
+            Check(ReferenceEquals(vrm1.Expressions[source], vrm1.Expressions[alias]), "VRM1 alias " + alias);
+        Check(vrm1.Expressions.ContainsKey("surprised") && vrm1.Expressions.ContainsKey("lookup") && vrm1.Expressions.ContainsKey("CustomFace"), "VRM1 preset case and custom name");
+        Check(vrm1.Expressions["joy"].Binds.Count == 1 && vrm1.Expressions["joy"].Binds[0].Weight == .6f, "VRM1 node binds only selected instance");
+        var expressions = vrm1.ApplyExpressions(vrm1.CreateShape(), new Dictionary<string, float> { ["joy"] = .5f, ["CustomFace"] = 1 });
+        Check(Leaves(expressions).First().MorphWeights!.SequenceEqual([.3f, .25f]), "VRM1 contributions");
+        Check(Leaves(expressions).Last().MorphWeights!.SequenceEqual([.5f, .25f]), "unaffected instance preserves defaults");
+        preset["happy"]!["morphTargetBinds"]![0]!["node"] = 999;
+        Bad(one.Build(), "expression node reference");
+        preset["happy"]!["morphTargetBinds"]![0]!["node"] = 3;
+        preset["happy"]!["morphTargetBinds"]![0]!["index"] = 2;
+        Bad(one.Build(), "expression target reference");
+    }
+
+    private static Fixture MorphFixture()
+    {
+        var f = Skinned();
+        var position = f.Accessor(new float[] { 0, 0, 0, 0, 0, 0, .4f, 0, 0, .4f, 0, 0 }, "VEC3");
+        var normal = f.Accessor(new float[] { 0, 0, 0, 0, 0, 0, .1f, 0, 0, .1f, 0, 0 }, "VEC3");
+        f.Primitive["indices"] = f.Accessor(new ushort[] { 0, 0, 1, 0, 1, 2, 1, 3, 2 }, "SCALAR");
+        var sparse = new JsonObject { ["componentType"] = 5126, ["type"] = "VEC3", ["count"] = 4,
+            ["sparse"] = new JsonObject { ["count"] = 2,
+                ["indices"] = new JsonObject { ["bufferView"] = f.View([2, 3]), ["componentType"] = 5121 },
+                ["values"] = new JsonObject { ["bufferView"] = f.View(new float[] { 0, -.2f, 0, 0, -.2f, 0 }.SelectMany(BitConverter.GetBytes).ToArray()) } } };
+        f.Accessors.Add(sparse);
+        f.Primitive["targets"] = new JsonArray(new JsonObject { ["POSITION"] = position, ["NORMAL"] = normal }, new JsonObject { ["POSITION"] = f.Accessors.Count - 1 });
+        f.Mesh["extras"] = new JsonObject { ["targetNames"] = new JsonArray("smile", "blink") };
+        f.Mesh["weights"] = Numbers(.5f, .25f);
+        return f;
+    }
+
     private static void Malformed()
     {
         var bytes = Basic().Build();
@@ -205,6 +313,40 @@ internal static class GltfReaderTests
         var toes = skeleton.RestPose.WorldTransforms[model.HumanoidBones["leftToes"]].Translation;
         Console.WriteLine($"FROGGY triangles={triangles} joints={skeleton.Joints.Count} bounds={bounds.Min}..{bounds.Max} size={bounds.Size} facing={(toes.Z < foot.Z ? "-Z" : "+Z")} (foot-to-toes={toes - foot}) coverage={coverage}/262144 ({coverage / 2621.44:F2}%) render={outputPath}");
         Console.WriteLine("FROGGY bones=" + string.Join(", ", model.HumanoidBones.Select(b => $"{b.Key}:{b.Value}={skeleton.Joints[b.Value].Name}")));
+        ExpressionSmoke("froggy", 16, ["a", "i", "u", "e", "o", "blink"]);
+        ExpressionSmoke("cat", 17, ["joy", "angry", "sorrow", "fun", "blink_l", "blink_r"]);
+    }
+
+    // Real VRM 0.x assets: presets resolve and move face vertices; renders each to a PPM for inspection.
+    private static void ExpressionSmoke(string name, int targetCount, string[] presets)
+    {
+        using var input = File.OpenRead(Path.Combine(AppContext.BaseDirectory, "Assets", name + ".vrm"));
+        var model = GltfReader.Read(input); var rest = model.CreateShape();
+        Check(Leaves(rest).Max(s => s.SkinnedMesh?.MorphTargets.Count ?? 0) == targetCount, name + " morph target count");
+        foreach (var preset in presets) Check(model.Expressions.ContainsKey(preset), $"{name} preset {preset}");
+        var report = new List<string>();
+        foreach (var expression in new[] { "joy", "a", "blink" }.Where(model.Expressions.ContainsKey).Append("blink_l").Distinct().Where(model.Expressions.ContainsKey))
+        {
+            var applied = model.ApplyExpressions(rest, new Dictionary<string, float> { [expression] = 1 });
+            var moved = 0; var largest = 0f;
+            foreach (var (before, after) in Leaves(rest).Zip(Leaves(applied)))
+                for (var t = 0; t < before.TriangleCount; t++)
+                    foreach (var (p, q) in new[] { (before.Mesh[t].A, after.Mesh[t].A), (before.Mesh[t].B, after.Mesh[t].B), (before.Mesh[t].C, after.Mesh[t].C) })
+                    { var d = Vector3.Distance(p, q); if (d > 1e-5f) moved++; largest = MathF.Max(largest, d); }
+            Check(moved > 0 && largest > 1e-3f, $"{name} {expression} moves face vertices");
+            var scene = new Scene { Light = new(new(.3f, -.4f, 1)), AmbientLight = .35f }.Add(applied); var fit = new Camera(5, MathF.PI, 0); fit.FitToScene(scene);
+            var bounds = scene.GetBounds()!.Value;  // framed on the head
+            var camera = new Camera(fit.Distance * .4f, MathF.PI, 0) { Target = new(0, bounds.Max.Y - .2f * bounds.Size.Y, 0) };
+            var frame = new DepthRenderer().Render(scene, camera, 256, 256, 0xFF123456);
+            var path = Path.Combine(Path.GetTempPath(), $"{name}-{expression}.ppm");
+            using (var output = File.Create(path))
+            {
+                output.Write(Encoding.ASCII.GetBytes("P6\n256 256\n255\n"));
+                foreach (var pixel in frame.Pixels.Span) output.Write([(byte)(pixel >> 16), (byte)(pixel >> 8), (byte)pixel]);
+            }
+            report.Add($"{expression}: {moved} corners, max {largest:0.0000}");
+        }
+        Console.WriteLine($"{name.ToUpperInvariant()} expressions={string.Join(",", model.Expressions.Keys)} | {string.Join("; ", report)} | renders={Path.GetTempPath()}{name}-*.ppm");
     }
 
     private static Fixture Basic()
