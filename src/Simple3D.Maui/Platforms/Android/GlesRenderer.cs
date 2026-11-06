@@ -10,11 +10,10 @@ namespace Simple3D.Maui;
 internal sealed unsafe class GlesRenderer : IDisposable
 {
     private uint _program, _maskProgram, _skinnedProgram, _skinnedMaskProgram, _screenProgram, _uniform, _palette, _vao, _fbo, _color, _mask, _depth;
-    private const int PaletteWidth = 4 * Skeleton.MaximumJoints;
-    private const int PaletteRowBytes = PaletteWidth * 4 * sizeof(float);
-    private int _targetWidth, _targetHeight, _paletteHeight;
-    private readonly int _maxTextureSize, _uniformStride, _outlineLocation;
+    private int _targetWidth, _targetHeight;
+    private readonly int _maxTextureSize, _uniformStride, _uniformAlignment, _outlineLocation;
     private byte[] _uniformData = [], _paletteData = [];
+    private int[] _paletteOffsets = [];
     // One VAO per resident mesh: attribute layout is specified once at upload, not per draw.
     private readonly GpuResources<(uint Buffer, uint Vao, uint Deltas), uint> _resources = new(
         mesh => { var (buffer, vao, deltas) = mesh; glDeleteTextures(1, ref deltas); glDeleteVertexArrays(1, ref vao); glDeleteBuffers(1, ref buffer); },
@@ -44,17 +43,16 @@ internal sealed unsafe class GlesRenderer : IDisposable
             _skinnedProgram = Program(skinned, GlesShaders.GlslFragment);
             _skinnedMaskProgram = Program(skinned, GlesShaders.WithDefine(GlesShaders.GlslFragment, GlesShaders.SelectionMaskDefine));
             _screenProgram = Program(GlesShaders.GlslScreenVertex, GlesShaders.GlslScreenFragment);
-            glGenVertexArrays(1, out _vao); glGenBuffers(1, out _uniform); glGenTextures(1, out _palette);
+            glGenVertexArrays(1, out _vao); glGenBuffers(1, out _uniform); glGenBuffers(1, out _palette);
             foreach (var program in new[] { _program, _maskProgram, _skinnedProgram, _skinnedMaskProgram })
             {
                 glUniformBlockBinding(program, glGetUniformBlockIndex(program, "Params"), 0);
+                if (program == _skinnedProgram || program == _skinnedMaskProgram)
+                    glUniformBlockBinding(program, glGetUniformBlockIndex(program, "Joints"), 1);
                 glUseProgram(program);
                 glUniform1i(glGetUniformLocation(program, "image"), 0);
                 if (program == _skinnedProgram || program == _skinnedMaskProgram)
-                {
                     glUniform1i(glGetUniformLocation(program, "morphDeltas"), 2);
-                    glUniform1i(glGetUniformLocation(program, "jointPalette"), 3);
-                }
             }
             glUseProgram(_screenProgram);
             glUniform1i(glGetUniformLocation(_screenProgram, "sceneColor"), 0);
@@ -65,6 +63,7 @@ internal sealed unsafe class GlesRenderer : IDisposable
             glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, out var alignment);
             alignment = Math.Max(1, alignment);
             _uniformStride = (sizeof(GpuUniforms) + alignment - 1) / alignment * alignment;
+            _uniformAlignment = alignment;
             // Queried with the window surface current and the default framebuffer bound.
             glGetIntegerv(GL_DEPTH_BITS, out var depthBits);
             SupportsDirect = depthBits >= 16;
@@ -121,6 +120,8 @@ internal sealed unsafe class GlesRenderer : IDisposable
                 boundDeltas = mesh.Deltas;
             }
             glBindBufferRange(GL_UNIFORM_BUFFER, 0, _uniform, (nint)index * _uniformStride, sizeof(GpuUniforms));
+            if (item.Joints is not null)
+                glBindBufferRange(GL_UNIFORM_BUFFER, 1, _palette, _paletteOffsets[index], GlesShaders.PaletteBytes);
             var texture = Texture(GpuResources.TextureOf(item));
             if (texture != boundTexture) { glBindTexture(GL_TEXTURE_2D, texture); boundTexture = texture; }
             var cull = item.Shape.Material.DoubleSided ? 0 : 1;
@@ -166,59 +167,43 @@ internal sealed unsafe class GlesRenderer : IDisposable
         var size = items.Count * _uniformStride;
         if (_uniformData.Length < size) _uniformData = new byte[Math.Max(size, _uniformData.Length * 2)];
         var viewProjection = frame.Geometry.ViewProjection;
-        var paletteRow = 0;
         fixed (byte* data = _uniformData)
         {
             for (var i = 0; i < items.Count; i++)
             {
-                var uniforms = GpuUniforms.Create(frame, items[i], viewProjection);
-                if (items[i].Joints is not null) uniforms.MorphInfo.Z = paletteRow++;
-                *(GpuUniforms*)(data + i * _uniformStride) = uniforms;
+                *(GpuUniforms*)(data + i * _uniformStride) = GpuUniforms.Create(frame, items[i], viewProjection);
                 if (items[i].Geometry.MorphVertexCount != 0) { MorphUploads++; MorphUploadBytes += 80; }
             }
             glBindBuffer(GL_UNIFORM_BUFFER, _uniform);
             glBufferData(GL_UNIFORM_BUFFER, size, data, GL_STREAM_DRAW);
         }
     }
-    // One texture row per skinned item, uploaded together once per frame.
+    // Every skinned item's joint palette in one upload per frame. Slots are packed by their real size; each
+    // bound range covers the whole declared block, so the buffer carries one block of tail padding.
     private void UploadPalettes(GpuFrame frame)
     {
         var items = frame.Geometry.Items;
-        var rows = 0;
+        if (_paletteOffsets.Length < items.Count) _paletteOffsets = new int[Math.Max(items.Count, _paletteOffsets.Length * 2)];
+        var used = 0;
         for (var i = 0; i < items.Count; i++)
-            if (items[i].Joints is not null) rows++;
-        if (rows == 0) return;
-        if (PaletteWidth > _maxTextureSize || rows > _maxTextureSize)
-            throw new InvalidOperationException($"Joint palettes require {PaletteWidth}x{rows} texels, exceeding this device's OpenGL ES texture limit of {_maxTextureSize}x{_maxTextureSize}.");
-        var height = _paletteHeight;
-        if (height < rows)
-        {
-            height = Math.Max(1, height);
-            while (height < rows) height = (int)Math.Min((long)height * 2, _maxTextureSize);
-            _paletteData = new byte[checked(height * PaletteRowBytes)];
-        }
+            if (items[i].Joints is { } joints) { _paletteOffsets[i] = used; used = checked(used + Align(joints.Length * sizeof(System.Numerics.Matrix4x4))); }
+        if (used == 0) return;
+        var size = checked(used + GlesShaders.PaletteBytes);
+        if (_paletteData.Length < size) _paletteData = new byte[Math.Max(size, _paletteData.Length * 2)];
         fixed (byte* data = _paletteData)
         {
-            var row = 0;
             for (var i = 0; i < items.Count; i++)
             {
                 if (items[i].Joints is not { } joints) continue;
                 var bytes = joints.Length * sizeof(System.Numerics.Matrix4x4);
-                fixed (System.Numerics.Matrix4x4* source = joints) Buffer.MemoryCopy(source, data + row * PaletteRowBytes, PaletteRowBytes, bytes);
-                row++;
+                fixed (System.Numerics.Matrix4x4* source = joints) Buffer.MemoryCopy(source, data + _paletteOffsets[i], bytes, bytes);
                 PaletteUploads++; PaletteUploadBytes += bytes;
             }
-            glActiveTexture(GL_TEXTURE3); glBindTexture(GL_TEXTURE_2D, _palette);
-            if (height != _paletteHeight)
-            {
-                Parameters(GL_NEAREST, GL_CLAMP_TO_EDGE);
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, PaletteWidth, height, 0, GL_RGBA, GL_FLOAT, data);
-                _paletteHeight = height;
-            }
-            else glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, PaletteWidth, rows, GL_RGBA, GL_FLOAT, data);
-            glActiveTexture(GL_TEXTURE0);
+            glBindBuffer(GL_UNIFORM_BUFFER, _palette);
+            glBufferData(GL_UNIFORM_BUFFER, size, data, GL_STREAM_DRAW);
         }
     }
+    private int Align(int bytes) => (bytes + _uniformAlignment - 1) / _uniformAlignment * _uniformAlignment;
     private (uint Buffer, uint Vao, uint Deltas) Mesh(GpuGeometry geometry)
     {
         if (_resources.Meshes.TryGetValue(geometry, out var mesh)) return mesh;
@@ -311,9 +296,8 @@ internal sealed unsafe class GlesRenderer : IDisposable
     public void Dispose()
     {
         _resources.Clear(); ReleaseTargets();
-        glDeleteBuffers(1, ref _uniform); glDeleteTextures(1, ref _palette); glDeleteVertexArrays(1, ref _vao);
+        glDeleteBuffers(1, ref _uniform); glDeleteBuffers(1, ref _palette); glDeleteVertexArrays(1, ref _vao);
         glDeleteProgram(_program); glDeleteProgram(_maskProgram); glDeleteProgram(_skinnedProgram); glDeleteProgram(_skinnedMaskProgram); glDeleteProgram(_screenProgram);
-        _paletteHeight = 0;
         _uniform = _palette = _vao = _program = _maskProgram = _skinnedProgram = _skinnedMaskProgram = _screenProgram = 0;
     }
 }

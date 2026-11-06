@@ -5,6 +5,8 @@ internal static class GlesShaders
 {
     internal const string SelectionMaskDefine = "SELECTION_MASK";
     internal const string SkinnedDefine = "SKINNED";
+    /// <summary>Joint matrices per skinned draw; the std140 block is 64 bytes per joint.</summary>
+    internal const int PaletteBytes = Simple3D.Core.Skeleton.MaximumJoints * 64;
     internal const string GlslVertex = """
         #version 300 es
         precision highp float;
@@ -17,7 +19,7 @@ internal static class GlesShaders
         layout(location=5) in vec4 jointWeights;
         layout(location=6) in vec4 sourceVertex;
         uniform highp sampler2D morphDeltas;
-        uniform highp sampler2D jointPalette;
+        layout(std140) uniform Joints { mat4 joints[128]; };
         #endif
         layout(std140) uniform Params {
             mat4 world; mat4 vp; mat4 normals;
@@ -28,13 +30,6 @@ internal static class GlesShaders
         out vec3 frontColor;
         out vec3 backColor;
         flat out float selectedFlag;
-        #ifdef SKINNED
-        mat4 jointMatrix(int joint) {
-            int x=4*joint; int row=int(morphInfo.z);
-            return mat4(texelFetch(jointPalette,ivec2(x,row),0),texelFetch(jointPalette,ivec2(x+1,row),0),
-                        texelFetch(jointPalette,ivec2(x+2,row),0),texelFetch(jointPalette,ivec2(x+3,row),0));
-        }
-        #endif
         void main() {
             vec4 localPosition=position; vec3 localNormal=normal.xyz;
         #ifdef SKINNED
@@ -49,7 +44,7 @@ internal static class GlesShaders
                 localNormal+=weight*texelFetch(morphDeltas,ivec2(texel%width,texel/width),0).xyz;
             }
             ivec4 j=ivec4(jointIndices);
-            mat4 skin=jointMatrix(j.x)*jointWeights.x+jointMatrix(j.y)*jointWeights.y+jointMatrix(j.z)*jointWeights.z+jointMatrix(j.w)*jointWeights.w;
+            mat4 skin=joints[j.x]*jointWeights.x+joints[j.y]*jointWeights.y+joints[j.z]*jointWeights.z+joints[j.w]*jointWeights.w;
             localPosition=skin*localPosition; localNormal=(skin*vec4(localNormal,0)).xyz;
             float normalLength=length(localNormal);
             localNormal=normalLength>0.0&&!isinf(normalLength)&&!isnan(normalLength)?localNormal/normalLength:normal.xyz;
