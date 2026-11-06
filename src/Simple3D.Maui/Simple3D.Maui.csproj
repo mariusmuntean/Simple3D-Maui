@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net10.0-android;net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
-    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Linux'))">net10.0-android</TargetFrameworks>
+    <!-- Apple targets need macOS and Xcode; elsewhere only Android builds. Pack on macOS to ship all three. -->
+    <TargetFrameworks>net10.0-android</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('OSX'))">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
     <UseMaui>true</UseMaui>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
@@ -12,6 +13,12 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <!-- Trimming/AOT safe (analyzers enforce it): apps trim unused library code in their default Release builds. -->
     <IsAotCompatible>true</IsAotCompatible>
+    <!-- The oldest systems the library runs on: .NET MAUI 10's Android floor, and for iOS and Mac Catalyst the lowest
+         app minimums the .NET for iOS and Mac Catalyst SDKs accept. The platform analyzers flag any newer API used
+         without a version check. -->
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">17.0</SupportedOSPlatformVersion>
   </PropertyGroup>
   <!-- Diagnostic counters and fault-injection hooks for the gallery's native GPU probes. Packed Release builds omit them. -->
   <PropertyGroup Condition="'$(EnableNativeRenderProbe)' == 'true'">
@@ -29,8 +36,8 @@
   <ItemGroup>
     <!-- Only diagnostic builds of the gallery (native GPU probes) may use internals; packed Release builds keep the sample on the public API. -->
     <InternalsVisibleTo Include="Simple3D.Demo" Condition="'$(Configuration)' == 'Debug' or '$(EnableNativeRenderProbe)' == 'true'" />
-    <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
-    <PackageReference Include="SkiaSharp.Views.Maui.Controls" Version="3.119.2" />
+    <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiMinimumVersion)" />
+    <PackageReference Include="SkiaSharp.Views.Maui.Controls" Version="$(SkiaSharpVersion)" />
     <ProjectReference Include="../Simple3D.Core/Simple3D.Core.csproj" />
     <None Include="../../docs/PACKAGE-README.md" Pack="true" PackagePath="/README.md" />
     <None Include="../../assets/brand/package-icon.png" Pack="true" PackagePath="/" />

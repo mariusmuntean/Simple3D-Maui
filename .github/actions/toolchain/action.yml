@@ -1,0 +1,28 @@
+name: Pinned toolchain
+description: Selects the Xcode in .xcode-version (macOS), installs the .NET SDK and workload set from global.json, and checks both.
+inputs:
+  project:
+    description: Project whose workloads to restore; empty restores none.
+    default: samples/Simple3D.Demo/Simple3D.Demo.csproj
+runs:
+  using: composite
+  steps:
+    - name: Select pinned Xcode
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        xcode="/Applications/Xcode_$(tr -d '[:space:]' < .xcode-version).app"
+        if [ ! -d "$xcode" ]; then
+          echo "::error::$xcode is not on this runner image; change .xcode-version or the runner label" >&2
+          exit 1
+        fi
+        sudo xcode-select --switch "$xcode"
+    - uses: actions/setup-dotnet@v4
+      with:
+        global-json-file: global.json
+    - if: inputs.project != ''
+      shell: bash
+      run: dotnet workload restore "${{ inputs.project }}"
+    - if: runner.os == 'macOS'
+      shell: bash
+      run: bash scripts/check-toolchain.sh

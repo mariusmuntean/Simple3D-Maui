@@ -2,11 +2,27 @@
 
 ## Toolchain and Rider
 
-Use .NET 10 with MAUI workloads. Check `dotnet --info` and `dotnet workload list`. In Rider, choose that CLI installation and its .NET SDK MSBuild under **Settings → Build, Execution, Deployment → Toolset and Build**. A second installation without workloads can produce missing references in the editor.
+The repository pins its toolchain in two files, read by local builds and by CI alike:
 
-Use matching Xcode and Apple workload versions. The locally validated combination is SDK 10.0.401, workload set 10.0.401.1 and Xcode 27. Keep Xcode validation enabled. After a targeted terminal build, run `dotnet restore samples/Simple3D.Demo` before building all platforms in Rider; targeted restores can replace shared runtime assets.
+- `global.json`: the .NET SDK (later patches of the same feature band are accepted) and the workload set.
+- `.xcode-version`: the Xcode that workload set requires.
 
-The manual validation workflow pins that SDK and workload set, creating a job-local `global.json` to prevent a newer preinstalled SDK from taking precedence. Apple builds and documentation use the `xcode-27` runner with Xcode 27.0 selected explicitly. Update those versions together after local validation; installing the latest workload against an older Xcode can break an otherwise unchanged build.
+Set up once, then check whenever something fails to build:
+
+```bash
+curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --version "$(python3 -c "import json; print(json.load(open('global.json'))['sdk']['version'])")"
+export DOTNET_ROOT="$HOME/.dotnet" PATH="$HOME/.dotnet:$PATH"   # in your shell profile, ahead of other dotnet installs
+dotnet workload install maui     # inside the repository: installs the pinned workload set
+bash scripts/check-toolchain.sh  # SDK, workload set and Xcode; prints the fix for any mismatch
+```
+
+`~/.dotnet` needs no administrator rights, also for workloads. Keep a single `dotnet` first on `PATH`: a Homebrew `dotnet` formula or another installation without these workloads produces missing references. In Rider, choose the same installation under **Settings → Build, Execution, Deployment → Toolset and Build**.
+
+Manage Xcode versions with [xcodes](https://github.com/XcodesOrg/xcodes) (`xcodes install 27.1`, `sudo xcodes select 27.1`; it needs an Apple ID sign-in to download). .NET for iOS uses the Xcode chosen by `xcode-select`, unless `XcodeLocation`, `MD_APPLE_SDK_ROOT` or an `AppleSdkRoot` in `~/Library/Preferences/{maui,Xamarin}/Settings.plist` overrides it; the check script reports those. Android builds need JDK 17 or later and the Android SDK: `dotnet build -t:InstallAndroidDependencies -f net10.0-android "-p:AndroidSdkDirectory=$HOME/Library/Android/sdk" -p:AcceptAndroidSdkLicenses=True` installs the SDK.
+
+Simulator and Mac Catalyst builds sign ad hoc by default, so they need no certificate. After a targeted terminal build, run `dotnet restore samples/Simple3D.Demo` before building all platforms in Rider; targeted restores can replace shared runtime assets.
+
+To move to a newer toolchain, change `global.json` and `.xcode-version` together in one pull request, once the `xcode-27` runner image ships that Xcode (its readme lists the installed versions). CI selects the Xcode from `.xcode-version`, installs the SDK and workload set from `global.json` and runs the check script, through `.github/actions/toolchain`. The library's `Microsoft.Maui.Controls` dependency is the minimum it supports (`MauiMinimumVersion` in `Directory.Build.props`), not the workload's version; CI builds the package consumer against both.
 
 Choose the `Simple3D.Demo` configuration with the appropriate platform icon. Android uses the checked-in manifest. If an iOS simulator launch returns `HE0042` / `NSPOSIXErrorDomain code 3`, stop the run and restart that simulator, then retry. Preserve other simulator sessions.
 

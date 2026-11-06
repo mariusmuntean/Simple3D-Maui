@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net10.0-android;net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
-    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Linux'))">net10.0-android</TargetFrameworks>
+    <!-- Apple targets need macOS and Xcode; elsewhere only Android builds. Pack on macOS to ship all three. -->
+    <TargetFrameworks>net10.0-android</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('OSX'))">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
     <OutputType>Exe</OutputType>
     <UseMaui>true</UseMaui>
     <SingleProject>true</SingleProject>
@@ -17,10 +18,6 @@
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">17.0</SupportedOSPlatformVersion>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
   </PropertyGroup>
-  <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
-    <!-- The Mac Catalyst workload (27.0.x) rejects Xcode 27.1; remove once a 27.1 workload ships. -->
-    <ValidateXcodeVersion>false</ValidateXcodeVersion>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(EnableNativeRenderProbe)' == 'true'">
     <DefineConstants>$(DefineConstants);NATIVE_RENDER_PROBE</DefineConstants>
   </PropertyGroup>
@@ -32,6 +29,12 @@
     <!-- Compile the rendering libraries; retain interpreter support for the demo UI. -->
     <UseInterpreter>true</UseInterpreter>
     <MtouchInterpreter>-all,Simple3D.Demo</MtouchInterpreter>
+  </PropertyGroup>
+  <!-- Simulator and Mac Catalyst builds sign ad hoc unless a signing key is given, so they need no certificate.
+       Device builds still take -p:CodesignKey and -p:CodesignProvision. -->
+  <PropertyGroup Condition="'$(CodesignKey)' == '' and ($([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst' or ($([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' and !$(RuntimeIdentifier.StartsWith('ios-'))))">
+    <EnableCodeSigning>true</EnableCodeSigning>
+    <CodesignKey>-</CodesignKey>
   </PropertyGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
     <!-- The accurate model holds full-body tracking far better than the base model (see docs/DEVELOPMENT.md). -->

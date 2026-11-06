@@ -1,4 +1,12 @@
 <Project>
+  <PropertyGroup>
+    <!-- Package versions shared by the library and the test projects. MauiMinimumVersion is the oldest MAUI the
+         library supports: apps resolve their own, newer version. Tests that don't use the MAUI workload have no
+         $(MauiVersion), so they name the current MAUI release here. -->
+    <MauiMinimumVersion>10.0.0</MauiMinimumVersion>
+    <MauiTestVersion>10.0.110</MauiTestVersion>
+    <SkiaSharpVersion>3.119.2</SkiaSharpVersion>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Simple3D.Core' or '$(MSBuildProjectName)' == 'Simple3D.Maui'">
     <Version>0.3.0-preview.1</Version>
     <Authors>Marius Muntean</Authors>

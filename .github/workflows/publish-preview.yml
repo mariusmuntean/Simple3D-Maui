@@ -18,9 +18,10 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       RELEASE_TAG: v0.2.0-preview.1
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
-          dotnet-version: 10.0.401
+          global-json-file: global.json
       - name: Download validated release artifacts
         run: |
           mkdir packages

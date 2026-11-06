@@ -1,9 +1,9 @@
 name: Build and test
 on:
+  pull_request:
+  push:
+    branches: [main]
   workflow_dispatch:
-env:
-  DOTNET_SDK_VERSION: 10.0.401
-  DOTNET_WORKLOAD_VERSION: 10.0.401.1
 concurrency:
   group: build-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -12,15 +12,7 @@ jobs:
     runs-on: xcode-27
     steps:
       - uses: actions/checkout@v4
-      - run: sudo xcode-select --switch /Applications/Xcode_27.0.app
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
-      - name: Select validated SDK
-        run: |
-          printf '{"sdk":{"version":"%s","rollForward":"disable"}}\n' "$DOTNET_SDK_VERSION" > global.json
-          dotnet --version
-      - run: dotnet workload install maui --version "$DOTNET_WORKLOAD_VERSION"
+      - uses: ./.github/actions/toolchain
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -40,13 +32,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install native text prerequisites
         run: sudo apt-get update && sudo apt-get install -y fontconfig fonts-dejavu-core
-      - uses: actions/setup-dotnet@v4
+      - uses: ./.github/actions/toolchain
         with:
-          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
-      - name: Select validated SDK
-        run: |
-          printf '{"sdk":{"version":"%s","rollForward":"disable"}}\n' "$DOTNET_SDK_VERSION" > global.json
-          dotnet --version
+          project: ''
       - run: dotnet run --project tests/Simple3D.Core.Tests --configuration Release
       - run: dotnet run --project tests/Simple3D.Maui.Tests --configuration Release
       - run: dotnet build src/Simple3D.Core --configuration Release --no-restore
@@ -65,28 +53,22 @@ jobs:
             runner: xcode-27
           - tfm: net10.0-android
             rid: android-arm64
-            runner: macos-26
+            runner: xcode-27
     steps:
       - uses: actions/checkout@v4
-      - run: sudo xcode-select --switch /Applications/Xcode_27.0.app
-        if: matrix.tfm != 'net10.0-android'
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
-      - name: Select validated SDK
-        run: |
-          printf '{"sdk":{"version":"%s","rollForward":"disable"}}\n' "$DOTNET_SDK_VERSION" > global.json
-          dotnet --version
       - uses: android-actions/setup-android@v4
         if: matrix.tfm == 'net10.0-android'
-      - run: dotnet workload install maui --version "$DOTNET_WORKLOAD_VERSION"
-      - run: dotnet build samples/Simple3D.Demo/Simple3D.Demo.csproj -f ${{ matrix.tfm }} -r ${{ matrix.rid }} -c Release -p:EnableCodeSigning=false
+      - uses: ./.github/actions/toolchain
+      - run: dotnet build samples/Simple3D.Demo/Simple3D.Demo.csproj -f ${{ matrix.tfm }} -r ${{ matrix.rid }} -c Release
       - name: Pack multi-target MAUI library
         if: matrix.tfm == 'net10.0-maccatalyst'
-        run: dotnet pack src/Simple3D.Maui/Simple3D.Maui.csproj -c Release -p:EnableCodeSigning=false -o artifacts/packages
+        run: dotnet pack src/Simple3D.Maui/Simple3D.Maui.csproj -c Release -o artifacts/packages
+      - name: Build unsigned iOS device demo for AOT
+        if: matrix.tfm == 'net10.0-ios'
+        run: dotnet build samples/Simple3D.Demo/Simple3D.Demo.csproj -f net10.0-ios -r ios-arm64 -c Release -p:EnableCodeSigning=false
       - name: Build signed iOS simulator gallery
         if: matrix.tfm == 'net10.0-ios'
-        run: dotnet build samples/Simple3D.Demo/Simple3D.Demo.csproj -f net10.0-ios -r iossimulator-arm64 -c Debug -p:EnableCodeSigning=true -p:CodesignKey=-
+        run: dotnet build samples/Simple3D.Demo/Simple3D.Demo.csproj -f net10.0-ios -r iossimulator-arm64 -c Debug
       - name: Launch gallery in iOS Simulator
         if: matrix.tfm == 'net10.0-ios'
         run: bash scripts/ios-simulator-smoke.sh
@@ -113,14 +95,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
-      - name: Select validated SDK
-        run: |
-          printf '{"sdk":{"version":"%s","rollForward":"disable"}}\n' "$DOTNET_SDK_VERSION" > global.json
-          dotnet --version
       - uses: android-actions/setup-android@v4
+      - uses: ./.github/actions/toolchain
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -131,7 +107,6 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install 'Pillow>=12,<13'
       - run: python -m unittest discover -s scripts -p 'test_*.py'
-      - run: dotnet workload install maui-android --version "$DOTNET_WORKLOAD_VERSION"
       - run: dotnet build samples/Simple3D.Demo/Simple3D.Demo.csproj -f net10.0-android -r android-x64 -c Debug -p:EmbedAssembliesIntoApk=true
       - name: Reclaim space for Android Emulator
         run: |
@@ -159,3 +134,24 @@ jobs:
             artifacts/android-gpu-probe.log
             artifacts/android-gpu-view-probe.log
           if-no-files-found: warn
+  package-consumer:
+    runs-on: xcode-27
+    strategy:
+      fail-fast: false
+      matrix:
+        MAUI_VERSION: ["10.0.0", "current"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/toolchain
+      - run: dotnet build src/Simple3D.Core --configuration Release
+      - run: dotnet pack src/Simple3D.Core --configuration Release --no-build --output artifacts/packages
+      - name: Pack multi-target MAUI library
+        run: dotnet pack src/Simple3D.Maui/Simple3D.Maui.csproj -c Release -o artifacts/packages
+      - name: Test package consumer
+        run: |
+          if [ "${{ matrix.MAUI_VERSION }}" = "current" ]; then
+            unset MAUI_VERSION
+            BUILD_PACKAGE_MAUI=true bash scripts/test-package-consumer.sh artifacts/packages
+          else
+            BUILD_PACKAGE_MAUI=true MAUI_VERSION="${{ matrix.MAUI_VERSION }}" bash scripts/test-package-consumer.sh artifacts/packages
+          fi

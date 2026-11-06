@@ -14,7 +14,7 @@ Use a clean committed checkout and .NET 10 with Android, iOS and Mac Catalyst wo
 
 ```bash
 dotnet pack src/Simple3D.Core -c Release -p:ContinuousIntegrationBuild=true -o artifacts/packages
-dotnet pack src/Simple3D.Maui -c Release -p:ContinuousIntegrationBuild=true -p:EnableCodeSigning=false -o artifacts/packages
+dotnet pack src/Simple3D.Maui -c Release -p:ContinuousIntegrationBuild=true -o artifacts/packages
 ```
 
 Each package includes license metadata, repository commit, README, icon and XML documentation. Matching `.snupkg` files contain portable PDBs. .NET 10 supplies [Source Link for GitHub](https://github.com/dotnet/sourcelink). Deterministic compilation and CI path normalization remove machine-specific source paths; [SDK package validation](https://learn.microsoft.com/dotnet/fundamentals/package-validation/overview) checks asset compatibility after packing.

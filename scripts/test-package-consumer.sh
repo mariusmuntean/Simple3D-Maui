@@ -10,6 +10,8 @@ mkdir -p "$consumer"
 consumer="$(cd "$consumer" && pwd -P)"
 cp -R "$root/tests/PackageConsumer/Core" "$root/tests/PackageConsumer/Maui" "$consumer/"
 cp -R "$root/samples/Simple3D.Demo/Platforms" "$root/samples/Simple3D.Demo/Resources" "$consumer/Maui/"
+# The same SDK and workload set as the repository.
+cp "$root/global.json" "$consumer/"
 cat > "$consumer/NuGet.Config" <<EOF
 <?xml version="1.0" encoding="utf-8"?>
 <configuration>
@@ -25,8 +27,12 @@ EOF
 "$dotnet_command" run --project "$consumer/Core" -c Release --no-restore -- "$packages"
 echo "Independent consumer: $consumer/Maui/PackageDemo.csproj"
 if [[ "${BUILD_PACKAGE_MAUI:-false}" == true ]]; then
-    "$dotnet_command" restore "$consumer/Maui" --configfile "$consumer/NuGet.Config" -p:Configuration=Release
-    "$dotnet_command" build "$consumer/Maui" -c Release -f net10.0-maccatalyst -r maccatalyst-arm64 -p:EnableCodeSigning=true -p:CodesignKey=-
-    "$dotnet_command" build "$consumer/Maui" -c Release -f net10.0-ios -r iossimulator-arm64 -p:EnableCodeSigning=true -p:CodesignKey=-
-    "$dotnet_command" build "$consumer/Maui" -c Release -f net10.0-android -r android-arm64
+    # MAUI_VERSION builds against an older Microsoft.Maui.Controls, e.g. the library's minimum; unset uses the workload's.
+    maui=(); [[ -n "${MAUI_VERSION:-}" ]] && maui=("-p:ConsumerMauiVersion=$MAUI_VERSION")
+    "$dotnet_command" restore "$consumer/Maui" --configfile "$consumer/NuGet.Config" -p:Configuration=Release ${maui[@]+"${maui[@]}"}
+    if [[ "$(uname)" == Darwin ]]; then
+        "$dotnet_command" build "$consumer/Maui" -c Release -f net10.0-maccatalyst -r maccatalyst-arm64 ${maui[@]+"${maui[@]}"}
+        "$dotnet_command" build "$consumer/Maui" -c Release -f net10.0-ios -r iossimulator-arm64 ${maui[@]+"${maui[@]}"}
+    fi
+    "$dotnet_command" build "$consumer/Maui" -c Release -f net10.0-android -r android-arm64 ${maui[@]+"${maui[@]}"}
 fi
