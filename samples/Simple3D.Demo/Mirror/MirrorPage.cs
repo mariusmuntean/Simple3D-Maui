@@ -14,23 +14,30 @@ public sealed class MirrorPage : ContentPage
 {
     private enum Step { Intro, Starting, Guide, Live, Blocked }
 
-    private readonly SceneView _view = new() { SceneBackgroundColor = Color.FromArgb("#0E1A2B"), IsInteractive = false, Opacity = 0 };
+    private readonly SceneView _view = new() { SceneBackgroundColor = Theme.Canvas, IsInteractive = false, Opacity = 0 };
     private readonly CameraPreview _preview = new() { IsVisible = false };
     private readonly Border _previewFrame;
-    private readonly View _intro, _guide, _blocked, _lostHint;
-    private readonly Label _blockedText = Text("", 16), _status = Text("", 12, "#A9B8D4");
-    private readonly Button _blockedAction, _switchCamera;
+    private readonly Grid _previewHost;
+    private readonly View _intro, _guide, _blocked, _lostHint, _insetStatus, _characterCard;
+    private readonly Label _blockedText = Theme.Label("", Theme.FontBody, 15, Theme.TextSoft), _status = Theme.Label("", Theme.FontMono, 11, Theme.TextMuted);
+    private readonly Label _insetText = Theme.Label("", Theme.FontLabel, 11, Theme.Text);
+    private readonly Border _insetDot = new() { WidthRequest = 6, HeightRequest = 6, StrokeShape = new Ellipse(), VerticalOptions = LayoutOptions.Center };
+    private readonly Label _characterName = Theme.Label("", Theme.FontDisplay, 16, Theme.Text), _characterTracks = Theme.Label("", Theme.FontBody, 12, Theme.TextMuted);
+    private readonly ActionButton _blockedAction;
+    private readonly IconButton _close, _switchCamera;
+    private readonly Grid _topButtons = new() { HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.Start, InputTransparent = true, CascadeInputTransparent = false };
     private readonly ScrollView _characters;
-    private readonly StackLayout _characterRow = new() { Spacing = 10 };
-    private readonly Label _introCharacter = Text("", 15, "#FFD27A", bold: true);
-    private readonly List<(MirrorModel Model, Border Chip)> _chips = [];
+    private readonly StackLayout _characterRow = new() { Spacing = 12 };
+    private readonly Label _introCharacter = Theme.Label("", Theme.FontLabel, 13, Theme.EmberLight);
+    private readonly Image _hero = new() { Aspect = Aspect.AspectFill };
+    private readonly List<(MirrorModel Model, Border Chip, Button Button)> _chips = [];
     private MirrorModel _model = MirrorModels.Find(Preferences.Default.Get<string?>("mirror.character", null));
     // The person's choice of camera; front by default, since people usually film themselves.
     private bool _frontCamera = Preferences.Default.Get("mirror.camera.front", true);
     private bool _switching;
-    private readonly Label _zoomText = Text("", 15, center: true);
+    private readonly Label _zoomText = Theme.Label("", Theme.FontMono, 15, Theme.EmberLight);
     private readonly Border _zoomPill;
-    private readonly View _guidePill;
+    private readonly Label _guideText = Theme.Label("", Theme.FontBody, 14, Theme.Text);
     private int _zoomShown, _choice;
     // Debug builds can replay a video instead of the camera (and on simulators without a body-pose model, recorded
     // landmarks instead of detection) through this same page, for development and automated checks.
@@ -55,53 +62,58 @@ public sealed class MirrorPage : ContentPage
     private int _frames, _poses;
     private double _detectMilliseconds;
 
-    public MirrorPage()
+    public MirrorPage(RenderingMode renderingMode = RenderingMode.Auto)
     {
-        BackgroundColor = Color.FromArgb("#0E1A2B");
+        _view.RenderingMode = renderingMode;
+        BackgroundColor = Theme.Canvas;
+        SafeAreaEdges = SafeAreaEdges.None;
         Shell.SetNavBarIsVisible(this, false);
+        _insetStatus = new HorizontalStackLayout
+        {
+            Spacing = 5, Margin = 8, HorizontalOptions = LayoutOptions.Start, VerticalOptions = LayoutOptions.End, InputTransparent = true,
+            Children = { _insetDot, _insetText }
+        };
         _previewFrame = new Border
         {
-            StrokeThickness = 0, Content = _preview,
+            StrokeThickness = 0, Content = new Grid { Children = { _preview, _insetStatus } },
             StrokeShape = new RoundRectangle { CornerRadius = 0 }
         };
+        SemanticProperties.SetDescription(_previewFrame, "Camera preview");
+        _previewHost = new Grid { InputTransparent = true, Children = { _previewFrame } };
         _intro = Intro();
-        _guidePill = Pill("", top: true);
         _guide = Guide();
-        _lostHint = Pill("Step back into the frame: whole body, waist up, or your face");
-        _blockedAction = PrimaryButton("Open Settings", CameraAccess.OpenSettings);
-        _blocked = new Border
+        _lostHint = Hint(Icons.Create(Icon.FindPerson, Theme.Ember, 20), "Step back into the frame: whole body, waist up, or your face", top: false);
+        _blockedAction = new ActionButton("Open Settings", CameraAccess.OpenSettings, ActionStyle.Primary, Icon.Settings, 56);
+        _blocked = Blocked();
+        _close = new IconButton(Icon.Close, "Close Mirror", BackOrClose) { HorizontalOptions = LayoutOptions.Start, VerticalOptions = LayoutOptions.Start };
+        _switchCamera = new IconButton(Icon.SwitchCamera, "Switch between the front and back camera", SwitchCamera)
         {
-            VerticalOptions = LayoutOptions.Center, Margin = 24, Padding = 22, BackgroundColor = Color.FromRgba(14, 22, 38, 235),
-            StrokeShape = new RoundRectangle { CornerRadius = 22 }, Stroke = Color.FromRgba(255, 255, 255, 30),
-            Content = new VerticalStackLayout { Spacing = 16, Children = { _blockedText, _blockedAction, SecondaryButton("Back", Close) } }
+            HorizontalOptions = LayoutOptions.Start, VerticalOptions = LayoutOptions.Start
         };
-        var close = new Button
-        {
-            Text = "✕", FontSize = 18, WidthRequest = 44, HeightRequest = 44, CornerRadius = 22, Padding = 0,
-            BackgroundColor = Color.FromRgba(8, 12, 22, 170), TextColor = Colors.White,
-            HorizontalOptions = LayoutOptions.Start, VerticalOptions = LayoutOptions.Start, Margin = new Thickness(16, 16, 0, 0)
-        };
-        SemanticProperties.SetDescription(close, "Close Mirror");
-        close.Clicked += (_, _) => Close();
-        _switchCamera = new Button
-        {
-            Text = "⇄", FontSize = 18, WidthRequest = 44, HeightRequest = 44, CornerRadius = 22, Padding = 0,
-            BackgroundColor = Color.FromRgba(8, 12, 22, 170), TextColor = Colors.White,
-            HorizontalOptions = LayoutOptions.Start, VerticalOptions = LayoutOptions.Start, Margin = new Thickness(68, 16, 0, 0)
-        };
-        SemanticProperties.SetDescription(_switchCamera, "Switch between the front and back camera");
-        _switchCamera.Clicked += (_, _) => SwitchCamera();
+        _topButtons.Add(_close);
+        _topButtons.Add(_switchCamera);
         _characters = Carousel();
+        _characterCard = new Border
+        {
+            Padding = new Thickness(18, 10), BackgroundColor = Theme.OverlayStrong, Stroke = Theme.Line, StrokeThickness = 1,
+            StrokeShape = Theme.Rounded(18), InputTransparent = true,
+            Content = new VerticalStackLayout { Spacing = 2, Children = { _characterName, _characterTracks } }
+        };
         // Debug-only developer stats, under the top-left buttons and clear of the carousel.
         _status.HorizontalOptions = LayoutOptions.Start; _status.VerticalOptions = LayoutOptions.Start;
-        _status.Margin = new Thickness(18, 68, 0, 0); _status.InputTransparent = true;
+        _status.InputTransparent = true;
         _zoomPill = new Border
         {
-            IsVisible = false, InputTransparent = true, Padding = new Thickness(14, 6), Margin = new Thickness(0, 20, 0, 0),
-            HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Start,
-            BackgroundColor = Color.FromRgba(8, 12, 22, 200), StrokeShape = new RoundRectangle { CornerRadius = 14 }, Content = _zoomText
+            IsVisible = false, InputTransparent = true, Padding = new Thickness(14, 6),
+            HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Start, BackgroundColor = Theme.OverlayStrong,
+            Stroke = Theme.Line, StrokeThickness = 1, StrokeShape = Theme.Rounded(Theme.RadiusSmall), Content = _zoomText
         };
-        var root = new Grid { Children = { _view, _previewFrame, _guide, _lostHint, _characters, _intro, _blocked, close, _switchCamera, _zoomPill, _status } };
+        var overlay = new Grid
+        {
+            SafeAreaEdges = SafeAreaEdges.All, Padding = new Thickness(Theme.Margin, 8, Theme.Margin, 12), InputTransparent = true, CascadeInputTransparent = false,
+            Children = { _guide, _lostHint, _characterCard, _characters, _blocked, _topButtons, _zoomPill, _status }
+        };
+        var root = new Grid { SafeAreaEdges = SafeAreaEdges.None, Children = { _view, _previewHost, overlay, _intro } };
         // Pinch anywhere to zoom the camera, for example to frame someone standing far away.
         var pinch = new PinchGestureRecognizer();
         pinch.PinchUpdated += OnPinch;
@@ -111,6 +123,11 @@ public sealed class MirrorPage : ContentPage
         Show(Step.Intro);
         _loading = LoadAsync();
         if (IsRequested) Dispatcher.Dispatch(Start);
+#if DEBUG
+        // Screenshot of the blocked state without denying the camera: SIMPLE3D_MIRROR_STATE=blocked.
+        if (Environment.GetEnvironmentVariable("SIMPLE3D_MIRROR_STATE") == "blocked")
+            Block("Mirror needs the camera to see who to copy. You can allow it in Settings.", settings: true);
+#endif
     }
 
     private async Task LoadAsync()
@@ -282,6 +299,8 @@ public sealed class MirrorPage : ContentPage
             case TrackingState.Lost:
                 MirrorHaptics.PersonLost();
                 _lostHint.IsVisible = true;
+                _characterCard.IsVisible = false;
+                ShowInset(searching: true);
                 break;
             default:
                 Show(Step.Guide);
@@ -312,12 +331,16 @@ public sealed class MirrorPage : ContentPage
         _step = step;
         // Switching cameras restarts capture without bringing back the intro.
         _intro.IsVisible = step is Step.Intro || step == Step.Starting && !_switching;
+        _intro.Opacity = step == Step.Starting ? .6 : 1;
+        _topButtons.IsVisible = step is not (Step.Intro or Step.Starting) || _switching;
         _switchCamera.IsVisible = !IsRequested && step is Step.Guide or Step.Live;
         _characters.IsVisible = step is Step.Guide or Step.Live;
-        _intro.Opacity = step == Step.Starting ? .6 : 1;
         _blocked.IsVisible = step == Step.Blocked;
         _guide.IsVisible = step == Step.Guide;
         _lostHint.IsVisible = false;
+        // The blocked screen goes back to the intro's choices (see BackOrClose); while the camera runs, the button closes Mirror.
+        _close.SetIcon(step == Step.Blocked ? Icon.Back : Icon.Close, Theme.Text);
+        SemanticProperties.SetDescription(_close.Button, step == Step.Blocked ? "Back" : "Close Mirror");
         // Pose rate, detection latency and frame time are for developers, not for the people using the app.
 #if DEBUG
         _status.IsVisible = step is Step.Guide or Step.Live;
@@ -325,16 +348,32 @@ public sealed class MirrorPage : ContentPage
         _status.IsVisible = false;
 #endif
         _preview.IsVisible = step is Step.Guide or Step.Live;
-        // Full-screen viewfinder while searching; a small inset while the frog performs.
+        // Full-screen viewfinder while searching; a small inset while the character performs.
         var live = step == Step.Live;
-        UpdateLayout();
+        // iOS keeps modal content out of the status bar: there, match the scene instead of showing the glow.
+        Background = step is Step.Guide or Step.Live ? new SolidColorBrush(Theme.Canvas) : Theme.Glow(Theme.Canvas, .3, .9);
+        _characterCard.IsVisible = live;
+        _previewHost.SafeAreaEdges = live ? SafeAreaEdges.All : SafeAreaEdges.None;
         _previewFrame.HorizontalOptions = live ? LayoutOptions.End : LayoutOptions.Fill;
         _previewFrame.VerticalOptions = live ? LayoutOptions.Start : LayoutOptions.Fill;
-        _previewFrame.Margin = live ? new Thickness(0, 16, 16, 0) : 0;
-        _previewFrame.StrokeShape = new RoundRectangle { CornerRadius = live ? 16 : 0 };
+        _previewFrame.Margin = live ? new Thickness(0, 8, Theme.Margin, 0) : 0;
+        _previewFrame.StrokeShape = new RoundRectangle { CornerRadius = live ? 18 : 0 };
         _previewFrame.StrokeThickness = live ? 2 : 0;
-        _previewFrame.Stroke = Color.FromRgba(255, 255, 255, 120);
+        _insetStatus.IsVisible = live;
+        if (live) ShowInset(searching: false);
+        UpdateLayout();
         _ = _view.FadeToAsync(live ? 1 : 0, 250);
+    }
+
+    private void ShowInset(bool searching)
+    {
+        _insetText.Text = searching ? "Searching" : "Tracking";
+        _insetText.TextColor = searching ? Theme.TextSoft : Theme.Text;
+        _insetDot.BackgroundColor = searching ? Colors.Transparent : Theme.Ember;
+        _insetDot.Stroke = searching ? Theme.TextMuted : null;
+        _insetDot.StrokeThickness = searching ? 1.5 : 0;
+        _previewFrame.Stroke = searching ? Theme.Text.WithAlpha(.2f) : Theme.EmberLight.WithAlpha(.5f);
+        _previewFrame.Shadow = searching ? null! : Theme.EmberGlow(18, .25f);
     }
 
     private void UpdateLayout()
@@ -351,23 +390,38 @@ public sealed class MirrorPage : ContentPage
         var live = _step == Step.Live;
         _previewFrame.WidthRequest = live ? landscape ? 192 : 108 : -1;
         _previewFrame.HeightRequest = live ? landscape ? 108 : 144 : -1;
-        if (_guidePill is Border { Content: Label label })
-            label.Text = landscape ? "Step back · body, waist up or face" :
-                "Get into the frame: your whole body, from the waist up, or just your head for face tracking";
-        _guidePill.MaximumWidthRequest = Math.Max(1, width - 48);
-        _lostHint.MaximumWidthRequest = Math.Max(1, width - 48);
+        _guideText.Text = landscape ? "Step back · body, waist up or face" : "Get into the frame: whole body, waist up, or just your head for face tracking";
+        // Close and switch camera stack on the left in portrait; in landscape, switch camera sits left of the camera inset.
+        _switchCamera.HorizontalOptions = landscape && live ? LayoutOptions.End : step(LayoutOptions.Start, LayoutOptions.End);
+        _switchCamera.Margin = landscape && live ? new Thickness(0, 0, 192 + 10, 0) : _step == Step.Live ? new Thickness(0, 56, 0, 0) : 0;
         // The carousel runs along the bottom in portrait and down the left edge in landscape, clear of the character's feet.
+        var chip = landscape ? 52 : 64;
         _characterRow.Orientation = landscape ? StackOrientation.Vertical : StackOrientation.Horizontal;
-        _characterRow.Padding = landscape ? new Thickness(0, 8) : new Thickness(16, 0);
+        _characterRow.Spacing = landscape ? 10 : 12;
+        _characterRow.Padding = landscape ? new Thickness(6, 8) : new Thickness(8, 6);
+        foreach (var (_, border, _) in _chips.Where(c => c.Chip.Parent?.Parent == _characterRow))
+        {
+            border.WidthRequest = border.HeightRequest = chip;
+            border.StrokeShape = Theme.Rounded(landscape ? 16 : 20);
+        }
         _characters.Orientation = landscape ? ScrollOrientation.Vertical : ScrollOrientation.Horizontal;
         _characters.HorizontalOptions = landscape ? LayoutOptions.Start : LayoutOptions.Center;
         _characters.VerticalOptions = landscape ? LayoutOptions.Center : LayoutOptions.End;
-        _characters.Margin = landscape ? new Thickness(22, 64, 0, 12) : new Thickness(0, 0, 0, 22);
+        _characters.Margin = landscape ? new Thickness(0, 56, 0, 0) : 0;
+        // The character's name sits above the carousel in portrait, bottom right in landscape.
+        _characterCard.HorizontalOptions = landscape ? LayoutOptions.End : LayoutOptions.Center;
+        _characterCard.VerticalOptions = LayoutOptions.End;
+        _characterCard.Margin = landscape ? 0 : new Thickness(0, 0, 0, 96);
+        _characterName.HorizontalTextAlignment = _characterTracks.HorizontalTextAlignment = landscape ? TextAlignment.End : TextAlignment.Center;
+        _lostHint.Margin = new Thickness(8, 0, 8, landscape ? 0 : 96);
+        _lostHint.MaximumWidthRequest = landscape ? 420 : double.PositiveInfinity;
         // Debug stats wrap left of the camera inset.
-        _status.Margin = new Thickness(landscape ? 100 : 18, landscape ? 24 : 68, 0, 0);
-        _status.MaximumWidthRequest = Math.Max(1, width - (live ? landscape ? 240 : 160 : 36));
+        _status.Margin = new Thickness(landscape ? 64 : 0, landscape ? 4 : 112, 0, 0);
+        _status.MaximumWidthRequest = Math.Max(1, width - (live ? landscape ? 300 : 160 : 36));
         // Keep transient zoom feedback below the top buttons and camera inset.
-        _zoomPill.Margin = new Thickness(0, live && landscape ? 132 : 168, 0, 0);
+        _zoomPill.Margin = new Thickness(0, live && landscape ? 124 : 160, 0, 0);
+
+        LayoutOptions step(LayoutOptions portrait, LayoutOptions guide) => _step == Step.Guide ? guide : portrait;
     }
 
     private void Block(string message, bool settings)
@@ -375,6 +429,12 @@ public sealed class MirrorPage : ContentPage
         _blockedText.Text = message;
         _blockedAction.IsVisible = settings;
         Show(Step.Blocked);
+    }
+
+    private void BackOrClose()
+    {
+        if (_step == Step.Blocked) Show(Step.Intro);
+        else Close();
     }
 
     private async void Close()
@@ -425,130 +485,158 @@ public sealed class MirrorPage : ContentPage
 
     private View Intro()
     {
-        static View Way(string icon, string title, string detail) => new HorizontalStackLayout
+        static View Way(Icon icon, string title, string detail)
         {
-            Spacing = 14,
-            Children =
+            var glyph = Icons.Create(icon, Theme.Ember, 26, 1.8);
+            glyph.HorizontalOptions = LayoutOptions.Center;
+            var name = Theme.Label(title, Theme.FontLabel, 13, Theme.Text);
+            var text = Theme.Label(detail, Theme.FontBody, 11, Theme.TextMuted);
+            name.HorizontalTextAlignment = text.HorizontalTextAlignment = TextAlignment.Center;
+            return new Border
             {
-                new Border
-                {
-                    WidthRequest = 40, HeightRequest = 40, BackgroundColor = Color.FromRgba(76, 123, 217, 60), StrokeThickness = 0,
-                    StrokeShape = new RoundRectangle { CornerRadius = 12 },
-                    Content = new Label { Text = icon, FontSize = 20, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center }
-                },
-                new VerticalStackLayout { VerticalOptions = LayoutOptions.Center, Children = { Text(title, 16, bold: true), Text(detail, 13, "#A9B8D4") } }
-            }
+                Padding = new Thickness(10, 14), BackgroundColor = Theme.Surface, Stroke = Theme.Line, StrokeThickness = 1, StrokeShape = Theme.Rounded(18),
+                Content = new VerticalStackLayout { Spacing = 8, Children = { glyph, name, text } }
+            };
+        }
+        var back = new IconButton(Icon.Back, "Back to the gallery", Close) { HorizontalOptions = LayoutOptions.Start };
+        var hero = new Border
+        {
+            WidthRequest = 132, HeightRequest = 132, HorizontalOptions = LayoutOptions.Center, StrokeThickness = 2, Stroke = Theme.Ember,
+            StrokeShape = Theme.Rounded(40), BackgroundColor = Theme.Surface, Shadow = Theme.EmberGlow(40, .5f), Content = _hero
         };
+        AutomationProperties.SetIsInAccessibleTree(hero, false);
+        var title = Theme.Label("Mirror", Theme.FontDisplay, 32, Theme.Text);
+        var about = Theme.Label("Move, and a 3D character moves with you: arms, legs, torso, head and face, live from your camera.", Theme.FontBody, 15, Theme.TextSoft);
+        title.HorizontalTextAlignment = about.HorizontalTextAlignment = TextAlignment.Center;
+        about.MaximumWidthRequest = 310;
+        SemanticProperties.SetHeadingLevel(title, SemanticHeadingLevel.Level1);
+        var ways = new Grid { ColumnSpacing = 8, ColumnDefinitions = { new(GridLength.Star), new(GridLength.Star), new(GridLength.Star) } };
+        ways.Add(Way(Icon.Body, "Whole body", "Step back, head to feet in view"));
+        ways.Add(Way(Icon.WaistUp, "Waist up", "Arms, torso and head"), 1);
+        ways.Add(Way(Icon.Face, "Face", "Come close: mouth, eyes, smile"), 2);
+        var label = Theme.Label("CHARACTER", Theme.FontLabel, 12, Theme.TextMuted);
+        label.CharacterSpacing = 1;
+        _introCharacter.HorizontalOptions = LayoutOptions.End;
+        var characterHeader = new Grid { Children = { label, _introCharacter } };
+        var picker = new Grid { ColumnSpacing = 10 };
+        foreach (var model in MirrorModels.All)
+        {
+            picker.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            picker.Add(CharacterChip(model, 76), picker.ColumnDefinitions.Count - 1);
+        }
+        var privacy = new HorizontalStackLayout
+        {
+            Spacing = 6, HorizontalOptions = LayoutOptions.Center,
+            Children = { Icons.Create(Icon.Private, Theme.TextMuted, 16), Theme.Label("Runs on this device. Nothing is recorded or sent.", Theme.FontBody, 12, Theme.TextMuted) }
+        };
+        ((View)privacy.Children[0]).VerticalOptions = LayoutOptions.Center;
         HighlightCharacter();
-        var stack = new VerticalStackLayout
+        var content = new Grid
         {
-            Spacing = 14,
-            Children =
-            {
-                Text("Mirror", 32, bold: true),
-                Text("Move, and a 3D character moves with you: arms, legs, torso, head and face, live from your camera.", 16, "#C7D3EA"),
-                Way("🧍", "Whole body", "Step back until head to feet are in view"),
-                Way("🙋", "Waist up", "Arms, torso and head"),
-                Way("🙂", "Face", "Come close: mouth, eyes, smile and head"),
-                _introCharacter,
-                PrimaryButton("Start camera", Start),
-                SecondaryButton("Back", Close),
-                Text("Everything runs on this device. Nothing is recorded or sent.", 12, "#7F8FAF", center: true),
-            }
+            RowSpacing = 22, Padding = new Thickness(20, 8, 20, 20), MaximumWidthRequest = 480,
+            RowDefinitions = { new(GridLength.Auto), new(GridLength.Auto), new(GridLength.Auto), new(GridLength.Auto), new(GridLength.Star), new(GridLength.Auto) }
         };
-        return new ScrollView
+        content.Add(back);
+        content.Add(new VerticalStackLayout { Spacing = 14, Children = { hero, title, about } }, 0, 1);
+        content.Add(ways, 0, 2);
+        content.Add(new VerticalStackLayout { Spacing = 10, Children = { characterHeader, picker } }, 0, 3);
+        content.Add(new VerticalStackLayout
         {
-            VerticalOptions = LayoutOptions.Center,
-            Content = new Border
-            {
-                Margin = 24, Padding = 24, MaximumWidthRequest = 440, BackgroundColor = Color.FromRgba(14, 22, 38, 235),
-                Stroke = Color.FromRgba(255, 255, 255, 30), StrokeShape = new RoundRectangle { CornerRadius = 24 }, Content = stack
-            }
+            Spacing = 12, Children = { new ActionButton("Start camera", Start, ActionStyle.Primary, Icon.Camera, 56), privacy }
+        }, 0, 5);
+        return new ScrollView { SafeAreaEdges = SafeAreaEdges.All, Content = content, Background = Theme.Glow(Theme.Canvas, .18, .8) };
+    }
+
+    private View Blocked()
+    {
+        var icon = new Border
+        {
+            WidthRequest = 96, HeightRequest = 96, HorizontalOptions = LayoutOptions.Center, BackgroundColor = Theme.Raised, Stroke = Theme.Line,
+            StrokeThickness = 1, StrokeShape = Theme.Rounded(32), Shadow = Theme.EmberGlow(40, .2f), Content = Icons.Create(Icon.CameraOff, Theme.Ember, 36, 1.8, center: true)
         };
+        var title = Theme.Label("Camera is off", Theme.FontDisplay, 26, Theme.Text);
+        title.HorizontalTextAlignment = _blockedText.HorizontalTextAlignment = TextAlignment.Center;
+        SemanticProperties.SetHeadingLevel(title, SemanticHeadingLevel.Level1);
+        var layout = new Grid { RowDefinitions = { new(GridLength.Star), new(GridLength.Auto) }, Padding = new Thickness(4, 0, 4, 8), MaximumWidthRequest = 480 };
+        layout.Add(new VerticalStackLayout { Spacing = 18, Padding = new Thickness(12, 0), VerticalOptions = LayoutOptions.Center, Children = { icon, title, _blockedText } });
+        layout.Add(new VerticalStackLayout { Spacing = 10, Children = { _blockedAction, new ActionButton("Back", BackOrClose, ActionStyle.Secondary) } }, 0, 1);
+        return layout;
     }
 
     // A strip of character thumbnails along the bottom; the chosen one is outlined.
     private ScrollView Carousel()
     {
-        var row = _characterRow;
-        foreach (var model in MirrorModels.All)
-        {
-            var image = new Image { WidthRequest = 56, HeightRequest = 56, Aspect = Aspect.AspectFill, Source = Thumbnail(model) };
-            var chip = new Border
-            {
-                Padding = 3, StrokeThickness = 2.5, BackgroundColor = Color.FromRgba(8, 12, 22, 190),
-                WidthRequest = 67, HeightRequest = 67, HorizontalOptions = LayoutOptions.Start, VerticalOptions = LayoutOptions.Start,
-                StrokeShape = new RoundRectangle { CornerRadius = 18 }, Content = new Border { StrokeThickness = 0, StrokeShape = new RoundRectangle { CornerRadius = 15 }, Content = image }
-            };
-            SemanticProperties.SetHint(chip, "Switches to this character");
-            AutomationProperties.SetIsInAccessibleTree(chip, true);
-            var tap = new TapGestureRecognizer();
-            tap.Tapped += async (_, _) => await ChooseCharacterAsync(model);
-            chip.GestureRecognizers.Add(tap);
-            _chips.Add((model, chip));
-            row.Add(chip);
-        }
+        foreach (var model in MirrorModels.All) _characterRow.Add(CharacterChip(model, 64));
         HighlightCharacter();
-        return new ScrollView { HorizontalScrollBarVisibility = ScrollBarVisibility.Never, VerticalScrollBarVisibility = ScrollBarVisibility.Never, Content = row };
+        return new ScrollView { HorizontalScrollBarVisibility = ScrollBarVisibility.Never, VerticalScrollBarVisibility = ScrollBarVisibility.Never, Content = _characterRow };
+    }
+
+    private View CharacterChip(MirrorModel model, double size)
+    {
+        var chip = new Border
+        {
+            StrokeThickness = 2, BackgroundColor = Theme.Surface, HeightRequest = size,
+            StrokeShape = Theme.Rounded(20), Content = new Image { Aspect = Aspect.AspectFill, Source = SceneCatalog.Character(model.File) }
+        };
+        if (size < 70) chip.WidthRequest = size;
+        var item = new Tappable(chip, null, async () => await ChooseCharacterAsync(model));
+        SemanticProperties.SetHint(item.Button, "Switches to this character");
+        _chips.Add((model, chip, item.Button));
+        return item;
     }
 
     private void HighlightCharacter()
     {
-        _introCharacter.Text = $"Your character: {_model.Name} · change it any time";
-        foreach (var (model, chip) in _chips)
+        _introCharacter.Text = _model.Name;
+        _characterName.Text = _model.Name;
+        _characterTracks.Text = char.ToUpperInvariant(_model.Tracks[0]) + _model.Tracks[1..];
+        _hero.Source = SceneCatalog.Character(_model.File);
+        foreach (var (model, chip, button) in _chips)
         {
             var chosen = model == _model;
-            chip.Stroke = chosen ? Color.FromArgb("#FFD27A") : Color.FromRgba(255, 255, 255, 40);
-            chip.Scale = chosen ? 1.08 : 1;
-            SemanticProperties.SetDescription(chip, chosen ? $"{model.Name}, selected" : model.Name);
+            chip.Stroke = chosen ? Theme.Ember : Theme.Text.WithAlpha(.18f);
+            chip.Shadow = chosen ? Theme.EmberGlow(18, .5f) : null!;
+            ((View)chip.Parent!).Scale = chosen && chip.WidthRequest > 0 ? 1.08 : 1;
+            SemanticProperties.SetDescription(button, chosen ? $"{model.Name}, selected" : model.Name);
         }
     }
 
-    // Thumbnails are rendered from each model (see docs/DEVELOPMENT.md) and bundled as raw assets.
-    private static ImageSource Thumbnail(MirrorModel model) =>
-        ImageSource.FromStream(async _ => await FileSystem.OpenAppPackageFileAsync("mirror/" + System.IO.Path.ChangeExtension(model.File, ".png")));
-
     private View Guide()
     {
-        // A translucent standing figure shows how much of the person should be in frame.
+        // A standing figure shows how much of the person should be in frame.
         var silhouette = new Microsoft.Maui.Controls.Shapes.Path
         {
             Data = (Geometry)new PathGeometryConverter().ConvertFromInvariantString(
                 "M50,4 A13,13 0 1 1 49.9,4 Z M30,36 L70,36 Q80,36 82,46 L90,100 Q91,106 85,107 Q80,107 79,101 L72,60 L72,112 L68,190 " +
                 "Q67,196 61,196 Q55,196 55,190 L52,124 L48,124 L45,190 Q45,196 39,196 Q33,196 32,190 L28,112 L28,60 L21,101 Q20,107 15,107 " +
                 "Q9,106 10,100 L18,46 Q20,36 30,36 Z")!,
-            Aspect = Stretch.Uniform, Fill = Color.FromRgba(255, 255, 255, 22), Stroke = Color.FromRgba(255, 255, 255, 200),
-            StrokeThickness = 2, StrokeDashArray = [4, 3], Margin = new Thickness(0, 128, 0, 104), InputTransparent = true
+            Aspect = Stretch.Uniform, Fill = Theme.Ember.WithAlpha(.08f), Stroke = Theme.Ember, StrokeThickness = 2.5,
+            StrokeDashArray = [3, 2.5], Margin = new Thickness(0, 128, 0, 104), InputTransparent = true, Shadow = Theme.EmberGlow(10, .55f)
         };
-        return new Grid
+        SemanticProperties.SetDescription(silhouette, "Outline showing how to stand in the frame");
+        var dot = new Border
         {
-            InputTransparent = true,
-            Children = { silhouette, _guidePill }
+            WidthRequest = 10, HeightRequest = 10, StrokeThickness = 0, StrokeShape = new Ellipse(), BackgroundColor = Theme.Ember,
+            Shadow = Theme.EmberGlow(10, 1), VerticalOptions = LayoutOptions.Center
+        };
+        return new Grid { InputTransparent = true, Children = { silhouette, Hint(dot, _guideText, top: true) } };
+    }
+
+    private static View Hint(View icon, string text, bool top) => Hint(icon, Theme.Label(text, Theme.FontBody, 14, Theme.Text), top);
+
+    private static View Hint(View icon, Label text, bool top)
+    {
+        icon.VerticalOptions = text.VerticalOptions = LayoutOptions.Center;
+        var row = new Grid { ColumnSpacing = 12, ColumnDefinitions = { new(GridLength.Auto), new(GridLength.Star) } };
+        row.Add(icon);
+        row.Add(text, 1);
+        return new Border
+        {
+            InputTransparent = true, Padding = new Thickness(16, 12), Margin = new Thickness(8, top ? 56 : 0, 8, 0), MaximumWidthRequest = 420,
+            HorizontalOptions = LayoutOptions.Fill, VerticalOptions = top ? LayoutOptions.Start : LayoutOptions.End,
+            BackgroundColor = Theme.OverlayStrong, Stroke = Theme.Ember.WithAlpha(.35f), StrokeThickness = 1, StrokeShape = Theme.Rounded(18), Content = row
         };
     }
-
-    private static View Pill(string text, bool top = false) => new Border
-    {
-        InputTransparent = true, Padding = new Thickness(16, 10), Margin = new Thickness(24, top ? 72 : 0, 24, top ? 0 : 108),
-        HorizontalOptions = LayoutOptions.Center, VerticalOptions = top ? LayoutOptions.Start : LayoutOptions.End,
-        BackgroundColor = Color.FromRgba(8, 12, 22, 200), Stroke = Color.FromRgba(255, 255, 255, 40), StrokeShape = new RoundRectangle { CornerRadius = 18 },
-        Content = Text(text, 15, center: true)
-    };
-
-    private static Button PrimaryButton(string text, Action action) => Button(text, action, "#4C7BD9");
-    private static Button SecondaryButton(string text, Action action) => Button(text, action, "#30466C");
-    private static Button Button(string text, Action action, string color)
-    {
-        var button = new Button { Text = text, BackgroundColor = Color.FromArgb(color), TextColor = Colors.White, CornerRadius = 14, FontSize = 16, Padding = new Thickness(18, 12) };
-        button.Clicked += (_, _) => action();
-        return button;
-    }
-
-    private static Label Text(string text, double size, string color = "#FFFFFF", bool bold = false, bool center = false) => new()
-    {
-        Text = text, FontSize = size, TextColor = Color.FromArgb(color), FontAttributes = bold ? FontAttributes.Bold : FontAttributes.None,
-        HorizontalTextAlignment = center ? TextAlignment.Center : TextAlignment.Start, LineBreakMode = LineBreakMode.WordWrap
-    };
 
     private static void Log(string line)
     {

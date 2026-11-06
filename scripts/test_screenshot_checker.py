@@ -13,13 +13,13 @@ SPEC.loader.exec_module(checker)
 
 class ScreenshotCheckerTests(unittest.TestCase):
     def check(self, panel=True, shape=True, shape_outside=False):
-        image = Image.new("RGB", (360, 720), (13, 19, 34))
+        image = Image.new("RGB", (360, 720), (10, 9, 8))
         draw = ImageDraw.Draw(image)
         if panel:
-            draw.rectangle((20, 150, 340, 520), fill=(24, 36, 59))
+            draw.rectangle((20, 150, 340, 520), fill=(20, 12, 7))
         if shape:
             draw.rectangle((100, 250, 250, 330) if not shape_outside else (100, 550, 250, 630),
-                           fill=(90, 130, 245))
+                           fill=(121, 186, 255))
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "capture.png"
             image.save(path)

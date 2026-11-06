@@ -17,8 +17,8 @@ public static partial class DemoScenes
             {
                 var height = Math.Clamp(values[i] + .45f * MathF.Sin(time * 2.1f + i * .6f), .35f, 2.5f);
                 var color = height < 1f
-                    ? Mix(0xFF80B2FF, 0xFF76DBC7, Math.Clamp((height - .35f) / .65f, 0, 1))
-                    : Mix(0xFF76DBC7, 0xFFFFA66F, Math.Clamp((height - 1.65f) / .85f, 0, 1));
+                    ? Mix(0xFFFFCD80, 0xFFDB768A, Math.Clamp((height - .35f) / .65f, 0, 1))
+                    : Mix(0xFFDB768A, 0xFF6FC8FF, Math.Clamp((height - 1.65f) / .85f, 0, 1));
                 bars[i] = Shape.Box(color).Named($"Sample {i + 1}: {height:0.00}")
                     .Scaled(.56f, height, .56f).At((i - 2) * .78f, height / 2, 0);
             }
@@ -26,8 +26,8 @@ public static partial class DemoScenes
         }
         var barGroup = BarsAt(0);
         scene.Add(barGroup);
-        scene.Add(Shape.Box(0xFF526B9A).Named("Baseline").Scaled(4.1f, .08f, 1.15f).At(0, -.08f, 0));
-        scene.AddLabel(new("5 SAMPLES / 0–2.5", new(-1.7f, 2.75f, 0), 0xFFE4ECFF));
+        scene.Add(Shape.Box(0xFF9A8152).Named("Baseline").Scaled(4.1f, .08f, 1.15f).At(0, -.08f, 0));
+        scene.AddLabel(new("5 SAMPLES / 0–2.5", new(-1.7f, 2.75f, 0), 0xFFFFF7E4));
         var camera = new Camera(6, .45f, .32f) { Projection = CameraProjection.Orthographic };
         camera.FitToScene(scene, 4f / 3);
         return new("Telemetry", "Five synthetic samples mapped to bar height and color in an orthographic chart.", scene, camera,

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Surface scene controls</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#FF8A3D;text-decoration:none}a:hover{color:#FFC08F}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: radial-gradient(90% 45% at 50% 42%, #3A1A08 0%, #140C07 60%); color: #F7F1EC; font-family: Inter, system-ui, sans-serif; position: relative; overflow: hidden">
+
+  <img src="../assets/surface.jpg" alt="Surface scene: a height-colored wave" style="position: absolute; left: -45px; top: 190px; width: 480px; height: 360px; mix-blend-mode: lighten">
+
+  <div style="position: absolute; left: 16px; right: 16px; top: 54px; display: flex; align-items: center; gap: 10px">
+    <a href="Main.dc.html" aria-label="Back to scenes" style="width: 44px; height: 44px; flex: none; border-radius: 22px; background: rgba(21,18,16,.85); border: 1px solid #2E2723; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F7F1EC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+    </a>
+    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center">
+      <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 18px">Surface</span>
+      <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #FF8A3D">03 · Meshes &amp; shading</span>
+    </div>
+    <a href="Renderer.dc.html" aria-label="Renderer: Auto, drawing on the GPU" style="height: 44px; padding: 0 12px; flex: none; border-radius: 22px; background: rgba(21,18,16,.85); border: 1px solid #2E2723; display: flex; align-items: center; gap: 6px; color: #F7F1EC; font-size: 13px; font-weight: 500">
+      <span style="width: 8px; height: 8px; border-radius: 4px; background: #FF8A3D; box-shadow: 0 0 10px #FF8A3D"></span>GPU
+    </a>
+  </div>
+
+  <div role="region" aria-label="Frame stats" style="position: absolute; left: 16px; top: 118px; width: 196px; padding: 12px 14px; border-radius: 16px; background: rgba(21,18,16,.92); border: 1px solid #2E2723; display: flex; flex-direction: column; gap: 4px; font-family: 'JetBrains Mono', monospace">
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <span style="font-size: 18px; font-weight: 500; color: #FFC08F">[n] fps</span>
+      <button type="button" aria-label="Hide frame stats" style="width: 44px; height: 44px; margin: -12px -12px -12px 0; border-radius: 22px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A89C93" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="m6 15 6-6 6 6"></path></svg></button>
+    </div>
+    <span style="font-size: 12px; color: #D6CBC2">[ms] ms CPU · [w]×[h]</span>
+    <span style="font-size: 12px; color: #D6CBC2">Metal</span>
+    <span style="font-size: 12px; color: #D6CBC2">[n] triangles</span>
+  </div>
+
+  <div role="toolbar" aria-label="Camera" style="position: absolute; right: 16px; top: 118px; display: flex; flex-direction: column; gap: 4px; padding: 4px; border-radius: 26px; background: rgba(21,18,16,.85); border: 1px solid #2E2723">
+    <button type="button" aria-label="Zoom in" style="width: 44px; height: 44px; border-radius: 22px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F7F1EC" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+    <button type="button" aria-label="Zoom out" style="width: 44px; height: 44px; border-radius: 22px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F7F1EC" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+    <div style="height: 1px; margin: 2px 8px; background: #2E2723"></div>
+    <button type="button" aria-label="Fit scene to view" style="width: 44px; height: 44px; border-radius: 22px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F7F1EC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path></svg></button>
+    <button type="button" aria-label="Reset scene" style="width: 44px; height: 44px; border-radius: 22px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F7F1EC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5"></path></svg></button>
+  </div>
+
+  <div style="position: absolute; left: 16px; right: 16px; bottom: 34px; padding: 16px; border-radius: 24px; background: rgba(21,18,16,.92); border: 1px solid #2E2723; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span id="shading-label" style="font-size: 12px; color: #A89C93; font-weight: 600">Shading</span>
+        <div role="radiogroup" aria-labelledby="shading-label" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 3px; border-radius: 14px; background: #0A0908; border: 1px solid #2E2723">
+          <button type="button" role="radio" aria-checked="true" style="height: 38px; border-radius: 11px; border: 0; background: #3A1C0A; color: #FFC08F; font: 600 13px Inter, sans-serif; cursor: pointer">Smooth</button>
+          <button type="button" role="radio" aria-checked="false" style="height: 38px; border-radius: 11px; border: 0; background: transparent; color: #D6CBC2; font: 500 13px Inter, sans-serif; cursor: pointer">Flat</button>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span id="light-label" style="font-size: 12px; color: #A89C93; font-weight: 600">Light from</span>
+        <div role="radiogroup" aria-labelledby="light-label" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 3px; border-radius: 14px; background: #0A0908; border: 1px solid #2E2723">
+          <button type="button" role="radio" aria-checked="false" style="height: 38px; border-radius: 11px; border: 0; background: transparent; color: #D6CBC2; font: 500 13px Inter, sans-serif; cursor: pointer">Left</button>
+          <button type="button" role="radio" aria-checked="true" style="height: 38px; border-radius: 11px; border: 0; background: #3A1C0A; color: #FFC08F; font: 600 13px Inter, sans-serif; cursor: pointer">Right</button>
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 14px">
+      <p style="margin: 0; flex: 1; font-size: 14px; line-height: 1.45; color: #D6CBC2">Compare flat and smooth shading, then move the light across the wave.</p>
+      <button type="button" style="height: 52px; padding: 0 20px; flex: none; border-radius: 26px; border: 1px solid #FF8A3D; background: #3A1C0A; box-shadow: 0 0 20px rgba(255,138,61,.3); color: #FFC08F; font: 600 15px Inter, sans-serif; display: flex; align-items: center; gap: 8px; cursor: pointer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFC08F" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"></rect><rect x="14" y="5" width="4" height="14" rx="1"></rect></svg>Pause
+      </button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

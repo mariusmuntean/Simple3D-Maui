@@ -39,6 +39,10 @@ public class MainActivity : MauiAppCompatActivity
             Environment.SetEnvironmentVariable("SIMPLE3D_MIRROR_VIDEO", mirrorVideo);
         if (Intent?.GetStringExtra("simple3d_mirror_landmarks") is { } mirrorLandmarks)
             Environment.SetEnvironmentVariable("SIMPLE3D_MIRROR_LANDMARKS", mirrorLandmarks);
+        if (Intent?.GetStringExtra("simple3d_gallery_scene") is { } galleryScene)
+            Environment.SetEnvironmentVariable("SIMPLE3D_GALLERY_SCENE", galleryScene);
+        if (Intent?.GetStringExtra("simple3d_gallery_show") is { } galleryShow)
+            Environment.SetEnvironmentVariable("SIMPLE3D_GALLERY_SHOW", galleryShow);
         if (Intent?.GetStringExtra("simple3d_camera_probe") is { } cameraProbe)
             Environment.SetEnvironmentVariable("SIMPLE3D_CAMERA_PROBE", cameraProbe);
         base.OnCreate(savedInstanceState);

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Splash</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: radial-gradient(60% 35% at 50% 46%, #3A1A08 0%, #140B06 55%, #0A0908 100%); color: #F7F1EC; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px">
+  <svg width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Simple3D" style="filter: drop-shadow(0 0 28px rgba(255,138,61,.55))">
+    <path d="M64 22 100 43 64 64 28 43z" fill="#FFC08F"></path>
+    <path d="M28 43 64 64v41L28 84z" fill="#FF8A3D"></path>
+    <path d="M100 43 64 64v41l36-21z" fill="#C2541A"></path>
+    <path d="M64 64v41" stroke="#7A3010" stroke-width="2"></path>
+  </svg>
+  <div style="display: flex; flex-direction: column; align-items: center; gap: 6px">
+    <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 28px; letter-spacing: -0.01em">Simple3D</span>
+    <span style="font-size: 14px; color: #A89C93">Gallery</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

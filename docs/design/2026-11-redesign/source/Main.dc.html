@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Simple3D Gallery</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#FF8A3D;text-decoration:none}a:hover{color:#FFC08F}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: radial-gradient(120% 45% at 50% 0%, #2E1609 0%, #0A0908 60%); color: #F7F1EC; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 18px; padding: 54px 16px 30px">
+
+  <header style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 4px">
+    <div style="display: flex; align-items: center; gap: 12px">
+      <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="12" fill="#1E1A17"></rect><path d="M20 8 31 14.5 20 21 9 14.5z" fill="#FFC08F"></path><path d="M9 14.5 20 21v12L9 26.5z" fill="#FF8A3D"></path><path d="M31 14.5 20 21v12l11-6.5z" fill="#C2541A"></path></svg>
+      <div style="display: flex; flex-direction: column">
+        <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.01em">Simple3D</span>
+        <span style="font-size: 13px; color: #A89C93">Interactive 3D for .NET MAUI</span>
+      </div>
+    </div>
+    <a href="Renderer.dc.html" aria-label="Renderer: Auto, drawing on the GPU" style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border-radius: 22px; background: #151210; border: 1px solid #2E2723; color: #F7F1EC; font-size: 13px; font-weight: 500">
+      <span style="width: 8px; height: 8px; border-radius: 4px; background: #FF8A3D; box-shadow: 0 0 10px #FF8A3D"></span>GPU
+    </a>
+  </header>
+
+  <h1 style="margin: 0; padding: 0 4px; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 28px; letter-spacing: -0.01em">Scenes</h1>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+    <a href="Equipment.dc.html" style="display: flex; flex-direction: column; border-radius: 20px; background: #151210; border: 1px solid #2E2723; overflow: hidden; color: #F7F1EC">
+      <img src="../assets/equipment.jpg" alt="" style="width: 100%; height: 118px; object-fit: cover; display: block">
+      <div style="padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600; font-size: 15px">Equipment</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #FF8A3D">01 · Primitives</span></div>
+    </a>
+    <a href="Telemetry.dc.html" style="display: flex; flex-direction: column; border-radius: 20px; background: #151210; border: 1px solid #2E2723; overflow: hidden; color: #F7F1EC">
+      <img src="../assets/telemetry.jpg" alt="" style="width: 100%; height: 118px; object-fit: cover; display: block">
+      <div style="padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600; font-size: 15px">Telemetry</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #FF8A3D">02 · Data</span></div>
+    </a>
+    <a href="Surface.dc.html" style="display: flex; flex-direction: column; border-radius: 20px; background: #151210; border: 1px solid #2E2723; overflow: hidden; color: #F7F1EC">
+      <img src="../assets/surface.jpg" alt="" style="width: 100%; height: 118px; object-fit: cover; display: block">
+      <div style="padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600; font-size: 15px">Surface</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #FF8A3D">03 · Meshes</span></div>
+    </a>
+    <a href="RobotArm.dc.html" style="display: flex; flex-direction: column; border-radius: 20px; background: #151210; border: 1px solid #2E2723; overflow: hidden; color: #F7F1EC">
+      <img src="../assets/robot-arm.jpg" alt="" style="width: 100%; height: 118px; object-fit: cover; display: block">
+      <div style="padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600; font-size: 15px">Robot Arm</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #FF8A3D">04 · Hierarchy</span></div>
+    </a>
+    <a href="Viewer.dc.html" style="display: flex; flex-direction: column; border-radius: 20px; background: #151210; border: 1px solid #2E2723; overflow: hidden; color: #F7F1EC">
+      <img src="../assets/gantry-crane.jpg" alt="" style="width: 100%; height: 118px; object-fit: cover; display: block">
+      <div style="padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600; font-size: 15px">Gantry Crane</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #FF8A3D">05 · Linked motion</span></div>
+    </a>
+    <a href="MirrorIntro.dc.html" style="display: flex; flex-direction: column; border-radius: 20px; background: #151210; border: 1px solid #2E2723; overflow: hidden; color: #F7F1EC">
+      <div style="height: 118px; background: radial-gradient(80% 80% at 50% 60%, #3A1A08 0%, #140C07 75%); display: grid; grid-template-columns: repeat(2, 44px); gap: 6px; justify-content: center; align-content: center">
+        <img src="../assets/avatar-cat.png" alt="" style="width: 44px; height: 44px; border-radius: 12px; object-fit: cover">
+        <img src="../assets/avatar-juanita.png" alt="" style="width: 44px; height: 44px; border-radius: 12px; object-fit: cover">
+        <img src="../assets/avatar-cosmicbot.png" alt="" style="width: 44px; height: 44px; border-radius: 12px; object-fit: cover">
+        <img src="../assets/avatar-froggy.png" alt="" style="width: 44px; height: 44px; border-radius: 12px; object-fit: cover">
+      </div>
+      <div style="padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600; font-size: 15px">Mirror</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #FF8A3D">06 · Camera</span></div>
+    </a>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -16,6 +16,12 @@
     <Compile Include="../../src/Simple3D.Maui/Rendering/*.cs" Link="Rendering/%(Filename)%(Extension)" />
     <Compile Include="../../samples/Simple3D.Shared/**/*.cs" Link="Samples/%(Filename)%(Extension)" />
     <Compile Include="../../samples/Simple3D.Demo/GalleryPage.cs" Link="GalleryPage.cs" />
+    <Compile Include="../../samples/Simple3D.Demo/SceneViewer.cs" Link="SceneViewer.cs" />
+    <Compile Include="../../samples/Simple3D.Demo/SceneCatalog.cs" Link="SceneCatalog.cs" />
+    <Compile Include="../../samples/Simple3D.Demo/Renderer.cs" Link="Renderer.cs" />
+    <Compile Include="../../samples/Simple3D.Demo/Controls.cs" Link="Controls.cs" />
+    <Compile Include="../../samples/Simple3D.Demo/Icons.cs" Link="Icons.cs" />
+    <Compile Include="../../samples/Simple3D.Demo/Theme.cs" Link="Theme.cs" />
     <Compile Include="../../samples/Simple3D.Demo/App.cs" Link="App.cs" />
     <Compile Include="../../samples/Simple3D.Demo/NativeRenderProbe.cs" Link="NativeRenderProbe.cs" />
     <Compile Include="../Shared/RegressionScenes.cs" Link="RegressionScenes.cs" />
