@@ -35,7 +35,9 @@ for y in stride(from: 0, to: image.pixelsHigh, by: 6) {
     }
 }
 
-fputs("Gallery pixels: scene background=\(background), blue shape=\(blueShape)\n", stderr)
-guard background > 1000, blueShape > 100 else {
+// Thresholds scale with the screenshot, like the Android checker's.
+let samples = ((image.pixelsHigh + 5) / 6) * ((image.pixelsWide + 5) / 6)
+fputs("Gallery pixels: scene background=\(background), blue shape=\(blueShape) of \(samples) samples\n", stderr)
+guard Double(background) > Double(samples) * 0.05, Double(blueShape) > Double(samples) * 0.003 else {
     exit(1)
 }

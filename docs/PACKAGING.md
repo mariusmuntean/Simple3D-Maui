@@ -1,9 +1,9 @@
 # Packaging and consumer validation
 
-The preview version is `0.2.0-preview.1` on NuGet.org. The MAUI package depends on Core, so applications install `Simple3D.Maui` alone.
+The current preview is `0.3.0-preview.1`. The MAUI package depends on Core, so applications install `Simple3D.Maui` alone.
 
 ```bash
-dotnet add YourApp.csproj package Simple3D.Maui --version 0.2.0-preview.1
+dotnet add YourApp.csproj package Simple3D.Maui --version 0.3.0-preview.1
 ```
 
 Core-only applications install `Simple3D.Core` instead. See [Getting started](site/getting-started.md) for platform requirements, SkiaSharp registration and the first scene. The local-feed instructions below support development builds.
@@ -37,7 +37,7 @@ In an existing .NET 10 MAUI app, keep only supported targets (Android, iOS and M
 ```
 
 ```bash
-dotnet add YourApp.csproj package Simple3D.Maui --version 0.2.0-preview.1 --no-restore
+dotnet add YourApp.csproj package Simple3D.Maui --version 0.3.0-preview.1 --no-restore
 dotnet restore YourApp.csproj
 ```
 

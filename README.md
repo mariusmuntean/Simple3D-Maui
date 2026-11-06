@@ -1,7 +1,5 @@
 # Simple3D
 
-> Native GPU rendering is unreleased. GPU APIs described here require a source build from this branch; NuGet `0.2.0-preview.1` remains software-only.
-
 ![Simple3D](docs/site/images/brand-banner.svg)
 
 A 3D scene control with software and native GPU rendering for .NET 10 MAUI on iOS, Android and Mac Catalyst. Build a scene from shapes, meshes or rigged glTF/VRM characters, display it in a `SceneView`, and let users orbit, zoom and select parts. Animate skeletons and facial expressions on Metal and OpenGL ES at the display's full refresh rate. Use it for equipment diagrams, data displays, scientific models and characters.
@@ -22,13 +20,13 @@ A 3D scene control with software and native GPU rendering for .NET 10 MAUI on iO
 
 ## Start with a scene
 
-Install the [MAUI preview](https://www.nuget.org/packages/Simple3D.Maui/0.2.0-preview.1) in a .NET 10 MAUI app with Android, iOS or Mac Catalyst targets:
+Install the [MAUI preview](https://www.nuget.org/packages/Simple3D.Maui/0.3.0-preview.1) in a .NET 10 MAUI app with Android, iOS or Mac Catalyst targets. It needs `Microsoft.Maui.Controls` 10.0.0 or later and runs on Android 5.0 (API 21), iOS 15 and Mac Catalyst 17 (macOS 14) or later:
 
 ```bash
-dotnet add YourApp.csproj package Simple3D.Maui --version 0.2.0-preview.1
+dotnet add YourApp.csproj package Simple3D.Maui --version 0.3.0-preview.1
 ```
 
-Core is a transitive dependency. Headless applications can install [Simple3D.Core](https://www.nuget.org/packages/Simple3D.Core/0.2.0-preview.1) alone. For source or local-feed builds, see [packaging](docs/PACKAGING.md). Register SkiaSharp in `MauiProgram`:
+Core is a transitive dependency. Headless applications can install [Simple3D.Core](https://www.nuget.org/packages/Simple3D.Core/0.3.0-preview.1) alone. For source or local-feed builds, see [packaging](docs/PACKAGING.md). Register SkiaSharp in `MauiProgram`:
 
 ```csharp
 using SkiaSharp.Views.Maui.Controls.Hosting;
@@ -56,15 +54,17 @@ Core colors use opaque `0xFFRRGGBB`; angles use radians. Shape transforms return
 
 ## Rendering backends
 
-Choose `RenderingMode.Auto` (default), `Software`, or `Hardware` on `SceneView`. Auto prefers Metal on iOS/Mac Catalyst or OpenGL ES 3 on Android and falls back with a diagnostic. Hardware reports failure without silently using software. Observe `ActiveRenderingBackend`, `RenderingDiagnostic` and `RenderingFailed`. The gallery exposes the same selector.
+Choose `RenderingMode.Auto` (default), `Software`, or `Hardware` on `SceneView`. Auto prefers Metal on iOS/Mac Catalyst or OpenGL ES 3 on Android and falls back with a diagnostic. Hardware reports failure without silently using software. Observe `ActiveRenderingBackend`, `RenderingDiagnostic` and `RenderingFailed`. The gallery's renderer chip (sidebar on tablets and Mac) switches modes at runtime.
 
 `CaptureFrame` always returns an owned software snapshot. GPU painting uses native triangle rendering with cached geometry/textures and no per-frame pixel readback. See [hardware rendering](docs/site/hardware-rendering.md) for limits, picking, capture semantics and the `SKCanvasView` → `ContentView` compatibility change.
 
 ## Try the gallery
 
-Open [Simple3D.sln](Simple3D.sln) in Rider or another MAUI IDE with .NET 10 and the target's MAUI workload. Choose **Simple3D.Demo** and an Android device, iOS simulator or Mac Catalyst target. Apple targets require macOS and a workload-compatible Xcode.
+![The gallery: scene grid, the Surface viewer and Mirror](docs/site/images/gallery.png)
 
-The five examples progress from [Equipment](samples/Simple3D.Shared/Equipment.cs) for primitives, labels and an imported controller with a mapped display, through [Telemetry](samples/Simple3D.Shared/Telemetry.cs) for data updates, [Surface](samples/Simple3D.Shared/Surface.cs) for height-based vertex colors and [Robot Arm](samples/Simple3D.Shared/RobotArm.cs) for hierarchy, to [Gantry Crane](samples/Simple3D.Shared/GantryCrane.cs) for coordinated motion. Then open **Mirror ✦**: point the camera at someone (whole body, waist up, or just the face) and the chosen character copies their pose, face and head in real time; see [the Mirror example](docs/site/examples.md#mirror). In Surface, use **Shading: smooth / flat** to compare normals and **Light: from right / left** to move the directional light. Each file contains one scene and its animation. The gallery pauses in the background; press Animate to resume.
+Open [Simple3D.sln](Simple3D.sln) in Rider or another MAUI IDE (see [develop](#develop) for the toolchain). Choose **Simple3D.Demo** and an Android device, iOS simulator or Mac Catalyst target.
+
+The gallery opens on a grid of scenes; each card opens a full-screen viewer with camera controls, frame statistics and an Animate button. On tablets and Mac a sidebar lists the scenes next to the viewer. The five examples progress from [Equipment](samples/Simple3D.Shared/Equipment.cs) for primitives, labels and an imported controller with a mapped display, through [Telemetry](samples/Simple3D.Shared/Telemetry.cs) for data updates, [Surface](samples/Simple3D.Shared/Surface.cs) for height-based vertex colors and [Robot Arm](samples/Simple3D.Shared/RobotArm.cs) for hierarchy, to [Gantry Crane](samples/Simple3D.Shared/GantryCrane.cs) for coordinated motion. In Surface, **Shading** (Smooth / Flat) compares normals and **Light from** (Left / Right) moves the directional light. Then open **Mirror**: point the camera at someone (whole body, waist up, or just the face) and the chosen character copies their pose, face and head in real time; see [the Mirror example](docs/site/examples.md#mirror). Each scene file contains one scene and its animation. The gallery pauses animation in the background; press Animate to resume.
 
 ## Documentation
 
@@ -85,12 +85,15 @@ The renderer supports opaque textured triangles, skinned meshes with glTF/VRM im
 
 ## Develop
 
+The repository pins its toolchain: `global.json` (the .NET SDK and workload set) and `.xcode-version` (the matching Xcode). Check your machine, then run the tests:
+
 ```bash
+bash scripts/check-toolchain.sh   # prints the fix for anything that doesn't match
 dotnet run --project tests/Simple3D.Core.Tests -c Release
 dotnet run --project tests/Simple3D.Maui.Tests -c Release
 ```
 
-See [development and native validation](docs/DEVELOPMENT.md) for Rider setup, documentation builds, image generation and performance comparisons, and [packaging](docs/PACKAGING.md) for independent package consumers. Portable and headless GLES checks run on pull requests. Hosted native validation requires a manual trigger; native GPU probes compare actual renderer pixels and record completion timings.
+See [development and native validation](docs/DEVELOPMENT.md) for setup (including Xcode versions with xcodes), Rider, documentation builds, image generation and performance comparisons, and [packaging](docs/PACKAGING.md) for independent package consumers. Every pull request builds Android, iOS (simulator and device) and Mac Catalyst, runs the portable, headless GLES and native GPU checks, and builds a package consumer against the minimum and current MAUI.
 
 ## License and contributions
 

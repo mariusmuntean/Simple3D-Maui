@@ -7,7 +7,7 @@ Use `Simple3D.Maui` in a .NET 10 MAUI app targeting Android, iOS or Mac Catalyst
 Install the preview from NuGet.org:
 
 ```bash
-dotnet add YourApp.csproj package Simple3D.Maui --version 0.2.0-preview.1
+dotnet add YourApp.csproj package Simple3D.Maui --version 0.3.0-preview.1
 ```
 
 For development builds, [build and restore from a local feed](https://github.com/mariusmuntean/Simple3D-Maui/blob/main/docs/PACKAGING.md). Register `UseSkiaSharp()` on the app builder, then assign a `Scene` to a `SceneView`.

@@ -29,8 +29,10 @@ def inspect(path):
                     shape_pixels.append((x, y))
         counts[1] = sum(bounds[0] <= x <= bounds[2] and bounds[1] <= y <= bounds[3]
                         for x, y in shape_pixels)
-    print(f"Gallery pixels: scene background={counts[0]}, blue shape={counts[1]}")
-    return all(count > minimum for count, minimum in zip(counts, (1000, 100)))
+    # Thresholds scale with the screenshot: CI's emulator screen is a fraction of a phone's.
+    samples = len(range(0, image.height, 6)) * len(range(0, image.width, 6))
+    print(f"Gallery pixels: scene background={counts[0]}, blue shape={counts[1]} of {samples} samples")
+    return counts[0] > samples * .05 and counts[1] > samples * .003
 
 
 if __name__ == "__main__":

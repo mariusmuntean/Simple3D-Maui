@@ -2,26 +2,45 @@
 
 ## 0.3.0-preview.1 · unreleased
 
-- Skinned meshes: `Skeleton`, `SkeletonPose`, `SkinnedMesh`, `Shape.FromSkinnedMesh`, `Shape.WithPose` and `SkeletonPose.Blend`. Metal and GLES skin in the vertex shader (one joint palette upload per pose); software rendering, picking and bounds skin on the CPU.
-- `GltfReader` (Core) and `GltfLoader` (MAUI) load binary glTF 2.0 and VRM: meshes, base color materials, node hierarchy, skins and the VRM humanoid bone map.
-- Morph targets (CPU, Metal, GLES) and VRM expressions: `MorphTarget`, `Shape.WithMorphWeights`, `GltfModel.Expressions`, `GltfModel.ApplyExpressions` (shows exactly the expressions passed; omitted ones return to neutral, and unchanged weights keep their nodes).
-- `FrameClock` (MAUI) ticks at the display's refresh rate (capped at 240 Hz) for smooth animation.
-- Gallery: the Mirror scene (four characters with per-character face tables, a thumbnail picker, tests on public-domain videos of real people), in which a chosen VRM character copies the body, face and head the camera sees (Apple Vision / Google ML Kit), in portrait or landscape, with guided framing (whole body, waist up or face), camera switching, pinch zoom, animated character swaps and haptics.
-- Add Auto/Software/Hardware rendering modes, native Metal and GLES3 backends, active-backend diagnostics and strict hardware failure reporting.
-- Cache native geometry/textures, depth-test opaque surfaces, and composite visible selection masks.
-- Add gallery backend controls, portable GPU preparation tests, headless GLES comparisons/performance probes and opt-in native GPU probes.
-- Breaking preview API change: SceneView now derives from ContentView rather than SKCanvasView. CaptureFrame remains an owned software snapshot.
-- Scene budget errors are reported through `RenderingDiagnostic` without disabling hardware rendering; near-singular transforms render on the GPU; failed native surfaces release their resources.
-- Gallery renderer picker switches Auto/Software/Hardware at runtime; native GPU probes now include a SceneView-level stage.
-- Fix a crash when switching rendering mode on an attached view (the native GPU surface was released before it was removed from the layout).
-- Hardware frames without a visible selection render in one pass to the drawable; the selection composite uses an 8-bit mask, linear upscaling and a density-scaled outline. Depth is never stored (memoryless on Apple GPUs, invalidated on GLES); Metal uses reversed float depth.
-- The label overlay is only composited and repainted in hardware mode while the scene has labels, once per GPU frame and in step with it.
-- Background GPU submissions on iOS and EGL context loss on Android no longer permanently disable hardware rendering.
-- Resident GPU meshes no longer keep their expanded CPU vertex copy; per-frame renderer bookkeeping no longer allocates.
-- Package: each platform's DLL contains only its own native renderer (GLES and its shaders only on Android, Metal only on iOS/Mac Catalyst), and both libraries are marked trimming/AOT compatible, so apps' Release builds remove unused library code.
-- Fix an iOS/Mac Catalyst UI freeze when the scene or camera changes while a Metal frame is drawing (for example from a `FrameSubmitted` handler); such changes now redraw on the next run-loop turn.
-- Add `SceneView.FrameSubmitted` and `LastFrameMilliseconds`/`LastFrameWidth`/`LastFrameHeight` for frame statistics. The gallery shows them in an FPS HUD and replaces the renderer picker with a segmented selector aligned with its status line.
+Native GPU rendering and animated characters. `SceneView` now draws with Metal on iOS and Mac Catalyst and OpenGL ES 3 on Android, falls back to software when needed, and renders skinned glTF/VRM characters with morph targets.
 
+### Breaking changes
+
+- `SceneView` derives from `ContentView` instead of `SKCanvasView`. `CaptureFrame` still returns an owned software snapshot.
+- The packages need iOS 15, Mac Catalyst 17 (macOS 14) or Android 5.0 (API 21) and later.
+
+### Rendering
+
+- Rendering modes `Auto` (default), `Software` and `Hardware`, switchable at runtime. Auto uses Metal or OpenGL ES 3 and falls back to software with a reason in `RenderingDiagnostic`; Hardware reports failure (`RenderingFailed`) instead of silently using software. `ActiveRenderingBackend` tells which one draws.
+- GPU frames cache geometry and textures, depth-test opaque surfaces and render in one pass when nothing is selected; a selection draws an 8-bit mask and a density-scaled outline. Depth is never stored (memoryless on Apple GPUs, invalidated on OpenGL ES); Metal uses reversed float depth.
+- Scene budget errors are reported in `RenderingDiagnostic` without disabling hardware rendering; near-singular transforms render on the GPU.
+- Labels are composited in hardware mode only while the scene has any, once per GPU frame and in step with it.
+- `SceneView.FrameSubmitted`, `LastFrameMilliseconds`, `LastFrameWidth` and `LastFrameHeight` report frame statistics.
+- `FrameClock` ticks at the display's refresh rate (up to 240 Hz) for smooth animation.
+
+### Characters
+
+- Skinned meshes: `Skeleton`, `SkeletonPose`, `SkinnedMesh`, `Shape.FromSkinnedMesh`, `Shape.WithPose` and `SkeletonPose.Blend`. Metal and OpenGL ES skin in the vertex shader (one joint palette upload per pose); software rendering, picking and bounds skin on the CPU.
+- Morph targets on the CPU, Metal and OpenGL ES: `MorphTarget`, `Shape.WithMorphWeights`.
+- `GltfReader` (Core) and `GltfLoader` (MAUI) load binary glTF 2.0 and VRM: meshes, base color materials, the node hierarchy, skins, the VRM humanoid bone map and VRM expressions (`GltfModel.Expressions`, `GltfModel.ApplyExpressions`, which shows exactly the expressions passed and returns omitted ones to neutral).
+
+### Fixes
+
+- Switching the rendering mode on an attached view no longer crashes (the native surface was released before it left the layout).
+- iOS and Mac Catalyst no longer freeze when the scene or camera changes while a Metal frame draws, for example from a `FrameSubmitted` handler.
+- Background GPU submissions on iOS and EGL context loss on Android no longer disable hardware rendering for good. Failed native surfaces release their resources.
+- Resident GPU meshes no longer keep an expanded CPU vertex copy, and per-frame renderer bookkeeping no longer allocates.
+
+### Packages
+
+- `Simple3D.Maui` depends on the oldest MAUI it supports, `Microsoft.Maui.Controls` 10.0.0 or later, instead of the build's MAUI version, and on SkiaSharp 3.119.2 or later.
+- Each platform's assembly contains only its own renderer (OpenGL ES and its shaders only on Android, Metal only on Apple platforms). Both libraries are trimming and AOT compatible, so apps' Release builds drop unused library code.
+
+### Gallery and repository
+
+- A redesigned gallery: a scene grid opening full-screen viewers, a renderer chip and sheet, a banner when Auto falls back to software, a sidebar layout on tablets and Mac, and new app icon, colors and fonts.
+- The Mirror scene: a VRM character (four to choose from) copies the body, face and head the camera sees, using Apple Vision or Google ML Kit on the device, with guided framing, camera switching, pinch zoom and haptics.
+- `global.json` and `.xcode-version` pin the .NET SDK, workload set and Xcode for local builds and CI; `scripts/check-toolchain.sh` checks a machine against them. CI builds every platform and checks the packages against the minimum and current MAUI on each pull request.
 
 ## 0.2.0-preview.1 · 2026-10-14
 

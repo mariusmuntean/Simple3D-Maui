@@ -91,7 +91,7 @@ To test a Release iOS simulator build, use `BUILD_CONFIGURATION=Release bash scr
 
 ## GPU validation
 
-The portable suites now include scene preparation/projection/picking, rendering-mode failure policy, scene-error recovery, and the gallery's renderer picker exercised in every mode. Run the actual GLES shader pipeline on Linux with Mesa EGL/GLES installed:
+The portable suites now include scene preparation/projection/picking, rendering-mode failure policy, scene-error recovery, and the gallery's renderer sheet exercised in every mode. Run the actual GLES shader pipeline on Linux with Mesa EGL/GLES installed:
 
 ```bash
 sudo apt-get install libegl1 libgles2 libgl1-mesa-dri
