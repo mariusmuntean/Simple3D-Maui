@@ -2,7 +2,7 @@ name: Pinned toolchain
 description: Selects the Xcode in .xcode-version (macOS), installs the .NET SDK and workload set from global.json, and checks both.
 inputs:
   project:
-    description: Project whose workloads to restore; empty restores none.
+    description: Project whose workloads to restore; empty installs only the pinned workload set's manifests.
     default: samples/Simple3D.Demo/Simple3D.Demo.csproj
 runs:
   using: composite
@@ -20,9 +20,11 @@ runs:
     - uses: actions/setup-dotnet@v4
       with:
         global-json-file: global.json
-    - if: inputs.project != ''
-      shell: bash
-      run: dotnet workload restore "${{ inputs.project }}"
+    # global.json pins a workload set, which even workload-free projects need present: without a project, install
+    # just its manifests (seconds); with one, the workloads that project uses.
+    - shell: bash
+      run: |
+        if [ -n "${{ inputs.project }}" ]; then dotnet workload restore "${{ inputs.project }}"; else dotnet workload update; fi
     - if: runner.os == 'macOS'
       shell: bash
       run: bash scripts/check-toolchain.sh

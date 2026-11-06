@@ -16,7 +16,7 @@ dotnet workload install maui     # inside the repository: installs the pinned wo
 bash scripts/check-toolchain.sh  # SDK, workload set and Xcode; prints the fix for any mismatch
 ```
 
-`~/.dotnet` needs no administrator rights, also for workloads. Keep a single `dotnet` first on `PATH`: a Homebrew `dotnet` formula or another installation without these workloads produces missing references. In Rider, choose the same installation under **Settings → Build, Execution, Deployment → Toolset and Build**.
+Because `global.json` pins a workload set, every build (even of `Simple3D.Core`) needs it installed; for Core-only work, `dotnet workload update` installs just its manifests in seconds. `~/.dotnet` needs no administrator rights, also for workloads. Keep a single `dotnet` first on `PATH`: a Homebrew `dotnet` formula or another installation without these workloads produces missing references. In Rider, choose the same installation under **Settings → Build, Execution, Deployment → Toolset and Build**.
 
 Manage Xcode versions with [xcodes](https://github.com/XcodesOrg/xcodes) (`xcodes install 27.1`, `sudo xcodes select 27.1`; it needs an Apple ID sign-in to download). .NET for iOS uses the Xcode chosen by `xcode-select`, unless `XcodeLocation`, `MD_APPLE_SDK_ROOT` or an `AppleSdkRoot` in `~/Library/Preferences/{maui,Xamarin}/Settings.plist` overrides it; the check script reports those. Android builds need JDK 17 or later and the Android SDK: `dotnet build -t:InstallAndroidDependencies -f net10.0-android "-p:AndroidSdkDirectory=$HOME/Library/Android/sdk" -p:AcceptAndroidSdkLicenses=True` installs the SDK.
 

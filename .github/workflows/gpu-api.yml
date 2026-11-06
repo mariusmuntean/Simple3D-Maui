@@ -9,9 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: ./.github/actions/toolchain
         with:
-          global-json-file: global.json
+          project: ''
       - name: Install headless graphics and text dependencies
         run: sudo apt-get update && sudo apt-get install -y libegl1 libgles2 libgl1-mesa-dri fontconfig fonts-dejavu-core
       - run: dotnet run --project tests/Simple3D.Core.Tests -c Release -- --tests-only
