@@ -24,6 +24,7 @@ internal static unsafe class Gles
     internal const int GL_TEXTURE0 = 0x84C0;
     internal const int GL_TEXTURE1 = 0x84C1;
     internal const int GL_TEXTURE2 = 0x84C2;
+    internal const int GL_TEXTURE3 = 0x84C3;
     internal const int GL_TEXTURE_2D = 0x0DE1;
     internal const int GL_CULL_FACE = 0x0B44;
     internal const int GL_TRIANGLES = 0x0004;
@@ -94,6 +95,7 @@ internal static unsafe class Gles
     [DllImport(Library)] internal static extern void glActiveTexture(uint texture);
     [DllImport(Library)] internal static extern void glTexParameteri(uint target, uint name, int value);
     [DllImport(Library)] internal static extern void glTexImage2D(uint target, int level, int format, int width, int height, int border, uint pixelFormat, uint type, void* data);
+    [DllImport(Library)] internal static extern void glTexSubImage2D(uint target, int level, int x, int y, int width, int height, uint pixelFormat, uint type, void* data);
     [DllImport(Library)] internal static extern void glGenFramebuffers(int count, out uint framebuffer);
     [DllImport(Library)] internal static extern void glDeleteFramebuffers(int count, ref uint framebuffer);
     [DllImport(Library)] internal static extern void glBindFramebuffer(uint target, uint framebuffer);
