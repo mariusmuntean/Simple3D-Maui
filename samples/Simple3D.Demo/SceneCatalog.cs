@@ -31,6 +31,10 @@ internal static class SceneCatalog
         return (await _thumbnails).TryGetValue(scene, out var png) ? new MemoryStream(png) : null;
     });
 
+    /// <summary>A Mirror character's thumbnail, rendered from its model and bundled (see docs/DEVELOPMENT.md).</summary>
+    public static ImageSource Character(string file) =>
+        ImageSource.FromStream(async _ => await FileSystem.OpenAppPackageFileAsync("mirror/" + Path.ChangeExtension(file, ".png")));
+
     private static Dictionary<string, byte[]> RenderThumbnails()
     {
         var renderer = new DepthRenderer();

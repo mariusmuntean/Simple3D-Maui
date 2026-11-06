@@ -31,7 +31,6 @@ internal static class Theme
     /// <summary>Behind 3D content: the scene view's own background, so the view blends into the glow around it.</summary>
     public static readonly Color SceneBackground = Color.FromArgb("#140C07");
     public static readonly Color GlowCenter = Color.FromArgb("#3A1A08");
-    public static readonly Color HeaderGlow = Color.FromArgb("#2E1609");
 
     // App icon cube faces.
     public static readonly Color CubeTop = EmberLight;
@@ -47,7 +46,7 @@ internal static class Theme
 
     // Radii and spacing (4 pt grid).
     public const double RadiusSmall = 14, RadiusCard = 20, RadiusPanel = 24, RadiusSheet = 28;
-    public const double Margin = 16, Gap = 10, GroupGap = 20;
+    public const double Margin = 16, Gap = 10;
     /// <summary>The smallest tappable size.</summary>
     public const double Touch = 44;
     /// <summary>Above this window width the gallery shows a sidebar next to the viewer.</summary>

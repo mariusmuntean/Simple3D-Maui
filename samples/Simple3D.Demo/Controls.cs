@@ -2,97 +2,88 @@ using Microsoft.Maui.Controls.Shapes;
 
 namespace Simple3D.Demo;
 
-/// <summary>A transparent button over custom content: it takes the taps, reads its text or description to screen readers,
-/// and dims the content while pressed. Tests click it through <see cref="IButtonController"/>.</summary>
-internal static class Tap
+/// <summary>Custom content under a transparent button: the button takes the taps, reads its text or description to screen
+/// readers and dims the content while pressed. Tests click it through <see cref="IButtonController"/>.</summary>
+internal class Tappable : Grid
 {
-    public static Button Over(View content, string? text, Action action)
+    public Button Button { get; }
+
+    public Tappable(View face, string? text, Action action)
     {
-        var button = new Button
+        face.InputTransparent = true;
+        AutomationProperties.SetIsInAccessibleTree(face, false);
+        Button = new Button
         {
             Text = text, TextColor = Colors.Transparent, BackgroundColor = Colors.Transparent, BorderWidth = 0, Padding = 0,
             CornerRadius = 0, MinimumHeightRequest = 0, MinimumWidthRequest = 0, FontSize = 1
         };
-        button.Pressed += (_, _) => content.Opacity = .6;
-        button.Released += (_, _) => content.Opacity = 1;
-        button.Clicked += (_, _) => action();
-        return button;
+        Button.Pressed += (_, _) => face.Opacity = .6;
+        Button.Released += (_, _) => face.Opacity = 1;
+        Button.Clicked += (_, _) => action();
+        Add(face);
+        Add(Button);
     }
 }
 
 /// <summary>An icon-only round button, at least 44 pt, with a required screen-reader description.</summary>
-internal sealed class IconButton : Grid
+internal sealed class IconButton : Tappable
 {
-    private readonly Grid _face;
-    public Button Button { get; }
+    private readonly Border _face;
 
-    public IconButton(Icon icon, string description, Action action, bool floating = true, double size = Theme.Touch,
-        double iconSize = 20, Color? color = null, Color? background = null)
-    {
-        WidthRequest = HeightRequest = size;
-        _face = new Grid();
-        var face = new Border
+    public IconButton(Icon icon, string description, Action action, bool floating = true, double iconSize = 20, Color? color = null, Color? background = null)
+        : this(new Border
         {
             StrokeShape = new Ellipse(), StrokeThickness = floating ? 1 : 0, Stroke = Theme.Line,
-            BackgroundColor = background ?? (floating ? Theme.Overlay : Colors.Transparent), InputTransparent = true
-        };
-        AutomationProperties.SetIsInAccessibleTree(face, false);
-        _face.Add(face);
+            BackgroundColor = background ?? (floating ? Theme.Overlay : Colors.Transparent)
+        }, description, action)
+    {
+        WidthRequest = HeightRequest = Theme.Touch;
         SetIcon(icon, color ?? Theme.Text, iconSize);
-        Button = Tap.Over(_face, null, action);
-        SemanticProperties.SetDescription(Button, description);
-        Add(_face);
-        Add(Button);
     }
 
-    public void SetIcon(Icon icon, Color color, double size = 20)
+    private IconButton(Border face, string description, Action action) : base(face, null, action)
     {
-        while (_face.Count > 1) _face.RemoveAt(1);
-        var view = Icons.Create(icon, color, size);
-        view.HorizontalOptions = view.VerticalOptions = LayoutOptions.Center;
-        _face.Add(view);
+        _face = face;
+        SemanticProperties.SetDescription(Button, description);
     }
+
+    public void SetIcon(Icon icon, Color color, double size = 20) => _face.Content = Icons.Create(icon, color, size, center: true);
 }
 
 internal enum ActionStyle { Primary, Active, Secondary, Text }
 
-/// <summary>A pill button with an optional leading icon. <see cref="Button"/> carries the text for screen readers and tests.</summary>
-internal sealed class ActionButton : Grid
+/// <summary>A pill button with an optional leading icon. <see cref="Tappable.Button"/> carries the text for screen readers
+/// and tests.</summary>
+internal sealed class ActionButton : Tappable
 {
     private readonly Border _face;
-    private readonly HorizontalStackLayout _content = new() { Spacing = 8, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center, InputTransparent = true };
     private readonly Label _label = new() { FontFamily = Theme.FontLabel, VerticalOptions = LayoutOptions.Center };
-    private Icon? _icon;
-    private ActionStyle _style;
     private readonly Color? _textColor;
-    public Button Button { get; }
+    private const double GlowRoom = 16;
 
     public ActionButton(string text, Action action, ActionStyle style = ActionStyle.Primary, Icon? icon = null, double height = 52, Color? textColor = null)
+        : this(new Border { StrokeShape = Theme.Rounded(height / 2), Padding = new Thickness(20, 0) }, text, action)
     {
-        HeightRequest = Math.Max(Theme.Touch, height);
-        _face = new Border { StrokeShape = Theme.Rounded(height / 2), InputTransparent = true, Padding = new Thickness(20, 0), Content = _content };
-        AutomationProperties.SetIsInAccessibleTree(_face, false);
+        // Room for the glow inside this view: Android does not draw a shadow outside its parent.
+        Padding = GlowRoom;
+        Margin = -GlowRoom;
+        HeightRequest = Math.Max(Theme.Touch, height) + 2 * GlowRoom;
         _label.FontSize = height >= 52 ? 15 : 14;
         _textColor = textColor;
-        Button = Tap.Over(_face, text, action);
-        Add(_face);
-        Add(Button);
         Update(text, style, icon);
     }
 
-    public string Text => Button.Text;
+    private ActionButton(Border face, string text, Action action) : base(face, text, action) => _face = face;
 
     public void Update(string text, ActionStyle style, Icon? icon)
     {
         Button.Text = _label.Text = text;
-        _style = style;
-        _icon = icon;
         var (background, stroke, foreground) = style switch
         {
-            ActionStyle.Primary => ((Brush?)Theme.PrimaryGradient, (Color?)null, Theme.OnEmber),
+            ActionStyle.Primary => (Theme.PrimaryGradient, null, Theme.OnEmber),
             ActionStyle.Active => (new SolidColorBrush(Theme.EmberTint), Theme.Ember, Theme.EmberLight),
             ActionStyle.Secondary => (new SolidColorBrush(Theme.Surface), Theme.Line, Theme.Text),
-            _ => (null, null, _textColor ?? Theme.Text)
+            _ => ((Brush?)null, (Color?)null, _textColor ?? Theme.Text)
         };
         _face.Background = background;
         _face.Stroke = stroke;
@@ -104,19 +95,20 @@ internal sealed class ActionButton : Grid
             _ => null!
         };
         _label.TextColor = foreground;
-        _content.Clear();
-        if (icon is { } shown) _content.Add(Icons.Create(shown, foreground, 16, 2));
-        _content.Add(_label);
+        var content = new HorizontalStackLayout { Spacing = 8, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
+        if (icon is { } shown) content.Add(Icons.Create(shown, foreground, 16, center: true));
+        content.Add(_label);
+        _face.Content = content;
     }
-
-    public void SetText(string text) => Update(text, _style, _icon);
 }
 
-/// <summary>Two or three mutually exclusive options in an inset track; the chosen one is ember-tinted.</summary>
+/// <summary>Two or three mutually exclusive options in an inset track; the chosen one is ember-tinted, or ember-filled when
+/// <c>strong</c>.</summary>
 internal sealed class Segmented : Border
 {
     private readonly List<Button> _buttons = [];
     private readonly Func<int, bool, string> _describe;
+    private readonly bool _strong;
     public int Selected { get; private set; }
     public IReadOnlyList<Button> Buttons => _buttons;
     public event Action<int>? Changed;
@@ -125,12 +117,13 @@ internal sealed class Segmented : Border
     public Segmented(IReadOnlyList<string> options, int selected, Func<int, bool, string> describe, bool strong = false)
     {
         _describe = describe;
+        _strong = strong;
         Padding = 3;
         BackgroundColor = Theme.Canvas;
         Stroke = Theme.Line;
         StrokeThickness = 1;
         StrokeShape = Theme.Rounded(Theme.RadiusSmall);
-        var grid = new Grid { ColumnSpacing = 0 };
+        var grid = new Grid();
         for (var i = 0; i < options.Count; i++)
         {
             grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
@@ -144,12 +137,9 @@ internal sealed class Segmented : Border
             _buttons.Add(button);
             grid.Add(button, i);
         }
-        _strong = strong;
         Content = grid;
         Select(selected, notify: false);
     }
-
-    private readonly bool _strong;
 
     public void Select(int index, bool notify)
     {
@@ -157,10 +147,9 @@ internal sealed class Segmented : Border
         for (var i = 0; i < _buttons.Count; i++)
         {
             var chosen = i == index;
-            var button = _buttons[i];
-            button.Background = chosen ? (_strong ? Theme.PrimaryGradient : new SolidColorBrush(Theme.EmberTint)) : new SolidColorBrush(Colors.Transparent);
-            button.TextColor = chosen ? (_strong ? Theme.OnEmber : Theme.EmberLight) : Theme.TextSoft;
-            SemanticProperties.SetDescription(button, _describe(i, chosen));
+            _buttons[i].Background = !chosen ? new SolidColorBrush(Colors.Transparent) : _strong ? Theme.PrimaryGradient : new SolidColorBrush(Theme.EmberTint);
+            _buttons[i].TextColor = !chosen ? Theme.TextSoft : _strong ? Theme.OnEmber : Theme.EmberLight;
+            SemanticProperties.SetDescription(_buttons[i], _describe(i, chosen));
         }
         if (notify) Changed?.Invoke(index);
     }
@@ -175,9 +164,13 @@ internal static class Panels
         Padding = padding, Content = content
     };
 
-    public static Border Card(View content, double radius = Theme.RadiusPanel, double padding = 16) => new()
+    /// <summary>A panel drawn behind its content rather than around it, so the glow of a button inside is not clipped.</summary>
+    public static View Card(View content, double radius = Theme.RadiusPanel, Thickness? padding = null) => new Grid
     {
-        BackgroundColor = Theme.OverlayStrong, Stroke = Theme.Line, StrokeThickness = 1, StrokeShape = Theme.Rounded(radius),
-        Padding = padding, Content = content
+        Children =
+        {
+            new Border { BackgroundColor = Theme.OverlayStrong, Stroke = Theme.Line, StrokeThickness = 1, StrokeShape = Theme.Rounded(radius) },
+            new ContentView { Padding = padding ?? new Thickness(16), Content = content }
+        }
     };
 }

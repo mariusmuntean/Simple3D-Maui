@@ -55,7 +55,7 @@ internal static class Icons
     private static readonly Dictionary<string, Geometry> Parsed = [];
 
     /// <summary>A <paramref name="size"/> pt square showing the icon in <paramref name="color"/>.</summary>
-    public static View Create(Icon icon, Color color, double size = 20, double stroke = 2)
+    public static View Create(Icon icon, Color color, double size = 20, double stroke = 2, bool center = false)
     {
         var filled = Fills.TryGetValue(icon, out var data);
         var path = Shape(data ?? Strokes[icon], 24, size);
@@ -68,6 +68,7 @@ internal static class Icons
             path.StrokeLineJoin = PenLineJoin.Round;
         }
         var box = new Grid { WidthRequest = size, HeightRequest = size, InputTransparent = true, Children = { path } };
+        if (center) box.HorizontalOptions = box.VerticalOptions = LayoutOptions.Center;
         AutomationProperties.SetIsInAccessibleTree(box, false);
         return box;
     }

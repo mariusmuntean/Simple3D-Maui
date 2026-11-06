@@ -7,16 +7,17 @@ namespace Simple3D.Demo;
 /// show a sidebar with the scenes and the renderer next to the viewer.</summary>
 public sealed class GalleryPage : ContentPage
 {
-    private readonly IReadOnlyList<DemoScene> _scenes = DemoScenes.All;
+    // Each opened page gets its own scene: a scene view stays subscribed to its scene, so sharing one would keep closed pages alive.
+    private static readonly (string Name, Func<DemoScene> Create)[] Scenes = [.. DemoScenes.Factories.Select(create => (create().Name, create))];
     private readonly RendererSettings _renderer = new();
     private readonly RendererSheet _sheet;
     private readonly Grid _root = new();
-    private View? _layout;
     private bool? _wide;
     private bool _visible;
     private SceneViewer? _wideViewer;
     private SceneViewerPage? _viewerPage;
-    private readonly List<(DemoScene Scene, Border Row, Label Name)> _sidebarRows = [];
+    private EventHandler? _sidebarStatus;
+    private readonly List<(string Scene, Border Row, Label Name)> _sidebarRows = [];
 
     public GalleryPage()
     {
@@ -32,7 +33,6 @@ public sealed class GalleryPage : ContentPage
 
     /// <summary>Opens a scene page; tests replace it to capture the page instead of navigating.</summary>
     internal Func<Page, Task> Navigate { get; set; }
-    internal RendererSettings Renderer => _renderer;
     /// <summary>The viewer on screen: the last opened scene page, or the one beside the sidebar.</summary>
     internal SceneViewer? Viewer => _wide == true ? _wideViewer : _viewerPage?.Viewer;
 
@@ -50,7 +50,7 @@ public sealed class GalleryPage : ContentPage
         if (!_visible || Environment.GetEnvironmentVariable("SIMPLE3D_GALLERY_SCENE") is not { } requested) return;
         Environment.SetEnvironmentVariable("SIMPLE3D_GALLERY_SCENE", null);
         if (requested == "Mirror") OpenMirror();
-        else if (_scenes.FirstOrDefault(s => s.Name == requested) is { } sample) Dispatcher.Dispatch(() => Open(sample));
+        else if (Scenes.Any(s => s.Name == requested)) Dispatcher.Dispatch(() => Open(requested));
     }
 
     private void Arrange(bool wide)
@@ -60,16 +60,18 @@ public sealed class GalleryPage : ContentPage
         var current = _wideViewer?.Current?.Name;
         _wideViewer?.Stop();
         _wideViewer = null;
+        if (_sidebarStatus is not null) _renderer.Changed -= _sidebarStatus;
+        _sidebarStatus = null;
         _sidebarRows.Clear();
-        _layout = wide ? Wide(current) : Phone();
         _root.Clear();
-        _root.Add(_layout);
+        _root.Add(wide ? Wide(current) : Phone());
         _root.Add(_sheet);
         if (_visible) _wideViewer?.Start();
     }
 
-    public async void Open(DemoScene sample)
+    public async void Open(string scene)
     {
+        var sample = Scenes.Single(s => s.Name == scene).Create();
         if (_wideViewer is { } viewer) { viewer.Show(sample); HighlightSidebar(); return; }
         _viewerPage = new SceneViewerPage(sample, _renderer);
         await Navigate(_viewerPage);
@@ -100,11 +102,11 @@ public sealed class GalleryPage : ContentPage
         scenes.Margin = new Thickness(4, 0);
         SemanticProperties.SetHeadingLevel(scenes, SemanticHeadingLevel.Level1);
         var grid = new Grid { ColumnSpacing = Theme.Gap, RowSpacing = Theme.Gap, ColumnDefinitions = { new(GridLength.Star), new(GridLength.Star) } };
-        var cards = _scenes.Select(sample => Card(sample.Name, SceneCatalog.ShortTag(sample.Name), SceneImage(sample.Name), () => Open(sample))).ToList();
+        var cards = Scenes.Select(scene => Card(scene.Name, SceneCatalog.ShortTag(scene.Name), SceneImage(scene.Name), () => Open(scene.Name))).ToList();
         if (HasMirror)
         {
             var mirror = Card("Mirror", SceneCatalog.MirrorTag, MirrorImage(), OpenMirror);
-            SemanticProperties.SetHint(((Grid)mirror).Children.OfType<Button>().Single(), "Opens a camera scene in which a 3D frog copies your movement");
+            SemanticProperties.SetHint(mirror.Button, MirrorHint);
             cards.Add(mirror);
         }
         for (var i = 0; i < cards.Count; i++)
@@ -123,22 +125,22 @@ public sealed class GalleryPage : ContentPage
         };
     }
 
-    private static View Card(string name, string tag, View image, Action open)
+    private const string MirrorHint = "Opens a camera scene in which a 3D frog copies your movement";
+
+    private static Tappable Card(string name, string tag, View image, Action open)
     {
         var text = new VerticalStackLayout
         {
             Spacing = 2, Padding = new Thickness(12, 10, 12, 12),
             Children = { Theme.Label(name, Theme.FontLabel, 15, Theme.Text), Theme.Label(tag, Theme.FontMono, 11, Theme.Ember) }
         };
-        var face = new Border
+        var card = new Tappable(new Border
         {
-            BackgroundColor = Theme.Surface, Stroke = Theme.Line, StrokeThickness = 1, StrokeShape = Theme.Rounded(Theme.RadiusCard), InputTransparent = true,
+            BackgroundColor = Theme.Surface, Stroke = Theme.Line, StrokeThickness = 1, StrokeShape = Theme.Rounded(Theme.RadiusCard),
             Content = new VerticalStackLayout { Children = { image, text } }
-        };
-        AutomationProperties.SetIsInAccessibleTree(face, false);
-        var button = Tap.Over(face, name, open);
-        SemanticProperties.SetHint(button, tag);
-        return new Grid { Children = { face, button } };
+        }, name, open);
+        SemanticProperties.SetHint(card.Button, tag);
+        return card;
     }
 
     private static View SceneImage(string scene) => new Image
@@ -161,18 +163,13 @@ public sealed class GalleryPage : ContentPage
         return grid;
     }
 
-    /// <summary>A Mirror character's thumbnail, rendered from its model and bundled (see docs/DEVELOPMENT.md).</summary>
-    internal static View Avatar(string file, double size, double radius) => new Border
+    private static View Avatar(string file, double size, double radius) => new Border
     {
         WidthRequest = size, HeightRequest = size, StrokeThickness = 0, StrokeShape = Theme.Rounded(radius),
-        Content = new Image
-        {
-            Aspect = Aspect.AspectFill,
-            Source = ImageSource.FromStream(async _ => await FileSystem.OpenAppPackageFileAsync("mirror/" + System.IO.Path.ChangeExtension(file, ".png")))
-        }
+        Content = new Image { Aspect = Aspect.AspectFill, Source = SceneCatalog.Character(file) }
     };
 
-    internal static View AppMark(double size)
+    private static View AppMark(double size)
     {
         var art = size * .7;
         var cube = new Grid
@@ -202,31 +199,30 @@ public sealed class GalleryPage : ContentPage
 
     private View Wide(string? current)
     {
-        _wideViewer = new SceneViewer(_scenes.FirstOrDefault(s => s.Name == current) ?? _scenes[0], _renderer, wide: true);
+        _wideViewer = new SceneViewer((Scenes.FirstOrDefault(s => s.Name == current).Create ?? Scenes[0].Create)(), _renderer, wide: true);
         var brand = new Grid { ColumnSpacing = 12, Padding = new Thickness(4, 0), ColumnDefinitions = { new(GridLength.Auto), new(GridLength.Star) } };
         brand.Add(AppMark(40));
         brand.Add(Brand(18, 12), 1);
         var list = new VerticalStackLayout { Spacing = 4, Children = { Caption("SCENES", new Thickness(8, 0, 8, 6)) } };
-        foreach (var sample in _scenes) list.Add(SidebarRow(sample));
+        foreach (var (name, _) in Scenes) list.Add(SidebarRow(name));
         var top = new VerticalStackLayout { Spacing = 18, Children = { brand, list } };
         if (HasMirror) top.Add(MirrorRow());
         RenderingMode[] modes = [RenderingMode.Auto, RenderingMode.Hardware, RenderingMode.Software];
         var renderer = new Segmented(modes.Select(m => m.ToString()).ToList(), Array.IndexOf(modes, _renderer.Mode),
             (i, selected) => selected ? $"{modes[i]} renderer, selected" : $"{modes[i]} renderer", strong: true);
         renderer.Changed += index => _renderer.Select(modes[index]);
-        var dot = new Border { WidthRequest = 8, HeightRequest = 8, StrokeThickness = 0, StrokeShape = new Microsoft.Maui.Controls.Shapes.Ellipse(), VerticalOptions = LayoutOptions.Center };
+        var dot = new RendererDot();
         var status = Theme.Label("", Theme.FontMono, 12, Theme.TextSoft);
         status.LineBreakMode = LineBreakMode.TailTruncation;
-        void UpdateStatus()
+        // Held in a field: the renderer settings only hold their subscribers weakly.
+        _sidebarStatus = (_, _) =>
         {
             renderer.Select(Array.IndexOf(modes, _renderer.Mode), notify: false);
-            var (_, software, starting) = _renderer.Chip;
-            dot.BackgroundColor = starting ? Theme.TextMuted : software ? Theme.Ice : Theme.Ember;
-            dot.Shadow = software || starting ? null! : Theme.EmberGlow(10, 1);
+            dot.Update(_renderer);
             status.Text = _renderer.Backend is { } backend ? $"{backend} · {_renderer.Diagnostic}" : _renderer.Mode.ToString();
-        }
-        _renderer.Changed += UpdateStatus;
-        UpdateStatus();
+        };
+        _renderer.Changed += _sidebarStatus;
+        _sidebarStatus(null, EventArgs.Empty);
         var statusRow = new Grid { ColumnSpacing = 8, Padding = new Thickness(4, 0), ColumnDefinitions = { new(GridLength.Auto), new(GridLength.Star) } };
         statusRow.Add(dot);
         statusRow.Add(status, 1);
@@ -264,35 +260,30 @@ public sealed class GalleryPage : ContentPage
         return label;
     }
 
-    private View SidebarRow(DemoScene sample)
+    private View SidebarRow(string scene)
     {
         var image = new Border
         {
             WidthRequest = 40, HeightRequest = 40, StrokeThickness = 0, StrokeShape = Theme.Rounded(10), BackgroundColor = Theme.SceneBackground,
-            Content = new Image { Source = SceneCatalog.Thumbnail(sample.Name), Aspect = Aspect.AspectFill }
+            Content = new Image { Source = SceneCatalog.Thumbnail(scene), Aspect = Aspect.AspectFill }
         };
-        var name = Theme.Label(sample.Name, Theme.FontLabel, 14, Theme.TextSoft);
+        var name = Theme.Label(scene, Theme.FontLabel, 14, Theme.TextSoft);
         name.VerticalOptions = LayoutOptions.Center;
         var content = new Grid { ColumnSpacing = 12, ColumnDefinitions = { new(GridLength.Auto), new(GridLength.Star) } };
         content.Add(image);
         content.Add(name, 1);
-        var row = new Border
-        {
-            MinimumHeightRequest = 52, Padding = new Thickness(8, 6), StrokeThickness = 1, StrokeShape = Theme.Rounded(Theme.RadiusSmall),
-            InputTransparent = true, Content = content
-        };
-        AutomationProperties.SetIsInAccessibleTree(row, false);
-        var button = Tap.Over(row, sample.Name, () => Open(sample));
-        SemanticProperties.SetHint(button, SceneCatalog.ShortTag(sample.Name));
-        _sidebarRows.Add((sample, row, name));
-        return new Grid { Children = { row, button } };
+        var row = new Border { MinimumHeightRequest = 52, Padding = new Thickness(8, 6), StrokeThickness = 1, StrokeShape = Theme.Rounded(Theme.RadiusSmall), Content = content };
+        var item = new Tappable(row, scene, () => Open(scene));
+        SemanticProperties.SetHint(item.Button, SceneCatalog.ShortTag(scene));
+        _sidebarRows.Add((scene, row, name));
+        return item;
     }
 
     private void HighlightSidebar()
     {
-        foreach (var (sample, row, name) in _sidebarRows)
+        foreach (var (scene, row, name) in _sidebarRows)
         {
-            var current = sample == _wideViewer?.Current;
+            var current = scene == _wideViewer?.Current?.Name;
             row.BackgroundColor = current ? Theme.EmberTint : Colors.Transparent;
             row.Stroke = current ? Theme.Ember : Colors.Transparent;
             name.TextColor = current ? Theme.Text : Theme.TextSoft;
@@ -307,22 +298,18 @@ public sealed class GalleryPage : ContentPage
             VerticalOptions = LayoutOptions.Center,
             Children = { Theme.Label("Mirror", Theme.FontLabel, 14, Theme.Text), Theme.Label("A character copies your moves", Theme.FontBody, 12, Theme.TextSoft) }
         };
-        var arrow = Icons.Create(Icon.Open, Theme.EmberLight, 20);
-        arrow.VerticalOptions = LayoutOptions.Center;
+        var arrow = Icons.Create(Icon.Open, Theme.EmberLight, 20, center: true);
         var content = new Grid { ColumnSpacing = 12, ColumnDefinitions = { new(GridLength.Auto), new(GridLength.Star), new(GridLength.Auto) } };
         content.Add(Avatar(models[0].File, 44, 12));
         content.Add(text, 1);
         content.Add(arrow, 2);
-        var row = new Border
+        var row = new Tappable(new Border
         {
-            Padding = 12, Stroke = Theme.EmberTint, StrokeThickness = 1, StrokeShape = Theme.Rounded(16), InputTransparent = true,
-            Background = new LinearGradientBrush([new GradientStop(Theme.EmberTint, 0), new GradientStop(Theme.Surface, .9f)], new Point(0, 0), new Point(1, 1)),
-            Content = content
-        };
-        AutomationProperties.SetIsInAccessibleTree(row, false);
-        var button = Tap.Over(row, "Mirror", OpenMirror);
-        SemanticProperties.SetHint(button, "Opens a camera scene in which a 3D frog copies your movement");
-        return new Grid { Children = { row, button } };
+            Padding = 12, Stroke = Theme.EmberTint, StrokeThickness = 1, StrokeShape = Theme.Rounded(16), Content = content,
+            Background = new LinearGradientBrush([new GradientStop(Theme.EmberTint, 0), new GradientStop(Theme.Surface, .9f)], new Point(0, 0), new Point(1, 1))
+        }, "Mirror", OpenMirror);
+        SemanticProperties.SetHint(row.Button, MirrorHint);
+        return row;
     }
 
     protected override void OnAppearing()

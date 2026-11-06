@@ -88,6 +88,15 @@ internal static class DemoAppearanceTests
             }
             finally { view.ReleaseRenderResources(); other?.ReleaseRenderResources(); }
         }),
+        ("closed scene pages are not kept alive by the shared renderer settings", () =>
+        {
+            var gallery = Gallery();
+            var first = OpenAndForget(gallery, "Surface");
+            Viewer(gallery, "Equipment").View.ReleaseRenderResources(); // Also replaces the gallery's last opened page.
+            for (var i = 0; i < 3 && first.IsAlive; i++) { GC.Collect(); GC.WaitForPendingFinalizers(); }
+            Assert(!first.IsAlive, "a closed scene page is still referenced");
+            GC.KeepAlive(gallery);
+        }),
         ("equipment imported textured controller occupies a readable part of the initial frame", () =>
         {
             var sample = DemoScenes.Equipment();
@@ -154,6 +163,14 @@ internal static class DemoAppearanceTests
         var page = Opened ?? throw new InvalidOperationException($"{scene} card did not open a viewer");
         var all = Descendants(page.Content).ToArray();
         return (page, all.OfType<SceneView>().Single(), all.OfType<Button>().ToArray());
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static WeakReference OpenAndForget(GalleryPage gallery, string scene)
+    {
+        var (page, view, _) = Viewer(gallery, scene);
+        view.ReleaseRenderResources();
+        return new WeakReference(page);
     }
 
     private static Segmented Segment(Page page, string id) => Descendants(page).OfType<Segmented>().Single(s => s.AutomationId == id);

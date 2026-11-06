@@ -14,8 +14,10 @@ public sealed record DemoScene(string Name, string Description, Scene Scene, Cam
 public static partial class DemoScenes
 {
     /// <summary>Creates examples progressing from primitives and data updates to meshes, hierarchy and linked motion.</summary>
-    public static IReadOnlyList<DemoScene> All =>
-        [Equipment(), Telemetry(), Surface(), RobotArm(), GantryCrane()];
+    public static IReadOnlyList<DemoScene> All => [.. Factories.Select(create => create())];
+
+    /// <summary>The factories behind <see cref="All"/>, in the same order, for creating one scene at a time.</summary>
+    public static IReadOnlyList<Func<DemoScene>> Factories => [Equipment, Telemetry, Surface, RobotArm, GantryCrane];
 
     private static Action<float> AnimateNode(Scene scene, Shape initial, Func<float, Shape> atTime)
     {

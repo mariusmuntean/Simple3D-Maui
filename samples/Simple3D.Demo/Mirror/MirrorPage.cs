@@ -546,9 +546,8 @@ public sealed class MirrorPage : ContentPage
         var icon = new Border
         {
             WidthRequest = 96, HeightRequest = 96, HorizontalOptions = LayoutOptions.Center, BackgroundColor = Theme.Raised, Stroke = Theme.Line,
-            StrokeThickness = 1, StrokeShape = Theme.Rounded(32), Shadow = Theme.EmberGlow(40, .2f), Content = Icons.Create(Icon.CameraOff, Theme.Ember, 36, 1.8)
+            StrokeThickness = 1, StrokeShape = Theme.Rounded(32), Shadow = Theme.EmberGlow(40, .2f), Content = Icons.Create(Icon.CameraOff, Theme.Ember, 36, 1.8, center: true)
         };
-        icon.Content.HorizontalOptions = icon.Content.VerticalOptions = LayoutOptions.Center;
         var title = Theme.Label("Camera is off", Theme.FontDisplay, 26, Theme.Text);
         title.HorizontalTextAlignment = _blockedText.HorizontalTextAlignment = TextAlignment.Center;
         SemanticProperties.SetHeadingLevel(title, SemanticHeadingLevel.Level1);
@@ -570,15 +569,14 @@ public sealed class MirrorPage : ContentPage
     {
         var chip = new Border
         {
-            StrokeThickness = 2, BackgroundColor = Theme.Surface, HeightRequest = size, InputTransparent = true,
-            StrokeShape = Theme.Rounded(20), Content = new Image { Aspect = Aspect.AspectFill, Source = Thumbnail(model) }
+            StrokeThickness = 2, BackgroundColor = Theme.Surface, HeightRequest = size,
+            StrokeShape = Theme.Rounded(20), Content = new Image { Aspect = Aspect.AspectFill, Source = SceneCatalog.Character(model.File) }
         };
         if (size < 70) chip.WidthRequest = size;
-        AutomationProperties.SetIsInAccessibleTree(chip, false);
-        var button = Tap.Over(chip, null, async () => await ChooseCharacterAsync(model));
-        SemanticProperties.SetHint(button, "Switches to this character");
-        _chips.Add((model, chip, button));
-        return new Grid { Children = { chip, button } };
+        var item = new Tappable(chip, null, async () => await ChooseCharacterAsync(model));
+        SemanticProperties.SetHint(item.Button, "Switches to this character");
+        _chips.Add((model, chip, item.Button));
+        return item;
     }
 
     private void HighlightCharacter()
@@ -586,7 +584,7 @@ public sealed class MirrorPage : ContentPage
         _introCharacter.Text = _model.Name;
         _characterName.Text = _model.Name;
         _characterTracks.Text = char.ToUpperInvariant(_model.Tracks[0]) + _model.Tracks[1..];
-        _hero.Source = Thumbnail(_model);
+        _hero.Source = SceneCatalog.Character(_model.File);
         foreach (var (model, chip, button) in _chips)
         {
             var chosen = model == _model;
@@ -596,10 +594,6 @@ public sealed class MirrorPage : ContentPage
             SemanticProperties.SetDescription(button, chosen ? $"{model.Name}, selected" : model.Name);
         }
     }
-
-    // Thumbnails are rendered from each model (see docs/DEVELOPMENT.md) and bundled as raw assets.
-    private static ImageSource Thumbnail(MirrorModel model) =>
-        ImageSource.FromStream(async _ => await FileSystem.OpenAppPackageFileAsync("mirror/" + System.IO.Path.ChangeExtension(model.File, ".png")));
 
     private View Guide()
     {

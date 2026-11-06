@@ -13,7 +13,6 @@ internal sealed class SceneViewer : ContentView
 {
     private readonly SceneView _view = new() { SceneBackgroundColor = Theme.SceneBackground };
     private readonly RendererSettings _renderer;
-    private readonly bool _wide;
     private readonly Label _title = Theme.Label("", Theme.FontDisplay, 18, Theme.Text);
     private readonly Label _tag = Theme.Label("", Theme.FontMono, 11, Theme.Ember);
     private readonly Label _description = Theme.Label("", Theme.FontBody, 14, Theme.TextSoft);
@@ -31,7 +30,6 @@ internal sealed class SceneViewer : ContentView
     public SceneViewer(DemoScene scene, RendererSettings renderer, bool wide = false, Action? back = null, Action? openRenderer = null)
     {
         _renderer = renderer;
-        _wide = wide;
         _animate = new ActionButton("Animate", ToggleAnimation, ActionStyle.Primary, Icon.Animate, wide ? 46 : 52);
         _animate.VerticalOptions = LayoutOptions.Center;
         _shading = new Segmented(["Smooth", "Flat"], 0, (i, selected) => Selected(i == 0 ? "Shading: smooth" : "Shading: flat", selected)) { AutomationId = "SurfaceShading" };
@@ -56,7 +54,6 @@ internal sealed class SceneViewer : ContentView
 
     public DemoScene? Current { get; private set; }
     public SceneView View => _view;
-    public bool IsAnimating => _animationClock.IsRunning;
 
     private static string Selected(string description, bool selected) => selected ? $"{description}, selected" : description;
 
@@ -205,12 +202,7 @@ internal sealed class SceneViewer : ContentView
             case "renderer": openRenderer(); break;
             case "fallback": _view.ReportHardwareFailure(new InvalidOperationException("Simulated GPU loss for a screenshot")); break;
             case "stats": _stats.Expand(true); break;
-            case "selected":
-                var height = (int)(200 * _view.Height / _view.Width);
-                var frame = _view.CaptureFrame(200, height);
-                var named = Enumerable.Range(0, 200 * height).FirstOrDefault(i => frame.Pick(i % 200, i / 200)?.Name is not null);
-                _view.SelectAt(named % 200, named / 200, 200, height);
-                break;
+            case "selected": _view.SelectAt(_view.Width * .62, _view.Height * .58, _view.Width, _view.Height); break;
         }
     }
 #endif
@@ -283,13 +275,11 @@ internal sealed class SceneViewer : ContentView
 /// <summary>"Selected" + the picked shape's name and a clear button, or a dashed hint while nothing is selected.</summary>
 internal sealed class SelectionChip : Grid
 {
-    private readonly SceneView _view;
     private readonly Label _name = Theme.Label("", Theme.FontLabel, 14, Theme.Text);
     private readonly Border _selected, _hint;
 
     public SelectionChip(SceneView view, bool wide)
     {
-        _view = view;
         HorizontalOptions = LayoutOptions.Start;
         _name.LineBreakMode = LineBreakMode.TailTruncation;
         _name.VerticalOptions = LayoutOptions.Center;
@@ -356,9 +346,9 @@ internal sealed class FrameStats : ContentView
         pulse.VerticalOptions = _pill.VerticalOptions = LayoutOptions.Center;
         var pill = Panels.Overlay(new HorizontalStackLayout { Spacing = 6, Children = { pulse, _pill } }, 22, new Thickness(14, 0));
         pill.HeightRequest = Theme.Touch;
-        pill.InputTransparent = true;
-        _expand = Tap.Over(pill, null, () => Expand(true));
-        _collapsed = new Grid { Children = { pill, _expand } };
+        var collapsed = new Tappable(pill, null, () => Expand(true));
+        _expand = collapsed.Button;
+        _collapsed = collapsed;
         var collapse = new IconButton(Icon.Collapse, "Hide frame stats", () => Expand(false), floating: false, iconSize: 16, color: Theme.TextMuted)
         {
             Margin = new Thickness(0, -12, -12, -12), HorizontalOptions = LayoutOptions.End
@@ -367,8 +357,7 @@ internal sealed class FrameStats : ContentView
         _fps.VerticalOptions = LayoutOptions.Center;
         head.Add(_fps);
         head.Add(collapse, 1);
-        var panel = Panels.Card(new VerticalStackLayout { Spacing = 4, Children = { head, _frame, _backend, _triangles } }, 16, 0);
-        panel.Padding = new Thickness(14, 12);
+        var panel = Panels.Card(new VerticalStackLayout { Spacing = 4, Children = { head, _frame, _backend, _triangles } }, 16, new Thickness(14, 12));
         panel.WidthRequest = 196;
         _expanded = panel;
         Expand(false);
