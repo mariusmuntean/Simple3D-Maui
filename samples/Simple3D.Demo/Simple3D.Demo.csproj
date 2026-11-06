@@ -55,6 +55,7 @@
   <ItemGroup>
     <MauiIcon Include="Resources/AppIcon/appicon.svg" ForegroundFile="Resources/AppIcon/appiconfg.svg" Color="#101A2D" />
     <!-- The Mirror scene's characters, all CC0: ToxSam's "Chubby Tubby Cat" and 100Avatars (Polygonal Mind) "Juanita", "CosmicBot", "Froggy". -->
+    <MauiFont Include="Resources/Fonts/*.ttf" />
     <MauiAsset Include="Resources/Raw/**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
     <MauiSplashScreen Include="Resources/Splash/splash.svg" Color="#101A2D" BaseSize="128,128" />
   </ItemGroup>

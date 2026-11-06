@@ -253,7 +253,7 @@ var tests = new (string Name, Action Run)[]
     }),
     ("gallery scene has no scrolling ancestor", () =>
     {
-        var page = new GalleryPage();
+        var page = DemoAppearanceTests.Viewer(DemoAppearanceTests.Gallery(), "Equipment").Page;
         var view = FindScene(page.Content);
         Assert(view is not null, "gallery has no scene");
         for (Element? parent = view!.Parent; parent is not null; parent = parent.Parent)
@@ -701,15 +701,14 @@ var tests = new (string Name, Action Run)[]
         {
             var app = new App();
             var window = ((Microsoft.Maui.IApplication)app).CreateWindow(null);
-            var page = (GalleryPage)((Window)window).Page!;
-            var grid = (Grid)page.Content;
-            view = grid.Children.OfType<Border>().Single().Content as SceneView
-                ?? throw new InvalidOperationException("gallery scene view missing");
-            var footer = (VerticalStackLayout)grid.Children.OfType<ScrollView>().Single().Content;
-            var tools = (HorizontalStackLayout)footer.Children.OfType<ScrollView>().Single().Content;
-            var animate = tools.Children.OfType<Button>().Single(button => button.Text == "Animate");
+            var gallery = (GalleryPage)((NavigationPage)((Window)window).Page!).RootPage;
             window.Created();
             window.Activated();
+            gallery.Navigate = _ => Task.CompletedTask;
+            DemoAppearanceTests.Click(DemoAppearanceTests.Descendants(gallery.Content).OfType<Button>().Single(button => button.Text == "Equipment"));
+            var viewer = gallery.Viewer ?? throw new InvalidOperationException("gallery opened no viewer");
+            view = viewer.View;
+            var animate = DemoAppearanceTests.Descendants(viewer).OfType<Button>().Single(button => button.Text == "Animate");
             ((IButtonController)animate).SendClicked();
             Assert(animate.Text == "Pause" && view.MaximumRenderDimension == 768, "animation did not start");
             var before = view.Scene.Shapes.ToArray();
@@ -741,13 +740,8 @@ var tests = new (string Name, Action Run)[]
     }),
     ("gallery reset clears highlighting and notifies once even in display only mode", () =>
     {
-        var page = new GalleryPage();
-        var grid = (Grid)page.Content;
-        var view = grid.Children.OfType<Border>().Single().Content as SceneView
-            ?? throw new InvalidOperationException("gallery border does not contain its scene view");
-        var footer = (VerticalStackLayout)grid.Children.OfType<ScrollView>().Single().Content;
-        var tools = (HorizontalStackLayout)footer.Children.OfType<ScrollView>().Single().Content;
-        var reset = tools.Children.OfType<Button>().Single(button => button.Text == "Reset");
+        var (_, view, buttons) = DemoAppearanceTests.Viewer(DemoAppearanceTests.Gallery(), "Equipment");
+        var reset = DemoAppearanceTests.Described(buttons, "Reset scene");
         var target = view.CapturePaintTarget(200, 200);
         var original = view.PaintBitmap(target).GetPixelSpan().ToArray();
         var point = Enumerable.Range(0, 40000).First(i => target.Pick(i % 200, i / 200) is not null);
@@ -767,14 +761,10 @@ var tests = new (string Name, Action Run)[]
     ("all gallery scenes remain reachable on narrow screens", () =>
     {
         var page = new GalleryPage();
-        var content = page.Content is Grid grid ? grid.Children.OfType<VerticalStackLayout>().Single() :
-            (VerticalStackLayout)((ScrollView)page.Content).Content;
-        var scroller = content.Children.OfType<ScrollView>()
-            .Single(view => view.Content is HorizontalStackLayout row &&
-                row.Children.OfType<Button>().Any(button => button.Text == "Gantry Crane"));
-        Assert(scroller.Orientation == ScrollOrientation.Horizontal, "scene catalogue cannot scroll horizontally");
-        var buttons = ((HorizontalStackLayout)scroller.Content).Children.OfType<Button>().ToArray();
-        Assert(buttons.Length == DemoScenes.All.Count, "not every example is in the gallery");
+        var scroller = DemoAppearanceTests.Descendants(page.Content).OfType<ScrollView>().Single();
+        Assert(scroller.Orientation == ScrollOrientation.Vertical, "scene catalogue cannot scroll");
+        var cards = DemoAppearanceTests.Descendants(scroller).OfType<Button>().Where(button => DemoScenes.All.Any(s => s.Name == button.Text));
+        Assert(cards.Count() == DemoScenes.All.Count, "not every example is in the gallery");
     }),
     ("world labels stay readable inside a narrow viewport", () =>
     {

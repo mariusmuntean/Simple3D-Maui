@@ -17,7 +17,8 @@ public sealed class App : Application
         if (Mirror.MirrorPage.IsRequested) return new Window(new Mirror.MirrorPage()) { Title = "Simple3D Mirror" };
 #endif
         var page = new GalleryPage();
-        var window = new Window(page) { Title = "Simple3D Gallery" };
+        var navigation = new NavigationPage(page) { BackgroundColor = Theme.Canvas, BarBackgroundColor = Theme.Canvas, BarTextColor = Theme.Text };
+        var window = new Window(navigation) { Title = "Simple3D Gallery" };
         window.Stopped += (_, _) => page.StopAnimation();
         return window;
     }

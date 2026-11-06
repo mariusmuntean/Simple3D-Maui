@@ -11,12 +11,11 @@ internal static class DemoAppearanceTests
     [
         ("surface shading comparison changes pixels and reuses prepared geometry", () =>
         {
-            var (page, view, buttons) = Gallery();
+            var (viewer, view, _) = Viewer(Gallery(), "Surface");
             try
             {
-                Click(buttons, "Surface");
-                var control = buttons.Single(button => button.AutomationId == "SurfaceShading");
-                Assert(control.IsVisible, "surface shading control is hidden");
+                var control = Segment(viewer, "SurfaceShading");
+                Assert(Shown(control), "surface shading control is hidden");
                 var original = view.CaptureFrame(320, 240).Pixels.ToArray();
                 var smooth = view.Scene.Shapes[0];
                 var frame = view.CaptureFrame(320, 240);
@@ -24,8 +23,8 @@ internal static class DemoAppearanceTests
                     .First(i => ReferenceEquals(frame.Pick(i % frame.Width, i / frame.Width), smooth));
                 view.SelectAt(point % frame.Width, point / frame.Width, frame.Width, frame.Height);
                 var camera = view.Camera;
-                Click(control);
-                Assert(SemanticProperties.GetDescription(control) == "Shading: flat", "accessible shading state stayed smooth");
+                Toggle(control);
+                Assert(SemanticProperties.GetDescription(control.Buttons[1]) == "Shading: flat, selected", "accessible shading state stayed smooth");
                 var flat = view.Scene.Shapes[0];
                 Assert(flat.Geometry?.Normals is null && smooth.Geometry?.Normals is not null,
                     "comparison did not switch normal attributes");
@@ -33,57 +32,61 @@ internal static class DemoAppearanceTests
                     "flat comparison is not visibly different");
                 Assert(ReferenceEquals(view.SelectedShape, flat), "shading switch lost selected surface");
                 Assert(ReferenceEquals(view.Camera, camera), "shading switch reset the orbit camera");
-                Click(control);
+                Toggle(control);
                 Assert(ReferenceEquals(smooth.Geometry, view.Scene.Shapes[0].Geometry), "smooth mesh was rebuilt");
-                Click(control);
+                Toggle(control);
                 Assert(ReferenceEquals(flat.Geometry, view.Scene.Shapes[0].Geometry), "flat mesh was rebuilt");
-                page.StopAnimation();
+                viewer.Viewer.StopAnimation();
             }
             finally { view.ReleaseRenderResources(); }
         }),
         ("surface light control redraws without replacing geometry or camera", () =>
         {
-            var (_, view, buttons) = Gallery();
+            var (viewer, view, _) = Viewer(Gallery(), "Surface");
             try
             {
-                Click(buttons, "Surface");
-                var control = buttons.Single(button => button.AutomationId == "SurfaceLight");
-                Assert(control.IsVisible && !string.IsNullOrWhiteSpace(SemanticProperties.GetDescription(control)),
+                var control = Segment(viewer, "SurfaceLight");
+                Assert(Shown(control) && control.Buttons.All(b => !string.IsNullOrWhiteSpace(SemanticProperties.GetHint(b))),
                     "light control is hidden or lacks its accessible explanation");
                 var original = view.CaptureFrame(320, 240).Pixels.ToArray();
                 var shapes = view.Scene.Shapes.ToArray();
                 var light = view.Scene.Light;
                 var camera = view.Camera;
-                Click(control);
-                Assert(SemanticProperties.GetDescription(control) == "Light: from left", "accessible light state stayed on the right");
+                Toggle(control);
+                Assert(SemanticProperties.GetDescription(control.Buttons[0]) == "Light: from left, selected", "accessible light state stayed on the right");
                 Assert(view.Scene.Light?.Direction.X > 0 && light?.Direction.X < 0, "light did not cross the surface");
                 Assert(Changed(original, view.CaptureFrame(320, 240).Pixels.ToArray()) > 1000,
                     "light change did not affect visible pixels");
                 Assert(view.Scene.Shapes.SequenceEqual(shapes) && ReferenceEquals(view.Camera, camera),
                     "light change replaced geometry or reset the camera");
-                Click(control);
+                Toggle(control);
                 Assert(view.CaptureFrame(320, 240).Pixels.Span.SequenceEqual(original), "returning the light changed the initial appearance");
             }
             finally { view.ReleaseRenderResources(); }
         }),
         ("gallery reset restores surface appearance and other scenes hide comparison controls", () =>
         {
-            var (_, view, buttons) = Gallery();
+            var gallery = Gallery();
+            var (viewer, view, buttons) = Viewer(gallery, "Surface");
+            SceneView? other = null;
             try
             {
-                Click(buttons, "Surface");
                 var original = view.CaptureFrame(320, 240).Pixels.ToArray();
-                var shading = buttons.Single(button => button.AutomationId == "SurfaceShading");
-                var light = buttons.Single(button => button.AutomationId == "SurfaceLight");
-                Click(shading); Click(light); Click(buttons, "Reset");
+                var shading = Segment(viewer, "SurfaceShading");
+                var light = Segment(viewer, "SurfaceLight");
+                Toggle(shading); Toggle(light); Click(Described(buttons, "Reset scene"));
                 Assert(view.CaptureFrame(320, 240).Pixels.Span.SequenceEqual(original), "Reset retained modified appearance");
-                Assert(shading.Text!.Contains("smooth") && light.Text == "Light: from right", "Reset retained stale control labels");
-                Click(buttons, "Equipment");
-                Assert(!shading.IsVisible && !light.IsVisible, "surface controls leaked into Equipment");
-                Click(buttons, "Surface");
-                Assert(view.CaptureFrame(320, 240).Pixels.Span.SequenceEqual(original), "scene return retained modified appearance");
+                Assert(shading.Selected == 0 && light.Selected == 1, "Reset retained stale control states");
+                Toggle(shading);
+                var equipment = Viewer(gallery, "Equipment");
+                other = equipment.View;
+                Assert(!Shown(Segment(equipment.Page, "SurfaceShading")) && !Shown(Segment(equipment.Page, "SurfaceLight")),
+                    "surface controls leaked into Equipment");
+                var surface = Viewer(gallery, "Surface");
+                Assert(surface.View.CaptureFrame(320, 240).Pixels.Span.SequenceEqual(original), "scene return retained modified appearance");
+                surface.View.ReleaseRenderResources();
             }
-            finally { view.ReleaseRenderResources(); }
+            finally { view.ReleaseRenderResources(); other?.ReleaseRenderResources(); }
         }),
         ("equipment imported textured controller occupies a readable part of the initial frame", () =>
         {
@@ -107,18 +110,17 @@ internal static class DemoAppearanceTests
             var dispatcher = new TestDispatcher();
             DispatcherProvider.SetCurrent(dispatcher);
             SceneView? view = null;
-            GalleryPage? page = null;
+            SceneViewerPage? page = null;
             try
             {
                 Button[] buttons;
-                (page, view, buttons) = Gallery();
-                Click(buttons, "Surface");
+                (page, view, buttons) = Viewer(Gallery(), "Surface");
                 var animate = buttons.Single(button => button.Text == "Animate");
                 Click(animate);
                 dispatcher.Timer.DeliverTick();
                 var marker = view.Scene.Shapes[1];
-                Click(buttons.Single(button => button.AutomationId == "SurfaceShading"));
-                Click(buttons.Single(button => button.AutomationId == "SurfaceLight"));
+                Toggle(Segment(page, "SurfaceShading"));
+                Toggle(Segment(page, "SurfaceLight"));
                 Assert(animate.Text == "Pause" && dispatcher.Timer.IsRunning && view.MaximumRenderDimension == 768,
                     "appearance comparison interrupted running animation");
                 Assert(ReferenceEquals(marker, view.Scene.Shapes[1]), "appearance comparison rewound the sample marker");
@@ -127,29 +129,61 @@ internal static class DemoAppearanceTests
             }
             finally
             {
-                page?.StopAnimation();
+                page?.Viewer.StopAnimation();
                 view?.ReleaseRenderResources();
                 DispatcherProvider.SetCurrent(previous);
             }
         })
     ];
 
-    private static (GalleryPage Page, SceneView View, Button[] Buttons) Gallery()
+    /// <summary>A gallery whose scene cards hand their page to <see cref="Opened"/> instead of navigating.</summary>
+    internal static GalleryPage Gallery()
     {
         var page = new GalleryPage();
-        var grid = (Grid)page.Content;
-        var view = grid.Children.OfType<Border>().Single().Content as SceneView
-            ?? throw new InvalidOperationException("gallery scene view is missing");
-        var header = grid.Children.OfType<VerticalStackLayout>().Single();
-        var footer = (VerticalStackLayout)grid.Children.OfType<ScrollView>().Single().Content;
-        var scrollers = header.Children.OfType<ScrollView>().Concat(footer.Children.OfType<ScrollView>());
-        Assert(scrollers.All(scroller => scroller.Orientation == ScrollOrientation.Horizontal),
-            "gallery controls are unreachable in a narrow layout");
-        var buttons = scrollers.SelectMany(scroller => ((HorizontalStackLayout)scroller.Content).Children.OfType<Button>()).ToArray();
-        return (page, view, buttons);
+        page.Navigate = opened => { Opened = (SceneViewerPage)opened; return Task.CompletedTask; };
+        return page;
     }
-    private static void Click(Button button) => ((IButtonController)button).SendClicked();
-    private static void Click(Button[] buttons, string text) => Click(buttons.Single(button => button.Text == text));
+
+    private static SceneViewerPage? Opened;
+
+    /// <summary>Taps the scene's card and returns the viewer page it opened.</summary>
+    internal static (SceneViewerPage Page, SceneView View, Button[] Buttons) Viewer(GalleryPage gallery, string scene)
+    {
+        Opened = null;
+        Click(Descendants(gallery.Content).OfType<Button>().Single(button => button.Text == scene));
+        var page = Opened ?? throw new InvalidOperationException($"{scene} card did not open a viewer");
+        var all = Descendants(page.Content).ToArray();
+        return (page, all.OfType<SceneView>().Single(), all.OfType<Button>().ToArray());
+    }
+
+    private static Segmented Segment(Page page, string id) => Descendants(page).OfType<Segmented>().Single(s => s.AutomationId == id);
+    private static bool Shown(VisualElement view)
+    {
+        for (Element? e = view; e is not null; e = e.Parent) if (e is VisualElement { IsVisible: false }) return false;
+        return true;
+    }
+    private static void Toggle(Segmented control) => Click(control.Buttons[1 - control.Selected]);
+    internal static Button Described(IEnumerable<Button> buttons, string description) =>
+        buttons.Single(button => SemanticProperties.GetDescription(button) == description);
+    internal static void Click(Button button) => ((IButtonController)button).SendClicked();
+
+    internal static IEnumerable<Element> Descendants(Element? root)
+    {
+        if (root is null) yield break;
+        yield return root;
+        IEnumerable<Element> children = root switch
+        {
+            SceneView => [],
+            Layout layout => layout.Children.OfType<Element>(),
+            ScrollView scroll => scroll.Content is null ? [] : [scroll.Content],
+            Border border => border.Content is null ? [] : [border.Content],
+            ContentView content => content.Content is null ? [] : [content.Content],
+            ContentPage page => page.Content is null ? [] : [page.Content],
+            _ => []
+        };
+        foreach (var child in children) foreach (var item in Descendants(child)) yield return item;
+    }
+
     private static int Changed(uint[] before, uint[] after) => before.Zip(after).Count(pair => pair.First != pair.Second);
     private static void Assert(bool condition, string message)
     {
