@@ -761,7 +761,8 @@ var tests = new (string Name, Action Run)[]
     ("all gallery scenes remain reachable on narrow screens", () =>
     {
         var page = new GalleryPage();
-        var scroller = DemoAppearanceTests.Descendants(page.Content).OfType<ScrollView>().Single();
+        var scroller = DemoAppearanceTests.Descendants(page.Content).OfType<ScrollView>()
+            .Single(view => DemoAppearanceTests.Descendants(view).OfType<Button>().Any(button => button.Text == "Gantry Crane"));
         Assert(scroller.Orientation == ScrollOrientation.Vertical, "scene catalogue cannot scroll");
         var cards = DemoAppearanceTests.Descendants(scroller).OfType<Button>().Where(button => DemoScenes.All.Any(s => s.Name == button.Text));
         Assert(cards.Count() == DemoScenes.All.Count, "not every example is in the gallery");

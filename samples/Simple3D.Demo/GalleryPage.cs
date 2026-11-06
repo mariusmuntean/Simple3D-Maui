@@ -17,6 +17,7 @@ public sealed class GalleryPage : ContentPage
     private SceneViewer? _wideViewer;
     private SceneViewerPage? _viewerPage;
     private EventHandler? _sidebarStatus;
+    private string? _wideScene;
     private readonly List<(string Scene, Border Row, Label Name)> _sidebarRows = [];
 
     public GalleryPage()
@@ -57,14 +58,14 @@ public sealed class GalleryPage : ContentPage
     {
         if (_wide == wide) return;
         _wide = wide;
-        var current = _wideViewer?.Current?.Name;
+        _wideScene = _wideViewer?.Current?.Name ?? _wideScene;
         _wideViewer?.Stop();
         _wideViewer = null;
         if (_sidebarStatus is not null) _renderer.Changed -= _sidebarStatus;
         _sidebarStatus = null;
         _sidebarRows.Clear();
         _root.Clear();
-        _root.Add(wide ? Wide(current) : Phone());
+        _root.Add(wide ? Wide(_wideScene) : Phone());
         _root.Add(_sheet);
         if (_visible) _wideViewer?.Start();
     }
@@ -356,7 +357,7 @@ internal sealed class SceneViewerPage : ContentPage
         _sheet = new RendererSheet(renderer);
         Viewer = new SceneViewer(scene, renderer, back: () => Navigation.PopAsync(), openRenderer: _sheet.Show);
         renderer.Attach(Viewer.View);
-        Content = new Grid { Children = { Viewer, _sheet } };
+        Content = new Grid { SafeAreaEdges = SafeAreaEdges.None, Children = { Viewer, _sheet } };
     }
 
     protected override void OnAppearing()

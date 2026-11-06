@@ -133,6 +133,7 @@ internal sealed class RendererSheet : Grid
     {
         _settings = settings;
         IsVisible = false;
+        SafeAreaEdges = SafeAreaEdges.None;
         _nowDetail.AutomationId = "RenderingBackend";
         var header = new Grid { ColumnSpacing = 12, ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto) } };
         header.Add(new VerticalStackLayout
@@ -174,14 +175,20 @@ internal sealed class RendererSheet : Grid
             VerticalOptions = LayoutOptions.End, MaximumWidthRequest = 560, BackgroundColor = Theme.Surface, Stroke = Theme.Line, StrokeThickness = 1,
             StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(Theme.RadiusSheet, Theme.RadiusSheet, 0, 0) },
             // Runs under the home indicator, with room for it below the content.
-            Padding = new Thickness(20, 10, 20, 34),
-            Content = new VerticalStackLayout
+            Padding = new Thickness(0, 10, 0, 34),
+            // Scrolls when taller than the screen, as on a phone in landscape.
+            Margin = new Thickness(0, 24, 0, 0),
+            Content = new ScrollView
             {
-                Spacing = 16,
-                Children =
+                Content = new VerticalStackLayout
                 {
-                    new BoxView { WidthRequest = 36, HeightRequest = 5, CornerRadius = 3, Color = Theme.Line, HorizontalOptions = LayoutOptions.Center },
-                    header, options, now
+                    // Inside the scroll view, so the selected option's glow is not clipped at the sides.
+                    Spacing = 16, Padding = new Thickness(20, 0),
+                    Children =
+                    {
+                        new BoxView { WidthRequest = 36, HeightRequest = 5, CornerRadius = 3, Color = Theme.Line, HorizontalOptions = LayoutOptions.Center },
+                        header, options, now
+                    }
                 }
             }
         };

@@ -85,7 +85,7 @@ public sealed class MirrorPage : ContentPage
         _lostHint = Hint(Icons.Create(Icon.FindPerson, Theme.Ember, 20), "Step back into the frame: whole body, waist up, or your face", top: false);
         _blockedAction = new ActionButton("Open Settings", CameraAccess.OpenSettings, ActionStyle.Primary, Icon.Settings, 56);
         _blocked = Blocked();
-        _close = new IconButton(Icon.Close, "Close Mirror", Close) { HorizontalOptions = LayoutOptions.Start, VerticalOptions = LayoutOptions.Start };
+        _close = new IconButton(Icon.Close, "Close Mirror", BackOrClose) { HorizontalOptions = LayoutOptions.Start, VerticalOptions = LayoutOptions.Start };
         _switchCamera = new IconButton(Icon.SwitchCamera, "Switch between the front and back camera", SwitchCamera)
         {
             HorizontalOptions = LayoutOptions.Start, VerticalOptions = LayoutOptions.Start
@@ -338,7 +338,7 @@ public sealed class MirrorPage : ContentPage
         _blocked.IsVisible = step == Step.Blocked;
         _guide.IsVisible = step == Step.Guide;
         _lostHint.IsVisible = false;
-        // The blocked screen goes back to the intro's choices; while the camera runs, the button closes Mirror.
+        // The blocked screen goes back to the intro's choices (see BackOrClose); while the camera runs, the button closes Mirror.
         _close.SetIcon(step == Step.Blocked ? Icon.Back : Icon.Close, Theme.Text);
         SemanticProperties.SetDescription(_close.Button, step == Step.Blocked ? "Back" : "Close Mirror");
         // Pose rate, detection latency and frame time are for developers, not for the people using the app.
@@ -429,6 +429,12 @@ public sealed class MirrorPage : ContentPage
         _blockedText.Text = message;
         _blockedAction.IsVisible = settings;
         Show(Step.Blocked);
+    }
+
+    private void BackOrClose()
+    {
+        if (_step == Step.Blocked) Show(Step.Intro);
+        else Close();
     }
 
     private async void Close()
@@ -553,7 +559,7 @@ public sealed class MirrorPage : ContentPage
         SemanticProperties.SetHeadingLevel(title, SemanticHeadingLevel.Level1);
         var layout = new Grid { RowDefinitions = { new(GridLength.Star), new(GridLength.Auto) }, Padding = new Thickness(4, 0, 4, 8), MaximumWidthRequest = 480 };
         layout.Add(new VerticalStackLayout { Spacing = 18, Padding = new Thickness(12, 0), VerticalOptions = LayoutOptions.Center, Children = { icon, title, _blockedText } });
-        layout.Add(new VerticalStackLayout { Spacing = 10, Children = { _blockedAction, new ActionButton("Back", Close, ActionStyle.Secondary) } }, 0, 1);
+        layout.Add(new VerticalStackLayout { Spacing = 10, Children = { _blockedAction, new ActionButton("Back", BackOrClose, ActionStyle.Secondary) } }, 0, 1);
         return layout;
     }
 
