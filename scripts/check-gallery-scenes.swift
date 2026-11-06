@@ -19,10 +19,10 @@ func changedPixels(_ first: NSBitmapImageRep, _ second: NSBitmapImageRep) -> Int
     var right = [Int](repeating: 0, count: second.samplesPerPixel)
     var changed = 0
     let width = first.pixelsWide, height = first.pixelsHigh
-    // Restrict comparisons to the panel's own background color. It moves with
+    // Restrict comparisons to the scene background color (Theme.SceneBackground). It moves with
     // the layout, so simulator safe-area and screen-size changes do not matter.
     func isPanel(_ pixel: [Int]) -> Bool {
-        let rgb = [24, 36, 59]
+        let rgb = [20, 12, 7]
         return (0..<3).allSatisfy { abs(pixel[$0] - rgb[$0]) <= 8 } ||
                (0..<3).allSatisfy { abs(pixel[2 - $0] - rgb[$0]) <= 8 }
     }

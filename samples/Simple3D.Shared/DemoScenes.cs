@@ -29,6 +29,14 @@ public static partial class DemoScenes
         };
     }
 
+    /// <summary>The same color with its hue turned 180° and its lightness and saturation kept (HSL).</summary>
+    internal static uint OppositeHue(uint color)
+    {
+        uint r = (color >> 16) & 255, g = (color >> 8) & 255, b = color & 255;
+        var sum = Math.Max(r, Math.Max(g, b)) + Math.Min(r, Math.Min(g, b));
+        return (color & 0xFF000000) | ((sum - r) << 16) | ((sum - g) << 8) | (sum - b);
+    }
+
     private static uint Mix(uint start, uint end, float fraction)
     {
         var red = (uint)MathF.Round(((start >> 16) & 255) * (1 - fraction) + ((end >> 16) & 255) * fraction);

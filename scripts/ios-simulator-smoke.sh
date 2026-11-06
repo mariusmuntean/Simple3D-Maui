@@ -63,7 +63,7 @@ if [ "$mode" = --render-probe ]; then
     grep -q NATIVE_RENDER_PROBE_PASS artifacts/ios-render-probe.log
     exit 0
 fi
-for scene in Equipment Packing Surface; do
+for scene in Equipment Telemetry Surface; do
     xcrun simctl terminate "$device" dev.simple3d.gallery 2>/dev/null || true
     SIMCTL_CHILD_SIMPLE3D_GALLERY_SCENE="$scene" xcrun simctl launch "$device" dev.simple3d.gallery
     visible=false
@@ -79,7 +79,7 @@ for scene in Equipment Packing Surface; do
     if [ "$visible" = false ]; then break; fi
 done
 if [ "$visible" = true ] && swift scripts/check-gallery-scenes.swift \
-    artifacts/ios-gallery-{Equipment,Packing,Surface}.png; then
+    artifacts/ios-gallery-{Equipment,Telemetry,Surface}.png; then
     exit 0
 fi
 

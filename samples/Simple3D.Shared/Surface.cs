@@ -20,8 +20,8 @@ public static partial class DemoScenes
                 var height = .38f * MathF.Sin(px * 2.5f) * MathF.Cos(pz * 2.2f);
                 vertices.Add(new(px, height, pz));
                 var t = (height / .38f + 1) * .5f;
-                colors.Add(0xFF000000 | ((uint)(75 + 175 * t) << 16) |
-                    ((uint)(145 + 40 * t) << 8) | (uint)(240 - 125 * t));
+                colors.Add(OppositeHue(0xFF000000 | ((uint)(75 + 175 * t) << 16) |
+                    ((uint)(145 + 40 * t) << 8) | (uint)(240 - 125 * t)));
             }
         for (var z = 0; z < cells; z++)
             for (var x = 0; x < cells; x++)
@@ -38,9 +38,9 @@ public static partial class DemoScenes
             AmbientLight = .3f
         }.Add(smooth);
         var comparison = new SurfaceComparison(scene, flat, smooth);
-        var samplePoint = Shape.Sphere(0xFFFFBE79).Named("Sample point").Scaled(.13f).At(0, .13f, 0);
+        var samplePoint = Shape.Sphere(0xFF79BAFF).Named("Sample point").Scaled(.13f).At(0, .13f, 0);
         scene.Add(samplePoint);
-        scene.AddLabel(new("HEIGHT · VERTEX COLORS", new(0, .8f, 0), 0xFFE4ECFF));
+        scene.AddLabel(new("HEIGHT · VERTEX COLORS", new(0, .8f, 0), 0xFFFFF7E4));
         var camera = new Camera(5, .55f, .65f);
         camera.FitToScene(scene, 4f / 3);
         return new("Surface", "Compare flat and smooth shading, then move the light across a height-colored wave.", scene, camera,

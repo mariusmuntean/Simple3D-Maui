@@ -18,22 +18,24 @@ func near(_ pixel: [Int], _ red: Int, _ green: Int, _ blue: Int) -> Bool {
     return forward || reversed
 }
 
+// The scene background (Theme.SceneBackground) behind every scene, and blue scene accents: the interface itself has no
+// blue unless the renderer fell back to software.
 var background = 0
-var panel = 0
 var blueShape = 0
 var pixel = [Int](repeating: 0, count: image.samplesPerPixel)
 for y in stride(from: 0, to: image.pixelsHigh, by: 6) {
     for x in stride(from: 0, to: image.pixelsWide, by: 6) {
         image.getPixel(&pixel, atX: x, y: y)
-        if near(pixel, 13, 19, 34) { background += 1 }
-        if near(pixel, 24, 36, 59) { panel += 1 }
-        let green = pixel[1]
-        let blue = max(pixel[0], pixel[2]), red = min(pixel[0], pixel[2])
-        if red >= 60 && blue >= 120 && blue > red + 35 && blue > green + 25 { blueShape += 1 }
+        if near(pixel, 20, 12, 7) { background += 1 }
+        // Simulator screenshots may be RGB or BGR.
+        for (red, blue) in [(pixel[0], pixel[2]), (pixel[2], pixel[0])] where blue >= 150 && blue > red + 60 && blue > pixel[1] + 15 {
+            blueShape += 1
+            break
+        }
     }
 }
 
-fputs("Gallery pixels: background=\(background), panel=\(panel), blue shape=\(blueShape)\n", stderr)
-guard background > 1000, panel > 1000, blueShape > 100 else {
+fputs("Gallery pixels: scene background=\(background), blue shape=\(blueShape)\n", stderr)
+guard background > 1000, blueShape > 100 else {
     exit(1)
 }
