@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.0 · unreleased
+## 0.3.0 · 2026-11-07
 
 Native GPU rendering and animated characters. `SceneView` now draws with Metal on iOS and Mac Catalyst and OpenGL ES 3 on Android, falls back to software when needed, and renders skinned glTF/VRM characters with morph targets.
 
