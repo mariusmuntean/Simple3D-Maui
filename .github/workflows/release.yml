@@ -113,7 +113,10 @@ jobs:
     permissions:
       contents: write
     steps:
+      # No persisted checkout credentials: the publication below uses its own, and two would both be sent.
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/toolchain
       - uses: actions/setup-python@v5
         with:
@@ -129,8 +132,6 @@ jobs:
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          # The publication script creates a separate repository; pass authentication to its Git commands.
-          export GIT_CONFIG_COUNT=1
-          export GIT_CONFIG_KEY_0=http.https://github.com/.extraheader
-          export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\n')"
+          # The publication script works in a separate repository: authenticate every GitHub URL.
+          git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
           bash scripts/publish-docs.sh
