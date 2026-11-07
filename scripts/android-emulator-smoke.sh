@@ -33,6 +33,8 @@ app="$(find "samples/Simple3D.Demo/bin/$configuration/net10.0-android/$rid" \
     -maxdepth 1 -type f -name '*-Signed.apk' -print -quit)"
 test -n "$app" || { echo 'Built Android APK not found' >&2; exit 1; }
 adb install -r "$app"
+# Fresh emulators sometimes show "isn't responding" dialogs for system apps over the gallery; don't show them.
+adb shell settings put global hide_error_dialogs 1 || true
 adb shell pm path dev.simple3d.gallery
 adb logcat -c
 activity="$(adb shell cmd package resolve-activity --brief \
@@ -72,6 +74,7 @@ adb shell am start -W -n "$activity"
 mkdir -p artifacts
 for attempt in 1 2 3; do
     sleep 10
+    adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1 || true
     adb exec-out screencap -p > artifacts/android-gallery.png
     if python3 scripts/check-gallery-screenshot.py artifacts/android-gallery.png; then
         exit 0
