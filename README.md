@@ -20,13 +20,13 @@ A 3D scene control with software and native GPU rendering for .NET 10 MAUI on iO
 
 ## Start with a scene
 
-Install the [MAUI preview](https://www.nuget.org/packages/Simple3D.Maui/0.3.0-preview.1) in a .NET 10 MAUI app with Android, iOS or Mac Catalyst targets. It needs `Microsoft.Maui.Controls` 10.0.0 or later and runs on Android 5.0 (API 21), iOS 15 and Mac Catalyst 17 (macOS 14) or later:
+Install the [MAUI package](https://www.nuget.org/packages/Simple3D.Maui/0.3.0) in a .NET 10 MAUI app with Android, iOS or Mac Catalyst targets. It needs `Microsoft.Maui.Controls` 10.0.0 or later and runs on Android 5.0 (API 21), iOS 15 and Mac Catalyst 17 (macOS 14) or later:
 
 ```bash
-dotnet add YourApp.csproj package Simple3D.Maui --version 0.3.0-preview.1
+dotnet add YourApp.csproj package Simple3D.Maui --version 0.3.0
 ```
 
-Core is a transitive dependency. Headless applications can install [Simple3D.Core](https://www.nuget.org/packages/Simple3D.Core/0.3.0-preview.1) alone. For source or local-feed builds, see [packaging](docs/PACKAGING.md). Register SkiaSharp in `MauiProgram`:
+Core is a transitive dependency. Headless applications can install [Simple3D.Core](https://www.nuget.org/packages/Simple3D.Core/0.3.0) alone. For source or local-feed builds, see [packaging](docs/PACKAGING.md). Register SkiaSharp in `MauiProgram`:
 
 ```csharp
 using SkiaSharp.Views.Maui.Controls.Hosting;

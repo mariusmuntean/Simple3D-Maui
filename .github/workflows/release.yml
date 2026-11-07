@@ -1,0 +1,136 @@
+# Release: change CHANGELOG.md to "## X.Y.Z · YYYY-MM-DD", push the commit,
+# push tag vX.Y.Z, then approve the release environment deployment.
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: xcode-27
+    permissions:
+      id-token: write
+      attestations: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate version and extract changelog notes
+        shell: bash
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          python3 - "$VERSION" <<'PY'
+          import datetime
+          import pathlib
+          import re
+          import sys
+
+          version = sys.argv[1]
+          if not re.fullmatch(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?", version):
+              sys.exit(f"Invalid release version: {version}")
+          changelog = pathlib.Path("CHANGELOG.md").read_text()
+          heading = re.search(r"^## " + re.escape(version) + r" · (\d{4}-\d{2}-\d{2})$", changelog, re.MULTILINE)
+          if heading is None:
+              sys.exit(f"CHANGELOG.md needs a dated heading for {version}")
+          datetime.date.fromisoformat(heading[1])
+          notes = re.split(r"^## ", changelog[heading.end():], maxsplit=1, flags=re.MULTILINE)[0].strip()
+          pathlib.Path("release-notes.md").write_text(notes + "\n")
+          PY
+      - uses: ./.github/actions/toolchain
+      - run: dotnet run --project tests/Simple3D.Core.Tests -c Release -- --tests-only
+      - run: dotnet run --project tests/Simple3D.Maui.Tests -c Release
+      - name: Pack release libraries
+        run: |
+          dotnet pack src/Simple3D.Core -c Release -p:Version="$VERSION" -p:ContinuousIntegrationBuild=true -o artifacts/packages
+          dotnet pack src/Simple3D.Maui -c Release -p:Version="$VERSION" -p:ContinuousIntegrationBuild=true -o artifacts/packages
+      - run: BUILD_PACKAGE_MAUI=true bash scripts/test-package-consumer.sh artifacts/packages
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: artifacts/packages/*.nupkg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: |
+            artifacts/packages
+            release-notes.md
+          if-no-files-found: error
+  # After NuGet, so a release never appears without its packages.
+  github-release:
+    needs: [build, nuget]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          flags=()
+          if [[ "$VERSION" == *-* ]]; then flags+=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" --title "Simple3D $VERSION" --notes-file release-notes.md "${flags[@]}" artifacts/packages/*.nupkg artifacts/packages/*.snupkg
+  nuget:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+      - name: Authenticate with NuGet trusted publishing
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1
+        id: login
+        with:
+          user: marius.muntean
+      - name: Publish Core, then MAUI, with matching symbols
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          for package in Simple3D.Core Simple3D.Maui; do
+            # Push symbols explicitly so retries also publish them when the package already exists.
+            dotnet nuget push "artifacts/packages/$package.$VERSION.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate --no-symbols
+            dotnet nuget push "artifacts/packages/$package.$VERSION.snupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+          done
+  docs:
+    needs: nuget
+    runs-on: xcode-27
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/toolchain
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'Pillow>=12,<13'
+      - run: python scripts/render-doc-images.py
+      - run: dotnet tool install docfx --tool-path .tools --version 2.81.0
+      - run: .tools/docfx metadata docs/site/docfx.json --warningsAsErrors
+      - run: .tools/docfx build docs/site/docfx.json --warningsAsErrors
+      - name: Publish documentation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # The publication script creates a separate repository; pass authentication to its Git commands.
+          export GIT_CONFIG_COUNT=1
+          export GIT_CONFIG_KEY_0=http.https://github.com/.extraheader
+          export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\n')"
+          bash scripts/publish-docs.sh

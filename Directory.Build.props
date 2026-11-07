@@ -8,7 +8,7 @@
     <SkiaSharpVersion>3.119.2</SkiaSharpVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Simple3D.Core' or '$(MSBuildProjectName)' == 'Simple3D.Maui'">
-    <Version>0.3.0-preview.1</Version>
+    <Version Condition="'$(Version)' == ''">0.3.0-dev</Version>
     <Authors>Marius Muntean</Authors>
     <Copyright>Copyright (c) 2026 Marius Muntean</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

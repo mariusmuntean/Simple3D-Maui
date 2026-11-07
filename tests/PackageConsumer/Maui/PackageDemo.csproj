@@ -27,7 +27,7 @@
     <CodesignKey>-</CodesignKey>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Simple3D.Maui" Version="0.3.0-preview.1" />
+    <PackageReference Include="Simple3D.Maui" Version="$(Simple3DVersion)" />
     <!-- ConsumerMauiVersion checks the package against an older MAUI, e.g. the library's minimum. -->
     <PackageReference Include="Microsoft.Maui.Controls" Version="$([MSBuild]::ValueOrDefault('$(ConsumerMauiVersion)', '$(MauiVersion)'))" />
     <MauiIcon Include="Resources/AppIcon/appicon.svg" ForegroundFile="Resources/AppIcon/appiconfg.svg" Color="#101A2D" />

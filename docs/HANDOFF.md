@@ -14,9 +14,9 @@ Read [architecture](site/architecture.md), [development](DEVELOPMENT.md) and [pa
 
 ## Distribution
 
-Documentation lives at https://mariusmuntean.github.io/Simple3D-Maui/. Build locally and publish through `scripts/publish-docs.sh`. Native hosted validation is manual to control Actions costs.
+Documentation lives at https://mariusmuntean.github.io/Simple3D-Maui/. The tag-driven release workflow builds and publishes it through `scripts/publish-docs.sh` after NuGet publication.
 
-Preview packages use version `0.3.0-preview.1` (`0.2.0-preview.1` stays the latest on NuGet.org until it is published). Local packing and consumer validation do not imply NuGet.org publication. Follow the package checklist before publishing, and record tested platforms and configurations in release notes.
+The next release is `0.3.0`; local builds default to `0.3.0-dev`, and release tags supply the package version. Follow the [release flow](PACKAGING.md#release), and record tested platforms and configurations in release notes. Local packing and consumer validation do not imply NuGet.org publication.
 
 ## Keep the docs in sync
 

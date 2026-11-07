@@ -68,7 +68,9 @@ Console.WriteLine("PACKAGE_SKINNING_PASS: skeleton, pose blend, skinned mesh and
 if (args.Length == 0) return;
 foreach (var name in new[] { "Simple3D.Core", "Simple3D.Maui" })
 {
-    var path = Path.Combine(args[0], $"{name}.0.3.0-preview.1.nupkg");
+    var path = args.Length > 1
+        ? Path.Combine(args[0], $"{name}.{args[1]}.nupkg")
+        : Directory.GetFiles(args[0], $"{name}.*.nupkg").Single();
     using var package = ZipFile.OpenRead(path);
     var nuspec = XDocument.Load(package.Entries.Single(e => e.FullName.EndsWith(".nuspec")).Open());
     var metadata = nuspec.Root!.Elements().Single(e => e.Name.LocalName == "metadata");

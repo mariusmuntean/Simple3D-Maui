@@ -1,9 +1,9 @@
 # Packaging and consumer validation
 
-The current preview is `0.3.0-preview.1`. The MAUI package depends on Core, so applications install `Simple3D.Maui` alone.
+The next release is `0.3.0`. The MAUI package depends on Core, so applications install `Simple3D.Maui` alone.
 
 ```bash
-dotnet add YourApp.csproj package Simple3D.Maui --version 0.3.0-preview.1
+dotnet add YourApp.csproj package Simple3D.Maui --version 0.3.0
 ```
 
 Core-only applications install `Simple3D.Core` instead. See [Getting started](site/getting-started.md) for platform requirements, SkiaSharp registration and the first scene. The local-feed instructions below support development builds.
@@ -13,8 +13,8 @@ Core-only applications install `Simple3D.Core` instead. See [Getting started](si
 Use a clean committed checkout and .NET 10 with Android, iOS and Mac Catalyst workloads. Pack on macOS to include all three MAUI frameworks. Linux produces Android assets only and must not supply the public multi-platform package.
 
 ```bash
-dotnet pack src/Simple3D.Core -c Release -p:ContinuousIntegrationBuild=true -o artifacts/packages
-dotnet pack src/Simple3D.Maui -c Release -p:ContinuousIntegrationBuild=true -o artifacts/packages
+dotnet pack src/Simple3D.Core -c Release -p:Version=0.3.0 -p:ContinuousIntegrationBuild=true -o artifacts/packages
+dotnet pack src/Simple3D.Maui -c Release -p:Version=0.3.0 -p:ContinuousIntegrationBuild=true -o artifacts/packages
 ```
 
 Each package includes license metadata, repository commit, README, icon and XML documentation. Matching `.snupkg` files contain portable PDBs. .NET 10 supplies [Source Link for GitHub](https://github.com/dotnet/sourcelink). Deterministic compilation and CI path normalization remove machine-specific source paths; [SDK package validation](https://learn.microsoft.com/dotnet/fundamentals/package-validation/overview) checks asset compatibility after packing.
@@ -30,18 +30,18 @@ In an existing .NET 10 MAUI app, keep only supported targets (Android, iOS and M
 <configuration>
   <packageSources>
     <clear />
-    <add key="preview" value="/absolute/path/to/Simple3D-Maui/artifacts/packages" />
+    <add key="local" value="/absolute/path/to/Simple3D-Maui/artifacts/packages" />
     <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
   </packageSources>
 </configuration>
 ```
 
 ```bash
-dotnet add YourApp.csproj package Simple3D.Maui --version 0.3.0-preview.1 --no-restore
+dotnet add YourApp.csproj package Simple3D.Maui --version 0.3.0 --no-restore
 dotnet restore YourApp.csproj
 ```
 
-Keep the feed configured for subsequent builds and IDE restores. Core-only apps use `Simple3D.Core` in the same commands. Continue with [SkiaSharp registration and the first scene](site/getting-started.md). If you rebuild the same preview version, use a fresh package cache for validation; NuGet may otherwise reuse an earlier local build.
+Keep the feed configured for subsequent builds and IDE restores. Core-only apps use `Simple3D.Core` in the same commands. Continue with [SkiaSharp registration and the first scene](site/getting-started.md). If you rebuild the same package version, use a fresh package cache for validation; NuGet may otherwise reuse an earlier local build.
 
 ## Verify outside the checkout
 
@@ -55,17 +55,10 @@ The script prints and retains the consumer path for native inspection. Run its `
 
 The fixture copies gallery platform bootstrap and icon resources. It neither references library projects nor compiles library source. Core arrives transitively through the MAUI package.
 
-## Publish a preview
+## Release
 
-The manual-only [`publish-preview.yml`](../.github/workflows/publish-preview.yml) publishes the validated `0.2.0-preview.1` artifacts attached to the GitHub preview release, including matching symbols. It runs on `main`, checks four committed SHA-256 hashes before authentication, and uses a standard Ubuntu runner. Public repositories do not consume private-repository Actions minutes. It does not rebuild packages or run the native validation matrix.
+Push a committed changelog heading `## X.Y.Z · YYYY-MM-DD` with a real release date, then push the matching tag (for example, `git tag v0.3.0 && git push origin v0.3.0`). The [`release.yml`](../.github/workflows/release.yml) workflow takes the package version from the tag, runs tests, packs and validates both packages on macOS, attests the packages, and creates a GitHub Release with changelog notes and package/symbol assets. Versions containing `-` create prereleases.
 
-Configure a NuGet.org trusted publishing policy for owner `marius.muntean`, GitHub owner `mariusmuntean`, repository `Simple3D-Maui`, workflow `publish-preview.yml`, and no environment. Allow pushing new packages and versions for the exact IDs `Simple3D.Core` and `Simple3D.Maui`; do not grant unlist/relist access. The workflow uses a short-lived key from [NuGet trusted publishing](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing), so no long-lived API key belongs in GitHub secrets. Dispatch it only after the release artifacts and their source commit have passed the checks below. For another version, update the filenames, release tag and hashes after validating that version; this workflow deliberately publishes only this preview.
+One-time setup: create the GitHub environment `release` with a required reviewer. Configure a [NuGet trusted publishing](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing) policy for NuGet owner `marius.muntean`, GitHub owner `mariusmuntean`, repository `Simple3D-Maui`, workflow `release.yml`, and environment `release`, allowing the exact package IDs `Simple3D.Core` and `Simple3D.Maui`. No long-lived API key is needed.
 
-1. Commit the intended source, run portable tests, push the commit, then run package validation and independent consumers.
-2. Launch a packaged native consumer; record device and configuration.
-3. Inspect dependencies and all three MAUI framework assets. Publish matching symbols.
-4. Tag the verified source commit and publish a GitHub prerelease with the validated package artifacts. Keep its notes clear about NuGet availability pending public restore. The Action's read-only token cannot download a draft release.
-5. Publish `.nupkg` and `.snupkg` files with the maintainer's NuGet.org credentials.
-6. Restore a fresh consumer from NuGet.org, then update installation instructions and badges.
-
-Do not claim public NuGet availability before step 6. Source Link enables debugging when the IDE supports external sources and NuGet symbols; a verified PDB mapping does not establish Rider breakpoint behavior.
+Approve the `release` environment deployment to publish Core, then MAUI, with matching symbols. After publication succeeds, the workflow builds DocFX and pushes the site to `gh-pages`. Restore a fresh consumer from NuGet.org before claiming public availability; a GitHub Release or successful local validation alone does not establish it.
