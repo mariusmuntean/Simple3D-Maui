@@ -9,7 +9,7 @@
       <meta name="viewport" content="width=device-width">
       <meta name="title" content="Class SceneView | Simple3D ">
     
-    <meta name="description" content="A depth-rendered, touch-enabled surface for small opaque scenes. Mutate its scene and camera on the UI thread.">
+    <meta name="description" content="A touch-enabled surface with selectable software and native GPU rendering for small opaque scenes. Mutate its scene and camera on the UI thread.">
       <link rel="shortcut icon" href="../images/favicon.png">
       <link rel="stylesheet" href="../styles/docfx.vendor.min.css">
       <link rel="stylesheet" href="../styles/docfx.css">
@@ -81,7 +81,7 @@
 
 
   <h1 id="Simple3D_Maui_SceneView" data-uid="Simple3D.Maui.SceneView" class="text-break">Class SceneView</h1>
-  <div class="markdown level0 summary"><p>A depth-rendered, touch-enabled surface for small opaque scenes. Mutate its scene and camera on the UI thread.</p>
+  <div class="markdown level0 summary"><p>A touch-enabled surface with selectable software and native GPU rendering for small opaque scenes. Mutate its scene and camera on the UI thread.</p>
 </div>
   <div class="markdown level0 conceptual"></div>
   <div class="inheritance">
@@ -93,13 +93,14 @@
     <div class="level4"><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.navigableelement">NavigableElement</a></div>
     <div class="level5"><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.visualelement">VisualElement</a></div>
     <div class="level6"><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.view">View</a></div>
-    <div class="level7"><a class="xref" href="https://learn.microsoft.com/dotnet/api/skiasharp.views.maui.controls.skcanvasview">SKCanvasView</a></div>
-    <div class="level8"><span class="xref">SceneView</span></div>
+    <div class="level7"><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.compatibility.layout">Layout</a></div>
+    <div class="level8"><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.templatedview">TemplatedView</a></div>
+    <div class="level9"><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.contentview">ContentView</a></div>
+    <div class="level10"><span class="xref">SceneView</span></div>
   </div>
   <div class="implements">
     <h5>Implements</h5>
     <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.componentmodel.inotifypropertychanged">INotifyPropertyChanged</a></div>
-    <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.ivisualtreeelement">IVisualTreeElement</a></div>
     <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.ieffectcontrolprovider">IEffectControlProvider</a></div>
     <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.itooltipelement">IToolTipElement</a></div>
     <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.icontextflyoutelement">IContextFlyoutElement</a></div>
@@ -112,36 +113,80 @@
     <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.ipropertymapperview">IPropertyMapperView</a></div>
     <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.hotreload.ihotreloadableview">IHotReloadableView</a></div>
     <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.ireplaceableview">IReplaceableView</a></div>
-    <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/skiasharp.views.maui.iskcanvasview">ISKCanvasView</a></div>
+    <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.ilayout">ILayout</a></div>
+    <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.ilayoutcontroller">ILayoutController</a></div>
+    <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.ivisualtreeelement">IVisualTreeElement</a></div>
+    <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.icontentview">IContentView</a></div>
     <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.iview">IView</a></div>
     <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.ielement">IElement</a></div>
     <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.itransform">ITransform</a></div>
+    <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.ipadding">IPadding</a></div>
+    <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.icrossplatformlayout">ICrossPlatformLayout</a></div>
   </div>
   <div class="inheritedMembers">
     <h5>Inherited Members</h5>
     <div>
-      <a class="xref" href="https://learn.microsoft.com/dotnet/api/skiasharp.views.maui.controls.skcanvasview.ignorepixelscalingproperty">SKCanvasView.IgnorePixelScalingProperty</a>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.contentview.contentproperty">ContentView.ContentProperty</a>
     </div>
     <div>
-      <a class="xref" href="https://learn.microsoft.com/dotnet/api/skiasharp.views.maui.controls.skcanvasview.enabletoucheventsproperty">SKCanvasView.EnableTouchEventsProperty</a>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.contentview.safeareaedgesproperty">ContentView.SafeAreaEdgesProperty</a>
     </div>
     <div>
-      <a class="xref" href="https://learn.microsoft.com/dotnet/api/skiasharp.views.maui.controls.skcanvasview.invalidatesurface">SKCanvasView.InvalidateSurface()</a>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.contentview.content">ContentView.Content</a>
     </div>
     <div>
-      <a class="xref" href="https://learn.microsoft.com/dotnet/api/skiasharp.views.maui.controls.skcanvasview.canvassize">SKCanvasView.CanvasSize</a>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.contentview.safeareaedges">ContentView.SafeAreaEdges</a>
     </div>
     <div>
-      <a class="xref" href="https://learn.microsoft.com/dotnet/api/skiasharp.views.maui.controls.skcanvasview.ignorepixelscaling">SKCanvasView.IgnorePixelScaling</a>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.templatedview.controltemplateproperty">TemplatedView.ControlTemplateProperty</a>
     </div>
     <div>
-      <a class="xref" href="https://learn.microsoft.com/dotnet/api/skiasharp.views.maui.controls.skcanvasview.enabletouchevents">SKCanvasView.EnableTouchEvents</a>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.templatedview.isclippedtoboundsproperty">TemplatedView.IsClippedToBoundsProperty</a>
     </div>
     <div>
-      <a class="xref" href="https://learn.microsoft.com/dotnet/api/skiasharp.views.maui.controls.skcanvasview.paintsurface">SKCanvasView.PaintSurface</a>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.templatedview.cascadeinputtransparentproperty">TemplatedView.CascadeInputTransparentProperty</a>
     </div>
     <div>
-      <a class="xref" href="https://learn.microsoft.com/dotnet/api/skiasharp.views.maui.controls.skcanvasview.touch">SKCanvasView.Touch</a>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.templatedview.paddingproperty">TemplatedView.PaddingProperty</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.templatedview.resolvecontroltemplate">TemplatedView.ResolveControlTemplate()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.templatedview.lowerchild">TemplatedView.LowerChild(View)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.templatedview.raisechild">TemplatedView.RaiseChild(View)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.templatedview.isclippedtobounds">TemplatedView.IsClippedToBounds</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.templatedview.controltemplate">TemplatedView.ControlTemplate</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.templatedview.cascadeinputtransparent">TemplatedView.CascadeInputTransparent</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.templatedview.padding">TemplatedView.Padding</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.compatibility.layout.forcelayout">Layout.ForceLayout()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.compatibility.layout.measure">Layout.Measure(double, double, MeasureFlags)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.compatibility.layout.layoutchildintoboundingregion">Layout.LayoutChildIntoBoundingRegion(VisualElement, Rect)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.compatibility.layout.crossplatformmeasure">Layout.CrossPlatformMeasure(double, double)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.compatibility.layout.crossplatformarrange">Layout.CrossPlatformArrange(Rect)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.compatibility.layout.layoutchanged">Layout.LayoutChanged</a>
     </div>
     <div>
       <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.view.verticaloptionsproperty">View.VerticalOptionsProperty</a>
@@ -289,9 +334,6 @@
     </div>
     <div>
       <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.visualelement.measure#microsoft-maui-controls-visualelement-measure(system-double-system-double)">VisualElement.Measure(double, double)</a>
-    </div>
-    <div>
-      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.visualelement.measure#microsoft-maui-controls-visualelement-measure(system-double-system-double-microsoft-maui-controls-measureflags)">VisualElement.Measure(double, double, MeasureFlags)</a>
     </div>
     <div>
       <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.visualelement.unfocus">VisualElement.Unfocus()</a>
@@ -610,7 +652,7 @@
   <h6><strong>Assembly</strong>: Simple3D.Maui.dll</h6>
   <h5 id="Simple3D_Maui_SceneView_syntax">Syntax</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public sealed class SceneView : SKCanvasView, INotifyPropertyChanged, IVisualTreeElement, IEffectControlProvider, IToolTipElement, IContextFlyoutElement, IAnimatable, IViewController, IVisualElementController, IElementController, IGestureController, IGestureRecognizers, IPropertyMapperView, IHotReloadableView, IReplaceableView, ISKCanvasView, IView, IElement, ITransform</code></pre>
+    <pre><code class="lang-csharp hljs">public sealed class SceneView : ContentView, INotifyPropertyChanged, IEffectControlProvider, IToolTipElement, IContextFlyoutElement, IAnimatable, IViewController, IVisualElementController, IElementController, IGestureController, IGestureRecognizers, IPropertyMapperView, IHotReloadableView, IReplaceableView, ILayout, ILayoutController, IVisualTreeElement, IContentView, IView, IElement, ITransform, IPadding, ICrossPlatformLayout</code></pre>
   </div>
   <h3 id="constructors">Constructors
 </h3>
@@ -670,7 +712,7 @@
     <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Maui/SceneView.cs/#L35">View Source</a>
   </span>
   <h4 id="Simple3D_Maui_SceneView_IsAntialiasEnabledProperty" data-uid="Simple3D.Maui.SceneView.IsAntialiasEnabledProperty">IsAntialiasEnabledProperty</h4>
-  <div class="markdown level1 summary"><p>Whether native painting softens high-contrast diagonal pixel steps.</p>
+  <div class="markdown level1 summary"><p>Whether software painting softens high-contrast diagonal pixel steps.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
@@ -754,6 +796,36 @@
   </table>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Maui_SceneView_RenderingModeProperty.md&amp;value=---%0Auid%3A%20Simple3D.Maui.SceneView.RenderingModeProperty%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Maui/SceneView.Hardware.cs/#L8">View Source</a>
+  </span>
+  <h4 id="Simple3D_Maui_SceneView_RenderingModeProperty" data-uid="Simple3D.Maui.SceneView.RenderingModeProperty">RenderingModeProperty</h4>
+  <div class="markdown level1 summary"><p>Requested rendering mode. Auto prefers hardware with observable software fallback.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static readonly BindableProperty RenderingModeProperty</code></pre>
+  </div>
+  <h5 class="fieldValue">Field Value</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.bindableproperty">BindableProperty</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
     <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Maui_SceneView_SceneBackgroundColorProperty.md&amp;value=---%0Auid%3A%20Simple3D.Maui.SceneView.SceneBackgroundColorProperty%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
@@ -816,6 +888,37 @@
 </h3>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Maui_SceneView_ActiveRenderingBackend.md&amp;value=---%0Auid%3A%20Simple3D.Maui.SceneView.ActiveRenderingBackend%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Maui/SceneView.Hardware.cs/#L14">View Source</a>
+  </span>
+  <a id="Simple3D_Maui_SceneView_ActiveRenderingBackend_" data-uid="Simple3D.Maui.SceneView.ActiveRenderingBackend*"></a>
+  <h4 id="Simple3D_Maui_SceneView_ActiveRenderingBackend" data-uid="Simple3D.Maui.SceneView.ActiveRenderingBackend">ActiveRenderingBackend</h4>
+  <div class="markdown level1 summary"><p>Backend actually presenting frames. None means initializing, disconnected or failed required hardware.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public RenderingBackend ActiveRenderingBackend { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="Simple3D.Maui.RenderingBackend.html">RenderingBackend</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
     <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Maui_SceneView_Camera.md&amp;value=---%0Auid%3A%20Simple3D.Maui.SceneView.Camera%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
@@ -854,7 +957,7 @@
   </span>
   <a id="Simple3D_Maui_SceneView_IsAntialiasEnabled_" data-uid="Simple3D.Maui.SceneView.IsAntialiasEnabled*"></a>
   <h4 id="Simple3D_Maui_SceneView_IsAntialiasEnabled" data-uid="Simple3D.Maui.SceneView.IsAntialiasEnabled">IsAntialiasEnabled</h4>
-  <div class="markdown level1 summary"><p>Soften diagonal edges during native painting. Core captures and picking remain unchanged.</p>
+  <div class="markdown level1 summary"><p>Soften diagonal edges during software painting. GPU rendering, Core captures and picking remain unchanged.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
@@ -909,6 +1012,130 @@
   </table>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Maui_SceneView_LastFrameHeight.md&amp;value=---%0Auid%3A%20Simple3D.Maui.SceneView.LastFrameHeight%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Maui/SceneView.Hardware.cs/#L24">View Source</a>
+  </span>
+  <a id="Simple3D_Maui_SceneView_LastFrameHeight_" data-uid="Simple3D.Maui.SceneView.LastFrameHeight*"></a>
+  <h4 id="Simple3D_Maui_SceneView_LastFrameHeight" data-uid="Simple3D.Maui.SceneView.LastFrameHeight">LastFrameHeight</h4>
+  <div class="markdown level1 summary"><p>Pixel height of the last presented 3D frame.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int LastFrameHeight { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Maui_SceneView_LastFrameMilliseconds.md&amp;value=---%0Auid%3A%20Simple3D.Maui.SceneView.LastFrameMilliseconds%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Maui/SceneView.Hardware.cs/#L20">View Source</a>
+  </span>
+  <a id="Simple3D_Maui_SceneView_LastFrameMilliseconds_" data-uid="Simple3D.Maui.SceneView.LastFrameMilliseconds*"></a>
+  <h4 id="Simple3D_Maui_SceneView_LastFrameMilliseconds" data-uid="Simple3D.Maui.SceneView.LastFrameMilliseconds">LastFrameMilliseconds</h4>
+  <div class="markdown level1 summary"><p>CPU time of the last frame: software rasterization (near zero when an unchanged image is repainted), or GPU frame preparation and submission (not GPU execution time).</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public double LastFrameMilliseconds { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Maui_SceneView_LastFrameWidth.md&amp;value=---%0Auid%3A%20Simple3D.Maui.SceneView.LastFrameWidth%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Maui/SceneView.Hardware.cs/#L22">View Source</a>
+  </span>
+  <a id="Simple3D_Maui_SceneView_LastFrameWidth_" data-uid="Simple3D.Maui.SceneView.LastFrameWidth*"></a>
+  <h4 id="Simple3D_Maui_SceneView_LastFrameWidth" data-uid="Simple3D.Maui.SceneView.LastFrameWidth">LastFrameWidth</h4>
+  <div class="markdown level1 summary"><p>Pixel width of the last presented 3D frame (may be below the view's pixel size, see <a class="xref" href="Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_MaximumRenderDimension">MaximumRenderDimension</a>).</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int LastFrameWidth { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Maui_SceneView_LastHardwareSubmissionMilliseconds.md&amp;value=---%0Auid%3A%20Simple3D.Maui.SceneView.LastHardwareSubmissionMilliseconds%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Maui/SceneView.Hardware.cs/#L18">View Source</a>
+  </span>
+  <a id="Simple3D_Maui_SceneView_LastHardwareSubmissionMilliseconds_" data-uid="Simple3D.Maui.SceneView.LastHardwareSubmissionMilliseconds*"></a>
+  <h4 id="Simple3D_Maui_SceneView_LastHardwareSubmissionMilliseconds" data-uid="Simple3D.Maui.SceneView.LastHardwareSubmissionMilliseconds">LastHardwareSubmissionMilliseconds</h4>
+  <div class="markdown level1 summary"><p>CPU elapsed time preparing and submitting the last GPU frame, including driver blocking. Not GPU execution time or displayed FPS.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public double LastHardwareSubmissionMilliseconds { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
     <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Maui_SceneView_MaximumRenderDimension.md&amp;value=---%0Auid%3A%20Simple3D.Maui.SceneView.MaximumRenderDimension%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
@@ -934,6 +1161,68 @@
     <tbody>
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Maui_SceneView_RenderingDiagnostic.md&amp;value=---%0Auid%3A%20Simple3D.Maui.SceneView.RenderingDiagnostic%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Maui/SceneView.Hardware.cs/#L16">View Source</a>
+  </span>
+  <a id="Simple3D_Maui_SceneView_RenderingDiagnostic_" data-uid="Simple3D.Maui.SceneView.RenderingDiagnostic*"></a>
+  <h4 id="Simple3D_Maui_SceneView_RenderingDiagnostic" data-uid="Simple3D.Maui.SceneView.RenderingDiagnostic">RenderingDiagnostic</h4>
+  <div class="markdown level1 summary"><p>Native backend description, fallback reason, initialization status, or why the current scene content was skipped (for example exceeding the triangle budget).</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string? RenderingDiagnostic { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Maui_SceneView_RenderingMode.md&amp;value=---%0Auid%3A%20Simple3D.Maui.SceneView.RenderingMode%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Maui/SceneView.Hardware.cs/#L12">View Source</a>
+  </span>
+  <a id="Simple3D_Maui_SceneView_RenderingMode_" data-uid="Simple3D.Maui.SceneView.RenderingMode*"></a>
+  <h4 id="Simple3D_Maui_SceneView_RenderingMode" data-uid="Simple3D.Maui.SceneView.RenderingMode">RenderingMode</h4>
+  <div class="markdown level1 summary"><p>Choose Auto, Software or Hardware. Changes retain scene, camera and selection.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public RenderingMode RenderingMode { get; set; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="Simple3D.Maui.RenderingMode.html">RenderingMode</a></td>
         <td></td>
       </tr>
     </tbody>
@@ -1104,10 +1393,26 @@
   </div>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Maui_SceneView_InvalidateSurface.md&amp;value=---%0Auid%3A%20Simple3D.Maui.SceneView.InvalidateSurface%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Maui/SceneView.Hardware.cs/#L193">View Source</a>
+  </span>
+  <a id="Simple3D_Maui_SceneView_InvalidateSurface_" data-uid="Simple3D.Maui.SceneView.InvalidateSurface*"></a>
+  <h4 id="Simple3D_Maui_SceneView_InvalidateSurface" data-uid="Simple3D.Maui.SceneView.InvalidateSurface">InvalidateSurface()</h4>
+  <div class="markdown level1 summary"><p>Requests a new native paint. Scene and camera changes call this automatically.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void InvalidateSurface()</code></pre>
+  </div>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
     <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Maui_SceneView_OnHandlerChanged.md&amp;value=---%0Auid%3A%20Simple3D.Maui.SceneView.OnHandlerChanged%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Maui/SceneView.cs/#L267">View Source</a>
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Maui/SceneView.cs/#L280">View Source</a>
   </span>
   <a id="Simple3D_Maui_SceneView_OnHandlerChanged_" data-uid="Simple3D.Maui.SceneView.OnHandlerChanged*"></a>
   <h4 id="Simple3D_Maui_SceneView_OnHandlerChanged" data-uid="Simple3D.Maui.SceneView.OnHandlerChanged">OnHandlerChanged()</h4>
@@ -1353,6 +1658,99 @@
 </h3>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Maui_SceneView_FrameSubmitted.md&amp;value=---%0Auid%3A%20Simple3D.Maui.SceneView.FrameSubmitted%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Maui/SceneView.Hardware.cs/#L29">View Source</a>
+  </span>
+  <h4 id="Simple3D_Maui_SceneView_FrameSubmitted" data-uid="Simple3D.Maui.SceneView.FrameSubmitted">FrameSubmitted</h4>
+  <div class="markdown level1 summary"><p>Raised on the UI thread after each frame is submitted for display, by either backend. Counting these gives
+the submission rate, which matches displayed FPS unless the platform drops or rejects a submitted frame (for
+example a Metal command buffer failing later). Frames are drawn on demand, so an idle view raises none. Exceptions thrown by handlers
+propagate to the caller as usual and are never treated as rendering failures.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public event EventHandler? FrameSubmitted</code></pre>
+  </div>
+  <h5 class="eventType">Event Type</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.eventhandler">EventHandler</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Maui_SceneView_RenderingBackendChanged.md&amp;value=---%0Auid%3A%20Simple3D.Maui.SceneView.RenderingBackendChanged%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Maui/SceneView.Hardware.cs/#L31">View Source</a>
+  </span>
+  <h4 id="Simple3D_Maui_SceneView_RenderingBackendChanged" data-uid="Simple3D.Maui.SceneView.RenderingBackendChanged">RenderingBackendChanged</h4>
+  <div class="markdown level1 summary"><p>Raised after backend/status changes. Subscribe before attaching the view to observe initialization failures.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public event EventHandler? RenderingBackendChanged</code></pre>
+  </div>
+  <h5 class="eventType">Event Type</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.eventhandler">EventHandler</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Maui_SceneView_RenderingFailed.md&amp;value=---%0Auid%3A%20Simple3D.Maui.SceneView.RenderingFailed%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Maui/SceneView.Hardware.cs/#L33">View Source</a>
+  </span>
+  <h4 id="Simple3D_Maui_SceneView_RenderingFailed" data-uid="Simple3D.Maui.SceneView.RenderingFailed">RenderingFailed</h4>
+  <div class="markdown level1 summary"><p>Raised when hardware initialization or drawing fails. Hardware mode does not silently use software.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public event EventHandler&lt;RenderingFailureEventArgs&gt;? RenderingFailed</code></pre>
+  </div>
+  <h5 class="eventType">Event Type</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.eventhandler-1">EventHandler</a>&lt;<a class="xref" href="Simple3D.Maui.RenderingFailureEventArgs.html">RenderingFailureEventArgs</a>&gt;</td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
     <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Maui_SceneView_SelectionChanged.md&amp;value=---%0Auid%3A%20Simple3D.Maui.SceneView.SelectionChanged%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
@@ -1384,9 +1782,6 @@
   <h3 id="implements">Implements</h3>
   <div>
       <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.componentmodel.inotifypropertychanged">INotifyPropertyChanged</a>
-  </div>
-  <div>
-      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.ivisualtreeelement">IVisualTreeElement</a>
   </div>
   <div>
       <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.ieffectcontrolprovider">IEffectControlProvider</a>
@@ -1425,7 +1820,16 @@
       <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.ireplaceableview">IReplaceableView</a>
   </div>
   <div>
-      <a class="xref" href="https://learn.microsoft.com/dotnet/api/skiasharp.views.maui.iskcanvasview">ISKCanvasView</a>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.ilayout">ILayout</a>
+  </div>
+  <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.controls.ilayoutcontroller">ILayoutController</a>
+  </div>
+  <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.ivisualtreeelement">IVisualTreeElement</a>
+  </div>
+  <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.icontentview">IContentView</a>
   </div>
   <div>
       <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.iview">IView</a>
@@ -1435,6 +1839,12 @@
   </div>
   <div>
       <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.itransform">ITransform</a>
+  </div>
+  <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.ipadding">IPadding</a>
+  </div>
+  <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.maui.icrossplatformlayout">ICrossPlatformLayout</a>
   </div>
 
 </article>
@@ -1448,7 +1858,7 @@
                     <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Maui_SceneView.md&amp;value=---%0Auid%3A%20Simple3D.Maui.SceneView%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
                   </li>
                   <li>
-                    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Maui/SceneView.cs/#L16" class="contribution-link">View Source</a>
+                    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Maui/SceneView.Hardware.cs/#L5" class="contribution-link">View Source</a>
                   </li>
                 </ul>
               </div>

@@ -72,7 +72,7 @@
             <article class="content wrap" id="_content" data-uid="">
 <h1 id="architecture-and-rendering-pipeline">Architecture and rendering pipeline</h1>
 
-<p>Simple3D is a small CPU renderer for opaque 3D scenes inside ordinary .NET MAUI pages. You describe geometry and a camera in Core. The MAUI control renders that geometry to a bitmap, presents it through SkiaSharp, and connects pointer gestures to the camera and selection.</p>
+<p>Simple3D provides software and native GPU rendering for opaque 3D scenes inside ordinary .NET MAUI pages. You describe geometry and a camera in Core. The MAUI control selects a native Metal/GLES surface or a software bitmap surface, overlays labels through SkiaSharp, and connects pointer gestures to the camera and selection.</p>
 <h2 id="package-boundaries">Package boundaries</h2>
 <p><img src="images/architecture.svg" alt="Application, portable Core, MAUI control and native platform boundaries"></p>
 <table>
@@ -106,9 +106,9 @@
 </tr>
 </tbody>
 </table>
-<p>Core has no MAUI or SkiaSharp dependency. You can render and query pixels in a console app without a native UI. <code>SceneView</code> uses <code>SKCanvasView</code>; SkiaSharp presents the raster image rather than executing the scene's triangles on a GPU.</p>
+<p>Core has no MAUI or SkiaSharp dependency. You can render and query pixels in a console app without a native UI. <code>SceneView</code> is a <code>ContentView</code> containing native GPU and Skia surfaces. The software path uses <code>SKCanvasView</code> for bitmap presentation; the hardware path executes triangles on Metal or GLES3. See <a href="hardware-rendering.html">hardware rendering</a>.</p>
 <p>This boundary keeps geometry and rendering tests portable. Your page hosts a normal MAUI view without adopting a game engine's application lifecycle.</p>
-<h2 id="one-frame-step-by-step">One frame, step by step</h2>
+<h2 id="one-software-frame-step-by-step">One software frame, step by step</h2>
 <p><img src="images/rendering-pipeline.svg" alt="Pipeline through transforms, clipping, depth rasterization and native presentation"></p>
 <ol>
 <li><strong>Invalidate.</strong> Scene and camera mutations raise synchronous notifications. The view marks cached output dirty and requests a paint. An unchanged native paint can reuse its previous target.</li>
@@ -119,7 +119,7 @@
 <li><strong>Present.</strong> The view copies changed pixels into a reusable Skia bitmap, optionally filters diagonal edges, adds selection tint and contour, and scales to the native surface. It draws labels afterward, with bounds and overlap handling.</li>
 </ol>
 <p>Scratch depth storage belongs to the <code>DepthRenderer</code> instance. Color and shape-ID arrays belong to the frame or reusable target. Core projects labels separately; labels overlay geometry without depth testing.</p>
-<h2 id="picking-shares-visibility">Picking shares visibility</h2>
+<h2 id="software-picking-shares-visibility">Software picking shares visibility</h2>
 <p>A render records the winning leaf ID for each pixel. <code>Pick</code> looks up that ID and returns its shape without a second geometry pass. Hidden triangles cannot win a tap.</p>
 <p><code>SceneView.PickAt</code> maps layout coordinates into target pixels. Selection uses the same ID buffer, preserving occlusion without changing materials. Shape replacement transfers selection to the corresponding child position in the new tree. Keep logical child order stable during animation; removed or missing parts clear selection.</p>
 <h2 id="ownership-and-repeated-frames">Ownership and repeated frames</h2>
@@ -153,7 +153,7 @@
 <p>Your application owns animation timing. Replace shapes from a UI timer and stop it when the page disappears. Cost grows with covered pixels and overlap as well as triangle count. Profile the native target and distinguish CPU render time from displayed frame rate.</p>
 <h2 id="deliberate-scope">Deliberate scope</h2>
 <p>The software path keeps rendering, visibility and picking in one inspectable pipeline. Its tradeoff is CPU work per covered pixel. Simple3D supports opaque textures, flat or smooth diffuse lighting, vertex colors, and OBJ geometry import. It has no transparency, PBR or shadows. Attribute interpolation is perspective-correct, including across near-plane clipping.</p>
-<p><code>SceneRenderer</code> is the older projected-triangle API, retained for compatible primitive/default-camera code. <code>SceneView</code> uses <code>DepthRenderer</code>. Use the depth path for custom meshes, newer camera features and intersecting geometry.</p>
+<p><code>SceneRenderer</code> is the older projected-triangle API, retained for compatible primitive/default-camera code. <code>SceneView</code> uses <code>DepthRenderer</code> for software presentation and explicit snapshots. Use the depth path for custom meshes, newer camera features and intersecting geometry.</p>
 <h2 id="read-the-implementation">Read the implementation</h2>
 <ul>
 <li><a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Core/Scene.cs">Scene traversal and notifications</a></li>

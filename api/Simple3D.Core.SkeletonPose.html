@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<!--[if IE]><![endif]-->
+<html>
+
+  <head>
+    <meta charset="utf-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+      <title>Class SkeletonPose | Simple3D </title>
+      <meta name="viewport" content="width=device-width">
+      <meta name="title" content="Class SkeletonPose | Simple3D ">
+    
+    <meta name="description" content="An immutable pose: one local rotation per joint plus an offset added to the root joints&#39; rest translation.">
+      <link rel="shortcut icon" href="../images/favicon.png">
+      <link rel="stylesheet" href="../styles/docfx.vendor.min.css">
+      <link rel="stylesheet" href="../styles/docfx.css">
+      <link rel="stylesheet" href="../styles/main.css">
+      <meta property="docfx:navrel" content="../toc.html">
+      <meta property="docfx:tocrel" content="toc.html">
+    
+    <meta property="docfx:rel" content="../">
+    
+  </head>
+  <body data-spy="scroll" data-target="#affix" data-offset="120">
+    <div id="wrapper">
+      <header>
+
+        <nav id="autocollapse" class="navbar navbar-inverse ng-scope" role="navigation">
+          <div class="container">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+
+              <a class="navbar-brand" href="../index.html">
+                <img id="logo" class="svg" src="../images/navigation-mark.svg" alt="Simple3D">
+              </a>
+            </div>
+            <div class="collapse navbar-collapse" id="navbar">
+              <form class="navbar-form navbar-right" role="search" id="search">
+                <div class="form-group">
+                  <input type="text" class="form-control" id="search-query" placeholder="Search" autocomplete="off">
+                </div>
+              </form>
+            </div>
+          </div>
+        </nav>
+
+        <div class="subnav navbar navbar-default">
+          <div class="container hide-when-search" id="breadcrumb">
+            <ul class="breadcrumb">
+              <li></li>
+            </ul>
+          </div>
+        </div>
+      </header>
+      <div class="container body-content">
+
+        <div id="search-results">
+          <div class="search-list">Search Results for <span></span></div>
+          <div class="sr-items">
+            <p><i class="glyphicon glyphicon-refresh index-loading"></i></p>
+          </div>
+          <ul id="pagination" data-first=First data-prev=Previous data-next=Next data-last=Last></ul>
+        </div>
+      </div>
+      <div role="main" class="container body-content hide-when-search">
+
+        <div class="sidenav hide-when-search">
+          <a class="btn toc-toggle collapse" data-toggle="collapse" href="#sidetoggle" aria-expanded="false" aria-controls="sidetoggle">Show / Hide Table of Contents</a>
+          <div class="sidetoggle collapse" id="sidetoggle">
+            <div id="sidetoc"></div>
+          </div>
+        </div>
+        <div class="article row grid-right">
+          <div class="col-md-10">
+            <article class="content wrap" id="_content" data-uid="Simple3D.Core.SkeletonPose">
+
+
+
+  <h1 id="Simple3D_Core_SkeletonPose" data-uid="Simple3D.Core.SkeletonPose" class="text-break">Class SkeletonPose</h1>
+  <div class="markdown level0 summary"><p>An immutable pose: one local rotation per joint plus an offset added to the root joints' rest translation.</p>
+</div>
+  <div class="markdown level0 conceptual"></div>
+  <div class="inheritance">
+    <h5>Inheritance</h5>
+    <div class="level0"><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+    <div class="level1"><span class="xref">SkeletonPose</span></div>
+  </div>
+  <div class="inheritedMembers">
+    <h5>Inherited Members</h5>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+  </div>
+  <h6><strong>Namespace</strong>: <span class="xref">Simple3D</span>.<a class="xref" href="Simple3D.Core.html">Core</a></h6>
+  <h6><strong>Assembly</strong>: Simple3D.Core.dll</h6>
+  <h5 id="Simple3D_Core_SkeletonPose_syntax">Syntax</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public sealed class SkeletonPose</code></pre>
+  </div>
+  <h3 id="properties">Properties
+</h3>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Core_SkeletonPose_RootOffset.md&amp;value=---%0Auid%3A%20Simple3D.Core.SkeletonPose.RootOffset%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Core/Skeleton.cs/#L90">View Source</a>
+  </span>
+  <a id="Simple3D_Core_SkeletonPose_RootOffset_" data-uid="Simple3D.Core.SkeletonPose.RootOffset*"></a>
+  <h4 id="Simple3D_Core_SkeletonPose_RootOffset" data-uid="Simple3D.Core.SkeletonPose.RootOffset">RootOffset</h4>
+  <div class="markdown level1 summary"><p>Offset added to the translation of root joints.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Vector3 RootOffset { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Core_SkeletonPose_Rotations.md&amp;value=---%0Auid%3A%20Simple3D.Core.SkeletonPose.Rotations%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Core/Skeleton.cs/#L88">View Source</a>
+  </span>
+  <a id="Simple3D_Core_SkeletonPose_Rotations_" data-uid="Simple3D.Core.SkeletonPose.Rotations*"></a>
+  <h4 id="Simple3D_Core_SkeletonPose_Rotations" data-uid="Simple3D.Core.SkeletonPose.Rotations">Rotations</h4>
+  <div class="markdown level1 summary"><p>Local joint rotations, relative to each parent.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public IReadOnlyList&lt;Quaternion&gt; Rotations { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.quaternion">Quaternion</a>&gt;</td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Core_SkeletonPose_Skeleton.md&amp;value=---%0Auid%3A%20Simple3D.Core.SkeletonPose.Skeleton%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Core/Skeleton.cs/#L86">View Source</a>
+  </span>
+  <a id="Simple3D_Core_SkeletonPose_Skeleton_" data-uid="Simple3D.Core.SkeletonPose.Skeleton*"></a>
+  <h4 id="Simple3D_Core_SkeletonPose_Skeleton" data-uid="Simple3D.Core.SkeletonPose.Skeleton">Skeleton</h4>
+  <div class="markdown level1 summary"><p>The posed skeleton.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Skeleton Skeleton { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="Simple3D.Core.Skeleton.html">Skeleton</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Core_SkeletonPose_WorldTransforms.md&amp;value=---%0Auid%3A%20Simple3D.Core.SkeletonPose.WorldTransforms%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Core/Skeleton.cs/#L128">View Source</a>
+  </span>
+  <a id="Simple3D_Core_SkeletonPose_WorldTransforms_" data-uid="Simple3D.Core.SkeletonPose.WorldTransforms*"></a>
+  <h4 id="Simple3D_Core_SkeletonPose_WorldTransforms" data-uid="Simple3D.Core.SkeletonPose.WorldTransforms">WorldTransforms</h4>
+  <div class="markdown level1 summary"><p>Joint transforms in the skinned mesh's coordinate system, including <a class="xref" href="Simple3D.Core.Skeleton.html#Simple3D_Core_Skeleton_RootTransform">RootTransform</a>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public IReadOnlyList&lt;Matrix4x4&gt; WorldTransforms { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.matrix4x4">Matrix4x4</a>&gt;</td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <h3 id="methods">Methods
+</h3>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Core_SkeletonPose_Blend_Simple3D_Core_SkeletonPose_Simple3D_Core_SkeletonPose_System_Single_.md&amp;value=---%0Auid%3A%20Simple3D.Core.SkeletonPose.Blend(Simple3D.Core.SkeletonPose%2CSimple3D.Core.SkeletonPose%2CSystem.Single)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Core/Skeleton.cs/#L114">View Source</a>
+  </span>
+  <a id="Simple3D_Core_SkeletonPose_Blend_" data-uid="Simple3D.Core.SkeletonPose.Blend*"></a>
+  <h4 id="Simple3D_Core_SkeletonPose_Blend_Simple3D_Core_SkeletonPose_Simple3D_Core_SkeletonPose_System_Single_" data-uid="Simple3D.Core.SkeletonPose.Blend(Simple3D.Core.SkeletonPose,Simple3D.Core.SkeletonPose,System.Single)">Blend(SkeletonPose, SkeletonPose, float)</h4>
+  <div class="markdown level1 summary"><p>Blends two poses of the same skeleton: each joint rotation is spherically interpolated and the root offset
+linearly, so <code class="paramref">amount</code> 0 gives <code class="paramref">from</code> and 1 gives <code class="paramref">to</code>. Use it to
+crossfade animations or to ease toward a tracked pose.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static SkeletonPose Blend(SkeletonPose from, SkeletonPose to, float amount)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="Simple3D.Core.SkeletonPose.html">SkeletonPose</a></td>
+        <td><span class="parametername">from</span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td><a class="xref" href="Simple3D.Core.SkeletonPose.html">SkeletonPose</a></td>
+        <td><span class="parametername">to</span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></td>
+        <td><span class="parametername">amount</span></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="Simple3D.Core.SkeletonPose.html">SkeletonPose</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Core_SkeletonPose_Create_Simple3D_Core_Skeleton_System_ReadOnlySpan_System_Numerics_Quaternion__System_Numerics_Vector3_.md&amp;value=---%0Auid%3A%20Simple3D.Core.SkeletonPose.Create(Simple3D.Core.Skeleton%2CSystem.ReadOnlySpan%7BSystem.Numerics.Quaternion%7D%2CSystem.Numerics.Vector3)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Core/Skeleton.cs/#L101">View Source</a>
+  </span>
+  <a id="Simple3D_Core_SkeletonPose_Create_" data-uid="Simple3D.Core.SkeletonPose.Create*"></a>
+  <h4 id="Simple3D_Core_SkeletonPose_Create_Simple3D_Core_Skeleton_System_ReadOnlySpan_System_Numerics_Quaternion__System_Numerics_Vector3_" data-uid="Simple3D.Core.SkeletonPose.Create(Simple3D.Core.Skeleton,System.ReadOnlySpan{System.Numerics.Quaternion},System.Numerics.Vector3)">Create(Skeleton, ReadOnlySpan&lt;Quaternion&gt;, Vector3)</h4>
+  <div class="markdown level1 summary"><p>Creates a pose from one local rotation per joint. Rotations are copied and normalized.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static SkeletonPose Create(Skeleton skeleton, ReadOnlySpan&lt;Quaternion&gt; rotations, Vector3 rootOffset = default)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="Simple3D.Core.Skeleton.html">Skeleton</a></td>
+        <td><span class="parametername">skeleton</span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.quaternion">Quaternion</a>&gt;</td>
+        <td><span class="parametername">rotations</span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></td>
+        <td><span class="parametername">rootOffset</span></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="Simple3D.Core.SkeletonPose.html">SkeletonPose</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+
+</article>
+          </div>
+
+          <div class="hidden-sm col-md-2" role="complementary">
+            <div class="sideaffix">
+              <div class="contribution">
+                <ul class="nav">
+                  <li>
+                    <a href="https://github.com/mariusmuntean/Simple3D-Maui/new/main/apiSpec/new?filename=Simple3D_Core_SkeletonPose.md&amp;value=---%0Auid%3A%20Simple3D.Core.SkeletonPose%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
+                  </li>
+                  <li>
+                    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/src/Simple3D.Core/Skeleton.cs/#L79" class="contribution-link">View Source</a>
+                  </li>
+                </ul>
+              </div>
+              <nav class="bs-docs-sidebar hidden-print hidden-xs hidden-sm affix" id="affix">
+                <h5>In this article</h5>
+                <div></div>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <div class="grad-bottom"></div>
+        <div class="footer">
+          <div class="container">
+            <span class="pull-right">
+              <a href="#top">Back to top</a>
+            </span>
+      
+      <span>Generated by <strong>DocFX</strong></span>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <script type="text/javascript" src="../styles/docfx.vendor.min.js"></script>
+    <script type="text/javascript" src="../styles/docfx.js"></script>
+    <script type="text/javascript" src="../styles/main.js"></script>
+  </body>
+</html>

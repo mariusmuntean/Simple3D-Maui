@@ -97,6 +97,90 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.GltfExpression.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.GltfExpression.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.GltfExpression",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.GltfExpression.yml\" sourcestartlinenumber=\"1\">A VRM expression's morph contributions. Material and texture binds are ignored.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.GltfImage.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.GltfImage.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.GltfImage",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.GltfImage.yml\" sourcestartlinenumber=\"1\">An embedded encoded image. Core leaves image decoding to the caller.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.GltfModel.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.GltfModel.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.GltfModel",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.GltfModel.yml\" sourcestartlinenumber=\"1\">A binary glTF asset, with reusable geometry, skeletons and embedded images.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.GltfReader.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.GltfReader.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.GltfReader",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.GltfReader.yml\" sourcestartlinenumber=\"1\">Reads a bounded binary glTF 2.0 / VRM subset without external resources or image codecs.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.Int4.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.Int4.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.Int4",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.Int4.yml\" sourcestartlinenumber=\"1\">Four joint indices.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.Joint.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.Joint.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.Joint",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.Joint.yml\" sourcestartlinenumber=\"1\">One joint of a <xref href=\"Simple3D.Core.Skeleton\" data-throw-if-not-resolved=\"false\"></xref>: its parent and rest transform relative to that parent.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/Simple3D.Core.Material.yml",
       "output": {
         ".html": {
@@ -122,6 +206,20 @@
       "IsMRef": true,
       "Title": "Simple3D.Core.Mesh",
       "Summary": "<p sourcefile=\"api/Simple3D.Core.Mesh.yml\" sourcestartlinenumber=\"1\">Immutable indexed triangle geometry. Counterclockwise vertices face outward; both sides render by default.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.MorphTarget.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.MorphTarget.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.MorphTarget",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.MorphTarget.yml\" sourcestartlinenumber=\"1\">A blend shape: per-vertex offsets added to bind-pose geometry, scaled by a weight in [0,1].</p>\n"
     },
     {
       "type": "ManagedReference",
@@ -251,6 +349,48 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.Skeleton.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.Skeleton.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.Skeleton",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.Skeleton.yml\" sourcestartlinenumber=\"1\">An immutable joint hierarchy shared by skinned meshes and their poses.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.SkeletonPose.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.SkeletonPose.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.SkeletonPose",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.SkeletonPose.yml\" sourcestartlinenumber=\"1\">An immutable pose: one local rotation per joint plus an offset added to the root joints' rest translation.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.SkinnedMesh.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.SkinnedMesh.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.SkinnedMesh",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.SkinnedMesh.yml\" sourcestartlinenumber=\"1\">Immutable bind-pose geometry deformed by a skeleton.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/Simple3D.Core.Texture2D.yml",
       "output": {
         ".html": {
@@ -293,6 +433,20 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Core.VertexInfluence.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Core.VertexInfluence.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Core.VertexInfluence",
+      "Summary": "<p sourcefile=\"api/Simple3D.Core.VertexInfluence.yml\" sourcestartlinenumber=\"1\">Up to four joint influences of one vertex. Weights are normalized when the skinned mesh is created.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/Simple3D.Core.WorldLabel.yml",
       "output": {
         ".html": {
@@ -321,6 +475,90 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Maui.FrameClock.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Maui.FrameClock.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Maui.FrameClock",
+      "Summary": "<p sourcefile=\"api/Simple3D.Maui.FrameClock.yml\" sourcestartlinenumber=\"1\">Ticks once per display refresh on the UI thread, at the screen's real rate (60, 120 Hz or more), for\nsmooth animation. Uses <code>CADisplayLink</code> on iOS and Mac Catalyst and <code>Choreographer</code> on Android; elsewhere\na timer at most <xref href=\"Simple3D.Maui.FrameClock.MaximumRate\" data-throw-if-not-resolved=\"false\"></xref> times per second.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Maui.GltfLoader.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Maui.GltfLoader.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Maui.GltfLoader",
+      "Summary": "<p sourcefile=\"api/Simple3D.Maui.GltfLoader.yml\" sourcestartlinenumber=\"1\">Loads binary glTF / VRM assets and decodes embedded images with Skia.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Maui.LoadedGltf.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Maui.LoadedGltf.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Maui.LoadedGltf",
+      "Summary": "<p sourcefile=\"api/Simple3D.Maui.LoadedGltf.yml\" sourcestartlinenumber=\"1\">A parsed glTF model and its default scene with decoded textures.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Maui.RenderingBackend.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Maui.RenderingBackend.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Maui.RenderingBackend",
+      "Summary": "<p sourcefile=\"api/Simple3D.Maui.RenderingBackend.yml\" sourcestartlinenumber=\"1\">The backend currently presenting frames, separate from the requested mode.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Maui.RenderingFailureEventArgs.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Maui.RenderingFailureEventArgs.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Maui.RenderingFailureEventArgs",
+      "Summary": "<p sourcefile=\"api/Simple3D.Maui.RenderingFailureEventArgs.yml\" sourcestartlinenumber=\"1\">Describes a native rendering failure and whether software fallback was selected.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Simple3D.Maui.RenderingMode.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Simple3D.Maui.RenderingMode.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Simple3D.Maui.RenderingMode",
+      "Summary": "<p sourcefile=\"api/Simple3D.Maui.RenderingMode.yml\" sourcestartlinenumber=\"1\">Selects how SceneView presents its scene. CaptureFrame always produces a software snapshot.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/Simple3D.Maui.Resource.yml",
       "output": {
         ".html": {
@@ -345,7 +583,7 @@
       "Uid": null,
       "IsMRef": true,
       "Title": "Simple3D.Maui.SceneView",
-      "Summary": "<p sourcefile=\"api/Simple3D.Maui.SceneView.yml\" sourcestartlinenumber=\"1\">A depth-rendered, touch-enabled surface for small opaque scenes. Mutate its scene and camera on the UI thread.</p>\n"
+      "Summary": "<p sourcefile=\"api/Simple3D.Maui.SceneView.yml\" sourcestartlinenumber=\"1\">A touch-enabled surface with selectable software and native GPU rendering for small opaque scenes. Mutate its scene and camera on the UI thread.</p>\n"
     },
     {
       "type": "ManagedReference",
@@ -414,6 +652,16 @@
       "output": {
         ".html": {
           "relative_path": "getting-started.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "hardware-rendering.md",
+      "output": {
+        ".html": {
+          "relative_path": "hardware-rendering.html"
         }
       },
       "version": ""
@@ -500,6 +748,66 @@
     },
     {
       "type": "Resource",
+      "source_relative_path": "images/gallery.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/gallery.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/mirror-faces-cat.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/mirror-faces-cat.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/mirror-faces-cosmicbot.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/mirror-faces-cosmicbot.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/mirror-faces-froggy.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/mirror-faces-froggy.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/mirror-faces-juanita.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/mirror-faces-juanita.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/mirror.gif",
+      "output": {
+        "resource": {
+          "relative_path": "images/mirror.gif"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
       "source_relative_path": "images/navigation-mark.svg",
       "output": {
         "resource": {
@@ -574,6 +882,16 @@
       "output": {
         ".html": {
           "relative_path": "scenes-and-cameras.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "skinned-characters.md",
+      "output": {
+        ".html": {
+          "relative_path": "skinned-characters.html"
         }
       },
       "version": ""

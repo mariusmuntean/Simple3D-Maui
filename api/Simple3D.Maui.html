@@ -85,15 +85,38 @@
     <h3 id="classes">
 Classes
 </h3>
+      <h4><a class="xref" href="Simple3D.Maui.FrameClock.html">FrameClock</a></h4>
+      <section><p>Ticks once per display refresh on the UI thread, at the screen's real rate (60, 120 Hz or more), for
+smooth animation. Uses <code>CADisplayLink</code> on iOS and Mac Catalyst and <code>Choreographer</code> on Android; elsewhere
+a timer at most <a class="xref" href="Simple3D.Maui.FrameClock.html#Simple3D_Maui_FrameClock_MaximumRate">MaximumRate</a> times per second.</p>
+</section>
+      <h4><a class="xref" href="Simple3D.Maui.GltfLoader.html">GltfLoader</a></h4>
+      <section><p>Loads binary glTF / VRM assets and decodes embedded images with Skia.</p>
+</section>
+      <h4><a class="xref" href="Simple3D.Maui.LoadedGltf.html">LoadedGltf</a></h4>
+      <section><p>A parsed glTF model and its default scene with decoded textures.</p>
+</section>
+      <h4><a class="xref" href="Simple3D.Maui.RenderingFailureEventArgs.html">RenderingFailureEventArgs</a></h4>
+      <section><p>Describes a native rendering failure and whether software fallback was selected.</p>
+</section>
       <h4><a class="xref" href="Simple3D.Maui.Resource.html">Resource</a></h4>
       <section><p>Android Resource Designer class.
 Exposes the Android Resource designer assembly into the project Namespace.</p>
 </section>
       <h4><a class="xref" href="Simple3D.Maui.SceneView.html">SceneView</a></h4>
-      <section><p>A depth-rendered, touch-enabled surface for small opaque scenes. Mutate its scene and camera on the UI thread.</p>
+      <section><p>A touch-enabled surface with selectable software and native GPU rendering for small opaque scenes. Mutate its scene and camera on the UI thread.</p>
 </section>
       <h4><a class="xref" href="Simple3D.Maui.TextureLoader.html">TextureLoader</a></h4>
       <section><p>Decodes opaque images using the platform's Skia image codecs.</p>
+</section>
+    <h3 id="enums">
+Enums
+</h3>
+      <h4><a class="xref" href="Simple3D.Maui.RenderingBackend.html">RenderingBackend</a></h4>
+      <section><p>The backend currently presenting frames, separate from the requested mode.</p>
+</section>
+      <h4><a class="xref" href="Simple3D.Maui.RenderingMode.html">RenderingMode</a></h4>
+      <section><p>Selects how SceneView presents its scene. CaptureFrame always produces a software snapshot.</p>
 </section>
 
 

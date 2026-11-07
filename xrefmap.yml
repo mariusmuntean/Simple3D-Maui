@@ -495,6 +495,377 @@ references:
   isSpec: "True"
   fullName: Simple3D.Core.DrawTriangle.Depth
   nameWithType: DrawTriangle.Depth
+- uid: Simple3D.Core.GltfExpression
+  name: GltfExpression
+  href: api/Simple3D.Core.GltfExpression.html
+  commentId: T:Simple3D.Core.GltfExpression
+  fullName: Simple3D.Core.GltfExpression
+  nameWithType: GltfExpression
+- uid: Simple3D.Core.GltfExpression.Binds
+  name: Binds
+  href: api/Simple3D.Core.GltfExpression.html#Simple3D_Core_GltfExpression_Binds
+  commentId: P:Simple3D.Core.GltfExpression.Binds
+  fullName: Simple3D.Core.GltfExpression.Binds
+  nameWithType: GltfExpression.Binds
+- uid: Simple3D.Core.GltfExpression.Binds*
+  name: Binds
+  href: api/Simple3D.Core.GltfExpression.html#Simple3D_Core_GltfExpression_Binds_
+  commentId: Overload:Simple3D.Core.GltfExpression.Binds
+  isSpec: "True"
+  fullName: Simple3D.Core.GltfExpression.Binds
+  nameWithType: GltfExpression.Binds
+- uid: Simple3D.Core.GltfExpression.IsBinary
+  name: IsBinary
+  href: api/Simple3D.Core.GltfExpression.html#Simple3D_Core_GltfExpression_IsBinary
+  commentId: P:Simple3D.Core.GltfExpression.IsBinary
+  fullName: Simple3D.Core.GltfExpression.IsBinary
+  nameWithType: GltfExpression.IsBinary
+- uid: Simple3D.Core.GltfExpression.IsBinary*
+  name: IsBinary
+  href: api/Simple3D.Core.GltfExpression.html#Simple3D_Core_GltfExpression_IsBinary_
+  commentId: Overload:Simple3D.Core.GltfExpression.IsBinary
+  isSpec: "True"
+  fullName: Simple3D.Core.GltfExpression.IsBinary
+  nameWithType: GltfExpression.IsBinary
+- uid: Simple3D.Core.GltfImage
+  name: GltfImage
+  href: api/Simple3D.Core.GltfImage.html
+  commentId: T:Simple3D.Core.GltfImage
+  fullName: Simple3D.Core.GltfImage
+  nameWithType: GltfImage
+- uid: Simple3D.Core.GltfImage.Bytes
+  name: Bytes
+  href: api/Simple3D.Core.GltfImage.html#Simple3D_Core_GltfImage_Bytes
+  commentId: P:Simple3D.Core.GltfImage.Bytes
+  fullName: Simple3D.Core.GltfImage.Bytes
+  nameWithType: GltfImage.Bytes
+- uid: Simple3D.Core.GltfImage.Bytes*
+  name: Bytes
+  href: api/Simple3D.Core.GltfImage.html#Simple3D_Core_GltfImage_Bytes_
+  commentId: Overload:Simple3D.Core.GltfImage.Bytes
+  isSpec: "True"
+  fullName: Simple3D.Core.GltfImage.Bytes
+  nameWithType: GltfImage.Bytes
+- uid: Simple3D.Core.GltfImage.MimeType
+  name: MimeType
+  href: api/Simple3D.Core.GltfImage.html#Simple3D_Core_GltfImage_MimeType
+  commentId: P:Simple3D.Core.GltfImage.MimeType
+  fullName: Simple3D.Core.GltfImage.MimeType
+  nameWithType: GltfImage.MimeType
+- uid: Simple3D.Core.GltfImage.MimeType*
+  name: MimeType
+  href: api/Simple3D.Core.GltfImage.html#Simple3D_Core_GltfImage_MimeType_
+  commentId: Overload:Simple3D.Core.GltfImage.MimeType
+  isSpec: "True"
+  fullName: Simple3D.Core.GltfImage.MimeType
+  nameWithType: GltfImage.MimeType
+- uid: Simple3D.Core.GltfModel
+  name: GltfModel
+  href: api/Simple3D.Core.GltfModel.html
+  commentId: T:Simple3D.Core.GltfModel
+  fullName: Simple3D.Core.GltfModel
+  nameWithType: GltfModel
+- uid: Simple3D.Core.GltfModel.ApplyExpressions(Simple3D.Core.Shape,System.Collections.Generic.IReadOnlyDictionary{System.String,System.Single})
+  name: ApplyExpressions(Shape, IReadOnlyDictionary<string, float>)
+  href: api/Simple3D.Core.GltfModel.html#Simple3D_Core_GltfModel_ApplyExpressions_Simple3D_Core_Shape_System_Collections_Generic_IReadOnlyDictionary_System_String_System_Single__
+  commentId: M:Simple3D.Core.GltfModel.ApplyExpressions(Simple3D.Core.Shape,System.Collections.Generic.IReadOnlyDictionary{System.String,System.Single})
+  name.vb: ApplyExpressions(Shape, IReadOnlyDictionary(Of String, Single))
+  fullName: Simple3D.Core.GltfModel.ApplyExpressions(Simple3D.Core.Shape, System.Collections.Generic.IReadOnlyDictionary<string, float>)
+  fullName.vb: Simple3D.Core.GltfModel.ApplyExpressions(Simple3D.Core.Shape, System.Collections.Generic.IReadOnlyDictionary(Of String, Single))
+  nameWithType: GltfModel.ApplyExpressions(Shape, IReadOnlyDictionary<string, float>)
+  nameWithType.vb: GltfModel.ApplyExpressions(Shape, IReadOnlyDictionary(Of String, Single))
+- uid: Simple3D.Core.GltfModel.ApplyExpressions*
+  name: ApplyExpressions
+  href: api/Simple3D.Core.GltfModel.html#Simple3D_Core_GltfModel_ApplyExpressions_
+  commentId: Overload:Simple3D.Core.GltfModel.ApplyExpressions
+  isSpec: "True"
+  fullName: Simple3D.Core.GltfModel.ApplyExpressions
+  nameWithType: GltfModel.ApplyExpressions
+- uid: Simple3D.Core.GltfModel.CreateShape(System.Func{Simple3D.Core.GltfImage,Simple3D.Core.Texture2D})
+  name: CreateShape(Func<GltfImage, Texture2D>?)
+  href: api/Simple3D.Core.GltfModel.html#Simple3D_Core_GltfModel_CreateShape_System_Func_Simple3D_Core_GltfImage_Simple3D_Core_Texture2D__
+  commentId: M:Simple3D.Core.GltfModel.CreateShape(System.Func{Simple3D.Core.GltfImage,Simple3D.Core.Texture2D})
+  name.vb: CreateShape(Func(Of GltfImage, Texture2D))
+  fullName: Simple3D.Core.GltfModel.CreateShape(System.Func<Simple3D.Core.GltfImage, Simple3D.Core.Texture2D>?)
+  fullName.vb: Simple3D.Core.GltfModel.CreateShape(System.Func(Of Simple3D.Core.GltfImage, Simple3D.Core.Texture2D))
+  nameWithType: GltfModel.CreateShape(Func<GltfImage, Texture2D>?)
+  nameWithType.vb: GltfModel.CreateShape(Func(Of GltfImage, Texture2D))
+- uid: Simple3D.Core.GltfModel.CreateShape*
+  name: CreateShape
+  href: api/Simple3D.Core.GltfModel.html#Simple3D_Core_GltfModel_CreateShape_
+  commentId: Overload:Simple3D.Core.GltfModel.CreateShape
+  isSpec: "True"
+  fullName: Simple3D.Core.GltfModel.CreateShape
+  nameWithType: GltfModel.CreateShape
+- uid: Simple3D.Core.GltfModel.Expressions
+  name: Expressions
+  href: api/Simple3D.Core.GltfModel.html#Simple3D_Core_GltfModel_Expressions
+  commentId: P:Simple3D.Core.GltfModel.Expressions
+  fullName: Simple3D.Core.GltfModel.Expressions
+  nameWithType: GltfModel.Expressions
+- uid: Simple3D.Core.GltfModel.Expressions*
+  name: Expressions
+  href: api/Simple3D.Core.GltfModel.html#Simple3D_Core_GltfModel_Expressions_
+  commentId: Overload:Simple3D.Core.GltfModel.Expressions
+  isSpec: "True"
+  fullName: Simple3D.Core.GltfModel.Expressions
+  nameWithType: GltfModel.Expressions
+- uid: Simple3D.Core.GltfModel.HumanoidBones
+  name: HumanoidBones
+  href: api/Simple3D.Core.GltfModel.html#Simple3D_Core_GltfModel_HumanoidBones
+  commentId: P:Simple3D.Core.GltfModel.HumanoidBones
+  fullName: Simple3D.Core.GltfModel.HumanoidBones
+  nameWithType: GltfModel.HumanoidBones
+- uid: Simple3D.Core.GltfModel.HumanoidBones*
+  name: HumanoidBones
+  href: api/Simple3D.Core.GltfModel.html#Simple3D_Core_GltfModel_HumanoidBones_
+  commentId: Overload:Simple3D.Core.GltfModel.HumanoidBones
+  isSpec: "True"
+  fullName: Simple3D.Core.GltfModel.HumanoidBones
+  nameWithType: GltfModel.HumanoidBones
+- uid: Simple3D.Core.GltfModel.Images
+  name: Images
+  href: api/Simple3D.Core.GltfModel.html#Simple3D_Core_GltfModel_Images
+  commentId: P:Simple3D.Core.GltfModel.Images
+  fullName: Simple3D.Core.GltfModel.Images
+  nameWithType: GltfModel.Images
+- uid: Simple3D.Core.GltfModel.Images*
+  name: Images
+  href: api/Simple3D.Core.GltfModel.html#Simple3D_Core_GltfModel_Images_
+  commentId: Overload:Simple3D.Core.GltfModel.Images
+  isSpec: "True"
+  fullName: Simple3D.Core.GltfModel.Images
+  nameWithType: GltfModel.Images
+- uid: Simple3D.Core.GltfModel.Skeletons
+  name: Skeletons
+  href: api/Simple3D.Core.GltfModel.html#Simple3D_Core_GltfModel_Skeletons
+  commentId: P:Simple3D.Core.GltfModel.Skeletons
+  fullName: Simple3D.Core.GltfModel.Skeletons
+  nameWithType: GltfModel.Skeletons
+- uid: Simple3D.Core.GltfModel.Skeletons*
+  name: Skeletons
+  href: api/Simple3D.Core.GltfModel.html#Simple3D_Core_GltfModel_Skeletons_
+  commentId: Overload:Simple3D.Core.GltfModel.Skeletons
+  isSpec: "True"
+  fullName: Simple3D.Core.GltfModel.Skeletons
+  nameWithType: GltfModel.Skeletons
+- uid: Simple3D.Core.GltfReader
+  name: GltfReader
+  href: api/Simple3D.Core.GltfReader.html
+  commentId: T:Simple3D.Core.GltfReader
+  fullName: Simple3D.Core.GltfReader
+  nameWithType: GltfReader
+- uid: Simple3D.Core.GltfReader.MaximumFileSize
+  name: MaximumFileSize
+  href: api/Simple3D.Core.GltfReader.html#Simple3D_Core_GltfReader_MaximumFileSize
+  commentId: F:Simple3D.Core.GltfReader.MaximumFileSize
+  fullName: Simple3D.Core.GltfReader.MaximumFileSize
+  nameWithType: GltfReader.MaximumFileSize
+- uid: Simple3D.Core.GltfReader.MaximumHierarchyDepth
+  name: MaximumHierarchyDepth
+  href: api/Simple3D.Core.GltfReader.html#Simple3D_Core_GltfReader_MaximumHierarchyDepth
+  commentId: F:Simple3D.Core.GltfReader.MaximumHierarchyDepth
+  fullName: Simple3D.Core.GltfReader.MaximumHierarchyDepth
+  nameWithType: GltfReader.MaximumHierarchyDepth
+- uid: Simple3D.Core.GltfReader.MaximumNodes
+  name: MaximumNodes
+  href: api/Simple3D.Core.GltfReader.html#Simple3D_Core_GltfReader_MaximumNodes
+  commentId: F:Simple3D.Core.GltfReader.MaximumNodes
+  fullName: Simple3D.Core.GltfReader.MaximumNodes
+  nameWithType: GltfReader.MaximumNodes
+- uid: Simple3D.Core.GltfReader.Read(System.IO.Stream)
+  name: Read(Stream)
+  href: api/Simple3D.Core.GltfReader.html#Simple3D_Core_GltfReader_Read_System_IO_Stream_
+  commentId: M:Simple3D.Core.GltfReader.Read(System.IO.Stream)
+  fullName: Simple3D.Core.GltfReader.Read(System.IO.Stream)
+  nameWithType: GltfReader.Read(Stream)
+- uid: Simple3D.Core.GltfReader.Read*
+  name: Read
+  href: api/Simple3D.Core.GltfReader.html#Simple3D_Core_GltfReader_Read_
+  commentId: Overload:Simple3D.Core.GltfReader.Read
+  isSpec: "True"
+  fullName: Simple3D.Core.GltfReader.Read
+  nameWithType: GltfReader.Read
+- uid: Simple3D.Core.Int4
+  name: Int4
+  href: api/Simple3D.Core.Int4.html
+  commentId: T:Simple3D.Core.Int4
+  fullName: Simple3D.Core.Int4
+  nameWithType: Int4
+- uid: Simple3D.Core.Int4.#ctor(System.Int32,System.Int32,System.Int32,System.Int32)
+  name: Int4(int, int, int, int)
+  href: api/Simple3D.Core.Int4.html#Simple3D_Core_Int4__ctor_System_Int32_System_Int32_System_Int32_System_Int32_
+  commentId: M:Simple3D.Core.Int4.#ctor(System.Int32,System.Int32,System.Int32,System.Int32)
+  name.vb: New(Integer, Integer, Integer, Integer)
+  fullName: Simple3D.Core.Int4.Int4(int, int, int, int)
+  fullName.vb: Simple3D.Core.Int4.New(Integer, Integer, Integer, Integer)
+  nameWithType: Int4.Int4(int, int, int, int)
+  nameWithType.vb: Int4.New(Integer, Integer, Integer, Integer)
+- uid: Simple3D.Core.Int4.#ctor*
+  name: Int4
+  href: api/Simple3D.Core.Int4.html#Simple3D_Core_Int4__ctor_
+  commentId: Overload:Simple3D.Core.Int4.#ctor
+  isSpec: "True"
+  name.vb: New
+  fullName: Simple3D.Core.Int4.Int4
+  fullName.vb: Simple3D.Core.Int4.New
+  nameWithType: Int4.Int4
+  nameWithType.vb: Int4.New
+- uid: Simple3D.Core.Int4.W
+  name: W
+  href: api/Simple3D.Core.Int4.html#Simple3D_Core_Int4_W
+  commentId: P:Simple3D.Core.Int4.W
+  fullName: Simple3D.Core.Int4.W
+  nameWithType: Int4.W
+- uid: Simple3D.Core.Int4.W*
+  name: W
+  href: api/Simple3D.Core.Int4.html#Simple3D_Core_Int4_W_
+  commentId: Overload:Simple3D.Core.Int4.W
+  isSpec: "True"
+  fullName: Simple3D.Core.Int4.W
+  nameWithType: Int4.W
+- uid: Simple3D.Core.Int4.X
+  name: X
+  href: api/Simple3D.Core.Int4.html#Simple3D_Core_Int4_X
+  commentId: P:Simple3D.Core.Int4.X
+  fullName: Simple3D.Core.Int4.X
+  nameWithType: Int4.X
+- uid: Simple3D.Core.Int4.X*
+  name: X
+  href: api/Simple3D.Core.Int4.html#Simple3D_Core_Int4_X_
+  commentId: Overload:Simple3D.Core.Int4.X
+  isSpec: "True"
+  fullName: Simple3D.Core.Int4.X
+  nameWithType: Int4.X
+- uid: Simple3D.Core.Int4.Y
+  name: Y
+  href: api/Simple3D.Core.Int4.html#Simple3D_Core_Int4_Y
+  commentId: P:Simple3D.Core.Int4.Y
+  fullName: Simple3D.Core.Int4.Y
+  nameWithType: Int4.Y
+- uid: Simple3D.Core.Int4.Y*
+  name: Y
+  href: api/Simple3D.Core.Int4.html#Simple3D_Core_Int4_Y_
+  commentId: Overload:Simple3D.Core.Int4.Y
+  isSpec: "True"
+  fullName: Simple3D.Core.Int4.Y
+  nameWithType: Int4.Y
+- uid: Simple3D.Core.Int4.Z
+  name: Z
+  href: api/Simple3D.Core.Int4.html#Simple3D_Core_Int4_Z
+  commentId: P:Simple3D.Core.Int4.Z
+  fullName: Simple3D.Core.Int4.Z
+  nameWithType: Int4.Z
+- uid: Simple3D.Core.Int4.Z*
+  name: Z
+  href: api/Simple3D.Core.Int4.html#Simple3D_Core_Int4_Z_
+  commentId: Overload:Simple3D.Core.Int4.Z
+  isSpec: "True"
+  fullName: Simple3D.Core.Int4.Z
+  nameWithType: Int4.Z
+- uid: Simple3D.Core.Joint
+  name: Joint
+  href: api/Simple3D.Core.Joint.html
+  commentId: T:Simple3D.Core.Joint
+  fullName: Simple3D.Core.Joint
+  nameWithType: Joint
+- uid: Simple3D.Core.Joint.#ctor(System.String,System.Int32,System.Numerics.Vector3,System.Numerics.Quaternion,System.Numerics.Vector3,System.Numerics.Matrix4x4)
+  name: Joint(string, int, Vector3, Quaternion, Vector3, Matrix4x4)
+  href: api/Simple3D.Core.Joint.html#Simple3D_Core_Joint__ctor_System_String_System_Int32_System_Numerics_Vector3_System_Numerics_Quaternion_System_Numerics_Vector3_System_Numerics_Matrix4x4_
+  commentId: M:Simple3D.Core.Joint.#ctor(System.String,System.Int32,System.Numerics.Vector3,System.Numerics.Quaternion,System.Numerics.Vector3,System.Numerics.Matrix4x4)
+  name.vb: New(String, Integer, Vector3, Quaternion, Vector3, Matrix4x4)
+  fullName: Simple3D.Core.Joint.Joint(string, int, System.Numerics.Vector3, System.Numerics.Quaternion, System.Numerics.Vector3, System.Numerics.Matrix4x4)
+  fullName.vb: Simple3D.Core.Joint.New(String, Integer, System.Numerics.Vector3, System.Numerics.Quaternion, System.Numerics.Vector3, System.Numerics.Matrix4x4)
+  nameWithType: Joint.Joint(string, int, Vector3, Quaternion, Vector3, Matrix4x4)
+  nameWithType.vb: Joint.New(String, Integer, Vector3, Quaternion, Vector3, Matrix4x4)
+- uid: Simple3D.Core.Joint.#ctor*
+  name: Joint
+  href: api/Simple3D.Core.Joint.html#Simple3D_Core_Joint__ctor_
+  commentId: Overload:Simple3D.Core.Joint.#ctor
+  isSpec: "True"
+  name.vb: New
+  fullName: Simple3D.Core.Joint.Joint
+  fullName.vb: Simple3D.Core.Joint.New
+  nameWithType: Joint.Joint
+  nameWithType.vb: Joint.New
+- uid: Simple3D.Core.Joint.InverseBind
+  name: InverseBind
+  href: api/Simple3D.Core.Joint.html#Simple3D_Core_Joint_InverseBind
+  commentId: P:Simple3D.Core.Joint.InverseBind
+  fullName: Simple3D.Core.Joint.InverseBind
+  nameWithType: Joint.InverseBind
+- uid: Simple3D.Core.Joint.InverseBind*
+  name: InverseBind
+  href: api/Simple3D.Core.Joint.html#Simple3D_Core_Joint_InverseBind_
+  commentId: Overload:Simple3D.Core.Joint.InverseBind
+  isSpec: "True"
+  fullName: Simple3D.Core.Joint.InverseBind
+  nameWithType: Joint.InverseBind
+- uid: Simple3D.Core.Joint.Name
+  name: Name
+  href: api/Simple3D.Core.Joint.html#Simple3D_Core_Joint_Name
+  commentId: P:Simple3D.Core.Joint.Name
+  fullName: Simple3D.Core.Joint.Name
+  nameWithType: Joint.Name
+- uid: Simple3D.Core.Joint.Name*
+  name: Name
+  href: api/Simple3D.Core.Joint.html#Simple3D_Core_Joint_Name_
+  commentId: Overload:Simple3D.Core.Joint.Name
+  isSpec: "True"
+  fullName: Simple3D.Core.Joint.Name
+  nameWithType: Joint.Name
+- uid: Simple3D.Core.Joint.Parent
+  name: Parent
+  href: api/Simple3D.Core.Joint.html#Simple3D_Core_Joint_Parent
+  commentId: P:Simple3D.Core.Joint.Parent
+  fullName: Simple3D.Core.Joint.Parent
+  nameWithType: Joint.Parent
+- uid: Simple3D.Core.Joint.Parent*
+  name: Parent
+  href: api/Simple3D.Core.Joint.html#Simple3D_Core_Joint_Parent_
+  commentId: Overload:Simple3D.Core.Joint.Parent
+  isSpec: "True"
+  fullName: Simple3D.Core.Joint.Parent
+  nameWithType: Joint.Parent
+- uid: Simple3D.Core.Joint.Rotation
+  name: Rotation
+  href: api/Simple3D.Core.Joint.html#Simple3D_Core_Joint_Rotation
+  commentId: P:Simple3D.Core.Joint.Rotation
+  fullName: Simple3D.Core.Joint.Rotation
+  nameWithType: Joint.Rotation
+- uid: Simple3D.Core.Joint.Rotation*
+  name: Rotation
+  href: api/Simple3D.Core.Joint.html#Simple3D_Core_Joint_Rotation_
+  commentId: Overload:Simple3D.Core.Joint.Rotation
+  isSpec: "True"
+  fullName: Simple3D.Core.Joint.Rotation
+  nameWithType: Joint.Rotation
+- uid: Simple3D.Core.Joint.Scale
+  name: Scale
+  href: api/Simple3D.Core.Joint.html#Simple3D_Core_Joint_Scale
+  commentId: P:Simple3D.Core.Joint.Scale
+  fullName: Simple3D.Core.Joint.Scale
+  nameWithType: Joint.Scale
+- uid: Simple3D.Core.Joint.Scale*
+  name: Scale
+  href: api/Simple3D.Core.Joint.html#Simple3D_Core_Joint_Scale_
+  commentId: Overload:Simple3D.Core.Joint.Scale
+  isSpec: "True"
+  fullName: Simple3D.Core.Joint.Scale
+  nameWithType: Joint.Scale
+- uid: Simple3D.Core.Joint.Translation
+  name: Translation
+  href: api/Simple3D.Core.Joint.html#Simple3D_Core_Joint_Translation
+  commentId: P:Simple3D.Core.Joint.Translation
+  fullName: Simple3D.Core.Joint.Translation
+  nameWithType: Joint.Translation
+- uid: Simple3D.Core.Joint.Translation*
+  name: Translation
+  href: api/Simple3D.Core.Joint.html#Simple3D_Core_Joint_Translation_
+  commentId: Overload:Simple3D.Core.Joint.Translation
+  isSpec: "True"
+  fullName: Simple3D.Core.Joint.Translation
+  nameWithType: Joint.Translation
 - uid: Simple3D.Core.Material
   name: Material
   href: api/Simple3D.Core.Material.html
@@ -712,6 +1083,70 @@ references:
   isSpec: "True"
   fullName: Simple3D.Core.Mesh.WithCalculatedNormals
   nameWithType: Mesh.WithCalculatedNormals
+- uid: Simple3D.Core.MorphTarget
+  name: MorphTarget
+  href: api/Simple3D.Core.MorphTarget.html
+  commentId: T:Simple3D.Core.MorphTarget
+  fullName: Simple3D.Core.MorphTarget
+  nameWithType: MorphTarget
+- uid: Simple3D.Core.MorphTarget.#ctor(System.String,System.Collections.Generic.IEnumerable{System.Numerics.Vector3},System.Collections.Generic.IEnumerable{System.Numerics.Vector3})
+  name: MorphTarget(string?, IEnumerable<Vector3>, IEnumerable<Vector3>?)
+  href: api/Simple3D.Core.MorphTarget.html#Simple3D_Core_MorphTarget__ctor_System_String_System_Collections_Generic_IEnumerable_System_Numerics_Vector3__System_Collections_Generic_IEnumerable_System_Numerics_Vector3__
+  commentId: M:Simple3D.Core.MorphTarget.#ctor(System.String,System.Collections.Generic.IEnumerable{System.Numerics.Vector3},System.Collections.Generic.IEnumerable{System.Numerics.Vector3})
+  name.vb: New(String, IEnumerable(Of Vector3), IEnumerable(Of Vector3))
+  fullName: Simple3D.Core.MorphTarget.MorphTarget(string?, System.Collections.Generic.IEnumerable<System.Numerics.Vector3>, System.Collections.Generic.IEnumerable<System.Numerics.Vector3>?)
+  fullName.vb: Simple3D.Core.MorphTarget.New(String, System.Collections.Generic.IEnumerable(Of System.Numerics.Vector3), System.Collections.Generic.IEnumerable(Of System.Numerics.Vector3))
+  nameWithType: MorphTarget.MorphTarget(string?, IEnumerable<Vector3>, IEnumerable<Vector3>?)
+  nameWithType.vb: MorphTarget.New(String, IEnumerable(Of Vector3), IEnumerable(Of Vector3))
+- uid: Simple3D.Core.MorphTarget.#ctor*
+  name: MorphTarget
+  href: api/Simple3D.Core.MorphTarget.html#Simple3D_Core_MorphTarget__ctor_
+  commentId: Overload:Simple3D.Core.MorphTarget.#ctor
+  isSpec: "True"
+  name.vb: New
+  fullName: Simple3D.Core.MorphTarget.MorphTarget
+  fullName.vb: Simple3D.Core.MorphTarget.New
+  nameWithType: MorphTarget.MorphTarget
+  nameWithType.vb: MorphTarget.New
+- uid: Simple3D.Core.MorphTarget.Name
+  name: Name
+  href: api/Simple3D.Core.MorphTarget.html#Simple3D_Core_MorphTarget_Name
+  commentId: P:Simple3D.Core.MorphTarget.Name
+  fullName: Simple3D.Core.MorphTarget.Name
+  nameWithType: MorphTarget.Name
+- uid: Simple3D.Core.MorphTarget.Name*
+  name: Name
+  href: api/Simple3D.Core.MorphTarget.html#Simple3D_Core_MorphTarget_Name_
+  commentId: Overload:Simple3D.Core.MorphTarget.Name
+  isSpec: "True"
+  fullName: Simple3D.Core.MorphTarget.Name
+  nameWithType: MorphTarget.Name
+- uid: Simple3D.Core.MorphTarget.NormalDeltas
+  name: NormalDeltas
+  href: api/Simple3D.Core.MorphTarget.html#Simple3D_Core_MorphTarget_NormalDeltas
+  commentId: P:Simple3D.Core.MorphTarget.NormalDeltas
+  fullName: Simple3D.Core.MorphTarget.NormalDeltas
+  nameWithType: MorphTarget.NormalDeltas
+- uid: Simple3D.Core.MorphTarget.NormalDeltas*
+  name: NormalDeltas
+  href: api/Simple3D.Core.MorphTarget.html#Simple3D_Core_MorphTarget_NormalDeltas_
+  commentId: Overload:Simple3D.Core.MorphTarget.NormalDeltas
+  isSpec: "True"
+  fullName: Simple3D.Core.MorphTarget.NormalDeltas
+  nameWithType: MorphTarget.NormalDeltas
+- uid: Simple3D.Core.MorphTarget.PositionDeltas
+  name: PositionDeltas
+  href: api/Simple3D.Core.MorphTarget.html#Simple3D_Core_MorphTarget_PositionDeltas
+  commentId: P:Simple3D.Core.MorphTarget.PositionDeltas
+  fullName: Simple3D.Core.MorphTarget.PositionDeltas
+  nameWithType: MorphTarget.PositionDeltas
+- uid: Simple3D.Core.MorphTarget.PositionDeltas*
+  name: PositionDeltas
+  href: api/Simple3D.Core.MorphTarget.html#Simple3D_Core_MorphTarget_PositionDeltas_
+  commentId: Overload:Simple3D.Core.MorphTarget.PositionDeltas
+  isSpec: "True"
+  fullName: Simple3D.Core.MorphTarget.PositionDeltas
+  nameWithType: MorphTarget.PositionDeltas
 - uid: Simple3D.Core.ObjReader
   name: ObjReader
   href: api/Simple3D.Core.ObjReader.html
@@ -1348,6 +1783,22 @@ references:
   isSpec: "True"
   fullName: Simple3D.Core.Shape.FromMesh
   nameWithType: Shape.FromMesh
+- uid: Simple3D.Core.Shape.FromSkinnedMesh(Simple3D.Core.SkinnedMesh,Simple3D.Core.Material)
+  name: FromSkinnedMesh(SkinnedMesh, Material?)
+  href: api/Simple3D.Core.Shape.html#Simple3D_Core_Shape_FromSkinnedMesh_Simple3D_Core_SkinnedMesh_Simple3D_Core_Material_
+  commentId: M:Simple3D.Core.Shape.FromSkinnedMesh(Simple3D.Core.SkinnedMesh,Simple3D.Core.Material)
+  name.vb: FromSkinnedMesh(SkinnedMesh, Material)
+  fullName: Simple3D.Core.Shape.FromSkinnedMesh(Simple3D.Core.SkinnedMesh, Simple3D.Core.Material?)
+  fullName.vb: Simple3D.Core.Shape.FromSkinnedMesh(Simple3D.Core.SkinnedMesh, Simple3D.Core.Material)
+  nameWithType: Shape.FromSkinnedMesh(SkinnedMesh, Material?)
+  nameWithType.vb: Shape.FromSkinnedMesh(SkinnedMesh, Material)
+- uid: Simple3D.Core.Shape.FromSkinnedMesh*
+  name: FromSkinnedMesh
+  href: api/Simple3D.Core.Shape.html#Simple3D_Core_Shape_FromSkinnedMesh_
+  commentId: Overload:Simple3D.Core.Shape.FromSkinnedMesh
+  isSpec: "True"
+  fullName: Simple3D.Core.Shape.FromSkinnedMesh
+  nameWithType: Shape.FromSkinnedMesh
 - uid: Simple3D.Core.Shape.Geometry
   name: Geometry
   href: api/Simple3D.Core.Shape.html#Simple3D_Core_Shape_Geometry
@@ -1406,6 +1857,19 @@ references:
   isSpec: "True"
   fullName: Simple3D.Core.Shape.Material
   nameWithType: Shape.Material
+- uid: Simple3D.Core.Shape.MorphWeights
+  name: MorphWeights
+  href: api/Simple3D.Core.Shape.html#Simple3D_Core_Shape_MorphWeights
+  commentId: P:Simple3D.Core.Shape.MorphWeights
+  fullName: Simple3D.Core.Shape.MorphWeights
+  nameWithType: Shape.MorphWeights
+- uid: Simple3D.Core.Shape.MorphWeights*
+  name: MorphWeights
+  href: api/Simple3D.Core.Shape.html#Simple3D_Core_Shape_MorphWeights_
+  commentId: Overload:Simple3D.Core.Shape.MorphWeights
+  isSpec: "True"
+  fullName: Simple3D.Core.Shape.MorphWeights
+  nameWithType: Shape.MorphWeights
 - uid: Simple3D.Core.Shape.Name
   name: Name
   href: api/Simple3D.Core.Shape.html#Simple3D_Core_Shape_Name
@@ -1435,6 +1899,19 @@ references:
   isSpec: "True"
   fullName: Simple3D.Core.Shape.Named
   nameWithType: Shape.Named
+- uid: Simple3D.Core.Shape.Pose
+  name: Pose
+  href: api/Simple3D.Core.Shape.html#Simple3D_Core_Shape_Pose
+  commentId: P:Simple3D.Core.Shape.Pose
+  fullName: Simple3D.Core.Shape.Pose
+  nameWithType: Shape.Pose
+- uid: Simple3D.Core.Shape.Pose*
+  name: Pose
+  href: api/Simple3D.Core.Shape.html#Simple3D_Core_Shape_Pose_
+  commentId: Overload:Simple3D.Core.Shape.Pose
+  isSpec: "True"
+  fullName: Simple3D.Core.Shape.Pose
+  nameWithType: Shape.Pose
 - uid: Simple3D.Core.Shape.Position
   name: Position
   href: api/Simple3D.Core.Shape.html#Simple3D_Core_Shape_Position
@@ -1531,6 +2008,19 @@ references:
   isSpec: "True"
   fullName: Simple3D.Core.Shape.Size
   nameWithType: Shape.Size
+- uid: Simple3D.Core.Shape.SkinnedMesh
+  name: SkinnedMesh
+  href: api/Simple3D.Core.Shape.html#Simple3D_Core_Shape_SkinnedMesh
+  commentId: P:Simple3D.Core.Shape.SkinnedMesh
+  fullName: Simple3D.Core.Shape.SkinnedMesh
+  nameWithType: Shape.SkinnedMesh
+- uid: Simple3D.Core.Shape.SkinnedMesh*
+  name: SkinnedMesh
+  href: api/Simple3D.Core.Shape.html#Simple3D_Core_Shape_SkinnedMesh_
+  commentId: Overload:Simple3D.Core.Shape.SkinnedMesh
+  isSpec: "True"
+  fullName: Simple3D.Core.Shape.SkinnedMesh
+  nameWithType: Shape.SkinnedMesh
 - uid: Simple3D.Core.Shape.Sphere(System.UInt32)
   name: Sphere(uint)
   href: api/Simple3D.Core.Shape.html#Simple3D_Core_Shape_Sphere_System_UInt32_
@@ -1573,6 +2063,35 @@ references:
   isSpec: "True"
   fullName: Simple3D.Core.Shape.WithMaterial
   nameWithType: Shape.WithMaterial
+- uid: Simple3D.Core.Shape.WithMorphWeights(Simple3D.Core.SkinnedMesh,System.ReadOnlySpan{System.Single})
+  name: WithMorphWeights(SkinnedMesh, ReadOnlySpan<float>)
+  href: api/Simple3D.Core.Shape.html#Simple3D_Core_Shape_WithMorphWeights_Simple3D_Core_SkinnedMesh_System_ReadOnlySpan_System_Single__
+  commentId: M:Simple3D.Core.Shape.WithMorphWeights(Simple3D.Core.SkinnedMesh,System.ReadOnlySpan{System.Single})
+  name.vb: WithMorphWeights(SkinnedMesh, ReadOnlySpan(Of Single))
+  fullName: Simple3D.Core.Shape.WithMorphWeights(Simple3D.Core.SkinnedMesh, System.ReadOnlySpan<float>)
+  fullName.vb: Simple3D.Core.Shape.WithMorphWeights(Simple3D.Core.SkinnedMesh, System.ReadOnlySpan(Of Single))
+  nameWithType: Shape.WithMorphWeights(SkinnedMesh, ReadOnlySpan<float>)
+  nameWithType.vb: Shape.WithMorphWeights(SkinnedMesh, ReadOnlySpan(Of Single))
+- uid: Simple3D.Core.Shape.WithMorphWeights*
+  name: WithMorphWeights
+  href: api/Simple3D.Core.Shape.html#Simple3D_Core_Shape_WithMorphWeights_
+  commentId: Overload:Simple3D.Core.Shape.WithMorphWeights
+  isSpec: "True"
+  fullName: Simple3D.Core.Shape.WithMorphWeights
+  nameWithType: Shape.WithMorphWeights
+- uid: Simple3D.Core.Shape.WithPose(Simple3D.Core.SkeletonPose)
+  name: WithPose(SkeletonPose)
+  href: api/Simple3D.Core.Shape.html#Simple3D_Core_Shape_WithPose_Simple3D_Core_SkeletonPose_
+  commentId: M:Simple3D.Core.Shape.WithPose(Simple3D.Core.SkeletonPose)
+  fullName: Simple3D.Core.Shape.WithPose(Simple3D.Core.SkeletonPose)
+  nameWithType: Shape.WithPose(SkeletonPose)
+- uid: Simple3D.Core.Shape.WithPose*
+  name: WithPose
+  href: api/Simple3D.Core.Shape.html#Simple3D_Core_Shape_WithPose_
+  commentId: Overload:Simple3D.Core.Shape.WithPose
+  isSpec: "True"
+  fullName: Simple3D.Core.Shape.WithPose
+  nameWithType: Shape.WithPose
 - uid: Simple3D.Core.ShapeReplacementEventArgs
   name: ShapeReplacementEventArgs
   href: api/Simple3D.Core.ShapeReplacementEventArgs.html
@@ -1605,6 +2124,265 @@ references:
   isSpec: "True"
   fullName: Simple3D.Core.ShapeReplacementEventArgs.OldShape
   nameWithType: ShapeReplacementEventArgs.OldShape
+- uid: Simple3D.Core.Skeleton
+  name: Skeleton
+  href: api/Simple3D.Core.Skeleton.html
+  commentId: T:Simple3D.Core.Skeleton
+  fullName: Simple3D.Core.Skeleton
+  nameWithType: Skeleton
+- uid: Simple3D.Core.Skeleton.#ctor(System.Collections.Generic.IEnumerable{Simple3D.Core.Joint},System.Nullable{System.Numerics.Matrix4x4})
+  name: Skeleton(IEnumerable<Joint>, Matrix4x4?)
+  href: api/Simple3D.Core.Skeleton.html#Simple3D_Core_Skeleton__ctor_System_Collections_Generic_IEnumerable_Simple3D_Core_Joint__System_Nullable_System_Numerics_Matrix4x4__
+  commentId: M:Simple3D.Core.Skeleton.#ctor(System.Collections.Generic.IEnumerable{Simple3D.Core.Joint},System.Nullable{System.Numerics.Matrix4x4})
+  name.vb: New(IEnumerable(Of Joint), Matrix4x4?)
+  fullName: Simple3D.Core.Skeleton.Skeleton(System.Collections.Generic.IEnumerable<Simple3D.Core.Joint>, System.Numerics.Matrix4x4?)
+  fullName.vb: Simple3D.Core.Skeleton.New(System.Collections.Generic.IEnumerable(Of Simple3D.Core.Joint), System.Numerics.Matrix4x4?)
+  nameWithType: Skeleton.Skeleton(IEnumerable<Joint>, Matrix4x4?)
+  nameWithType.vb: Skeleton.New(IEnumerable(Of Joint), Matrix4x4?)
+- uid: Simple3D.Core.Skeleton.#ctor*
+  name: Skeleton
+  href: api/Simple3D.Core.Skeleton.html#Simple3D_Core_Skeleton__ctor_
+  commentId: Overload:Simple3D.Core.Skeleton.#ctor
+  isSpec: "True"
+  name.vb: New
+  fullName: Simple3D.Core.Skeleton.Skeleton
+  fullName.vb: Simple3D.Core.Skeleton.New
+  nameWithType: Skeleton.Skeleton
+  nameWithType.vb: Skeleton.New
+- uid: Simple3D.Core.Skeleton.IndexOf(System.String)
+  name: IndexOf(string)
+  href: api/Simple3D.Core.Skeleton.html#Simple3D_Core_Skeleton_IndexOf_System_String_
+  commentId: M:Simple3D.Core.Skeleton.IndexOf(System.String)
+  name.vb: IndexOf(String)
+  fullName: Simple3D.Core.Skeleton.IndexOf(string)
+  fullName.vb: Simple3D.Core.Skeleton.IndexOf(String)
+  nameWithType: Skeleton.IndexOf(string)
+  nameWithType.vb: Skeleton.IndexOf(String)
+- uid: Simple3D.Core.Skeleton.IndexOf*
+  name: IndexOf
+  href: api/Simple3D.Core.Skeleton.html#Simple3D_Core_Skeleton_IndexOf_
+  commentId: Overload:Simple3D.Core.Skeleton.IndexOf
+  isSpec: "True"
+  fullName: Simple3D.Core.Skeleton.IndexOf
+  nameWithType: Skeleton.IndexOf
+- uid: Simple3D.Core.Skeleton.Joints
+  name: Joints
+  href: api/Simple3D.Core.Skeleton.html#Simple3D_Core_Skeleton_Joints
+  commentId: P:Simple3D.Core.Skeleton.Joints
+  fullName: Simple3D.Core.Skeleton.Joints
+  nameWithType: Skeleton.Joints
+- uid: Simple3D.Core.Skeleton.Joints*
+  name: Joints
+  href: api/Simple3D.Core.Skeleton.html#Simple3D_Core_Skeleton_Joints_
+  commentId: Overload:Simple3D.Core.Skeleton.Joints
+  isSpec: "True"
+  fullName: Simple3D.Core.Skeleton.Joints
+  nameWithType: Skeleton.Joints
+- uid: Simple3D.Core.Skeleton.MaximumJoints
+  name: MaximumJoints
+  href: api/Simple3D.Core.Skeleton.html#Simple3D_Core_Skeleton_MaximumJoints
+  commentId: F:Simple3D.Core.Skeleton.MaximumJoints
+  fullName: Simple3D.Core.Skeleton.MaximumJoints
+  nameWithType: Skeleton.MaximumJoints
+- uid: Simple3D.Core.Skeleton.RestPose
+  name: RestPose
+  href: api/Simple3D.Core.Skeleton.html#Simple3D_Core_Skeleton_RestPose
+  commentId: P:Simple3D.Core.Skeleton.RestPose
+  fullName: Simple3D.Core.Skeleton.RestPose
+  nameWithType: Skeleton.RestPose
+- uid: Simple3D.Core.Skeleton.RestPose*
+  name: RestPose
+  href: api/Simple3D.Core.Skeleton.html#Simple3D_Core_Skeleton_RestPose_
+  commentId: Overload:Simple3D.Core.Skeleton.RestPose
+  isSpec: "True"
+  fullName: Simple3D.Core.Skeleton.RestPose
+  nameWithType: Skeleton.RestPose
+- uid: Simple3D.Core.Skeleton.RootTransform
+  name: RootTransform
+  href: api/Simple3D.Core.Skeleton.html#Simple3D_Core_Skeleton_RootTransform
+  commentId: P:Simple3D.Core.Skeleton.RootTransform
+  fullName: Simple3D.Core.Skeleton.RootTransform
+  nameWithType: Skeleton.RootTransform
+- uid: Simple3D.Core.Skeleton.RootTransform*
+  name: RootTransform
+  href: api/Simple3D.Core.Skeleton.html#Simple3D_Core_Skeleton_RootTransform_
+  commentId: Overload:Simple3D.Core.Skeleton.RootTransform
+  isSpec: "True"
+  fullName: Simple3D.Core.Skeleton.RootTransform
+  nameWithType: Skeleton.RootTransform
+- uid: Simple3D.Core.SkeletonPose
+  name: SkeletonPose
+  href: api/Simple3D.Core.SkeletonPose.html
+  commentId: T:Simple3D.Core.SkeletonPose
+  fullName: Simple3D.Core.SkeletonPose
+  nameWithType: SkeletonPose
+- uid: Simple3D.Core.SkeletonPose.Blend(Simple3D.Core.SkeletonPose,Simple3D.Core.SkeletonPose,System.Single)
+  name: Blend(SkeletonPose, SkeletonPose, float)
+  href: api/Simple3D.Core.SkeletonPose.html#Simple3D_Core_SkeletonPose_Blend_Simple3D_Core_SkeletonPose_Simple3D_Core_SkeletonPose_System_Single_
+  commentId: M:Simple3D.Core.SkeletonPose.Blend(Simple3D.Core.SkeletonPose,Simple3D.Core.SkeletonPose,System.Single)
+  name.vb: Blend(SkeletonPose, SkeletonPose, Single)
+  fullName: Simple3D.Core.SkeletonPose.Blend(Simple3D.Core.SkeletonPose, Simple3D.Core.SkeletonPose, float)
+  fullName.vb: Simple3D.Core.SkeletonPose.Blend(Simple3D.Core.SkeletonPose, Simple3D.Core.SkeletonPose, Single)
+  nameWithType: SkeletonPose.Blend(SkeletonPose, SkeletonPose, float)
+  nameWithType.vb: SkeletonPose.Blend(SkeletonPose, SkeletonPose, Single)
+- uid: Simple3D.Core.SkeletonPose.Blend*
+  name: Blend
+  href: api/Simple3D.Core.SkeletonPose.html#Simple3D_Core_SkeletonPose_Blend_
+  commentId: Overload:Simple3D.Core.SkeletonPose.Blend
+  isSpec: "True"
+  fullName: Simple3D.Core.SkeletonPose.Blend
+  nameWithType: SkeletonPose.Blend
+- uid: Simple3D.Core.SkeletonPose.Create(Simple3D.Core.Skeleton,System.ReadOnlySpan{System.Numerics.Quaternion},System.Numerics.Vector3)
+  name: Create(Skeleton, ReadOnlySpan<Quaternion>, Vector3)
+  href: api/Simple3D.Core.SkeletonPose.html#Simple3D_Core_SkeletonPose_Create_Simple3D_Core_Skeleton_System_ReadOnlySpan_System_Numerics_Quaternion__System_Numerics_Vector3_
+  commentId: M:Simple3D.Core.SkeletonPose.Create(Simple3D.Core.Skeleton,System.ReadOnlySpan{System.Numerics.Quaternion},System.Numerics.Vector3)
+  name.vb: Create(Skeleton, ReadOnlySpan(Of Quaternion), Vector3)
+  fullName: Simple3D.Core.SkeletonPose.Create(Simple3D.Core.Skeleton, System.ReadOnlySpan<System.Numerics.Quaternion>, System.Numerics.Vector3)
+  fullName.vb: Simple3D.Core.SkeletonPose.Create(Simple3D.Core.Skeleton, System.ReadOnlySpan(Of System.Numerics.Quaternion), System.Numerics.Vector3)
+  nameWithType: SkeletonPose.Create(Skeleton, ReadOnlySpan<Quaternion>, Vector3)
+  nameWithType.vb: SkeletonPose.Create(Skeleton, ReadOnlySpan(Of Quaternion), Vector3)
+- uid: Simple3D.Core.SkeletonPose.Create*
+  name: Create
+  href: api/Simple3D.Core.SkeletonPose.html#Simple3D_Core_SkeletonPose_Create_
+  commentId: Overload:Simple3D.Core.SkeletonPose.Create
+  isSpec: "True"
+  fullName: Simple3D.Core.SkeletonPose.Create
+  nameWithType: SkeletonPose.Create
+- uid: Simple3D.Core.SkeletonPose.RootOffset
+  name: RootOffset
+  href: api/Simple3D.Core.SkeletonPose.html#Simple3D_Core_SkeletonPose_RootOffset
+  commentId: P:Simple3D.Core.SkeletonPose.RootOffset
+  fullName: Simple3D.Core.SkeletonPose.RootOffset
+  nameWithType: SkeletonPose.RootOffset
+- uid: Simple3D.Core.SkeletonPose.RootOffset*
+  name: RootOffset
+  href: api/Simple3D.Core.SkeletonPose.html#Simple3D_Core_SkeletonPose_RootOffset_
+  commentId: Overload:Simple3D.Core.SkeletonPose.RootOffset
+  isSpec: "True"
+  fullName: Simple3D.Core.SkeletonPose.RootOffset
+  nameWithType: SkeletonPose.RootOffset
+- uid: Simple3D.Core.SkeletonPose.Rotations
+  name: Rotations
+  href: api/Simple3D.Core.SkeletonPose.html#Simple3D_Core_SkeletonPose_Rotations
+  commentId: P:Simple3D.Core.SkeletonPose.Rotations
+  fullName: Simple3D.Core.SkeletonPose.Rotations
+  nameWithType: SkeletonPose.Rotations
+- uid: Simple3D.Core.SkeletonPose.Rotations*
+  name: Rotations
+  href: api/Simple3D.Core.SkeletonPose.html#Simple3D_Core_SkeletonPose_Rotations_
+  commentId: Overload:Simple3D.Core.SkeletonPose.Rotations
+  isSpec: "True"
+  fullName: Simple3D.Core.SkeletonPose.Rotations
+  nameWithType: SkeletonPose.Rotations
+- uid: Simple3D.Core.SkeletonPose.Skeleton
+  name: Skeleton
+  href: api/Simple3D.Core.SkeletonPose.html#Simple3D_Core_SkeletonPose_Skeleton
+  commentId: P:Simple3D.Core.SkeletonPose.Skeleton
+  fullName: Simple3D.Core.SkeletonPose.Skeleton
+  nameWithType: SkeletonPose.Skeleton
+- uid: Simple3D.Core.SkeletonPose.Skeleton*
+  name: Skeleton
+  href: api/Simple3D.Core.SkeletonPose.html#Simple3D_Core_SkeletonPose_Skeleton_
+  commentId: Overload:Simple3D.Core.SkeletonPose.Skeleton
+  isSpec: "True"
+  fullName: Simple3D.Core.SkeletonPose.Skeleton
+  nameWithType: SkeletonPose.Skeleton
+- uid: Simple3D.Core.SkeletonPose.WorldTransforms
+  name: WorldTransforms
+  href: api/Simple3D.Core.SkeletonPose.html#Simple3D_Core_SkeletonPose_WorldTransforms
+  commentId: P:Simple3D.Core.SkeletonPose.WorldTransforms
+  fullName: Simple3D.Core.SkeletonPose.WorldTransforms
+  nameWithType: SkeletonPose.WorldTransforms
+- uid: Simple3D.Core.SkeletonPose.WorldTransforms*
+  name: WorldTransforms
+  href: api/Simple3D.Core.SkeletonPose.html#Simple3D_Core_SkeletonPose_WorldTransforms_
+  commentId: Overload:Simple3D.Core.SkeletonPose.WorldTransforms
+  isSpec: "True"
+  fullName: Simple3D.Core.SkeletonPose.WorldTransforms
+  nameWithType: SkeletonPose.WorldTransforms
+- uid: Simple3D.Core.SkinnedMesh
+  name: SkinnedMesh
+  href: api/Simple3D.Core.SkinnedMesh.html
+  commentId: T:Simple3D.Core.SkinnedMesh
+  fullName: Simple3D.Core.SkinnedMesh
+  nameWithType: SkinnedMesh
+- uid: Simple3D.Core.SkinnedMesh.#ctor(Simple3D.Core.Mesh,Simple3D.Core.Skeleton,System.Collections.Generic.IEnumerable{Simple3D.Core.VertexInfluence},System.Collections.Generic.IEnumerable{Simple3D.Core.MorphTarget})
+  name: SkinnedMesh(Mesh, Skeleton, IEnumerable<VertexInfluence>, IEnumerable<MorphTarget>?)
+  href: api/Simple3D.Core.SkinnedMesh.html#Simple3D_Core_SkinnedMesh__ctor_Simple3D_Core_Mesh_Simple3D_Core_Skeleton_System_Collections_Generic_IEnumerable_Simple3D_Core_VertexInfluence__System_Collections_Generic_IEnumerable_Simple3D_Core_MorphTarget__
+  commentId: M:Simple3D.Core.SkinnedMesh.#ctor(Simple3D.Core.Mesh,Simple3D.Core.Skeleton,System.Collections.Generic.IEnumerable{Simple3D.Core.VertexInfluence},System.Collections.Generic.IEnumerable{Simple3D.Core.MorphTarget})
+  name.vb: New(Mesh, Skeleton, IEnumerable(Of VertexInfluence), IEnumerable(Of MorphTarget))
+  fullName: Simple3D.Core.SkinnedMesh.SkinnedMesh(Simple3D.Core.Mesh, Simple3D.Core.Skeleton, System.Collections.Generic.IEnumerable<Simple3D.Core.VertexInfluence>, System.Collections.Generic.IEnumerable<Simple3D.Core.MorphTarget>?)
+  fullName.vb: Simple3D.Core.SkinnedMesh.New(Simple3D.Core.Mesh, Simple3D.Core.Skeleton, System.Collections.Generic.IEnumerable(Of Simple3D.Core.VertexInfluence), System.Collections.Generic.IEnumerable(Of Simple3D.Core.MorphTarget))
+  nameWithType: SkinnedMesh.SkinnedMesh(Mesh, Skeleton, IEnumerable<VertexInfluence>, IEnumerable<MorphTarget>?)
+  nameWithType.vb: SkinnedMesh.New(Mesh, Skeleton, IEnumerable(Of VertexInfluence), IEnumerable(Of MorphTarget))
+- uid: Simple3D.Core.SkinnedMesh.#ctor*
+  name: SkinnedMesh
+  href: api/Simple3D.Core.SkinnedMesh.html#Simple3D_Core_SkinnedMesh__ctor_
+  commentId: Overload:Simple3D.Core.SkinnedMesh.#ctor
+  isSpec: "True"
+  name.vb: New
+  fullName: Simple3D.Core.SkinnedMesh.SkinnedMesh
+  fullName.vb: Simple3D.Core.SkinnedMesh.New
+  nameWithType: SkinnedMesh.SkinnedMesh
+  nameWithType.vb: SkinnedMesh.New
+- uid: Simple3D.Core.SkinnedMesh.Influences
+  name: Influences
+  href: api/Simple3D.Core.SkinnedMesh.html#Simple3D_Core_SkinnedMesh_Influences
+  commentId: P:Simple3D.Core.SkinnedMesh.Influences
+  fullName: Simple3D.Core.SkinnedMesh.Influences
+  nameWithType: SkinnedMesh.Influences
+- uid: Simple3D.Core.SkinnedMesh.Influences*
+  name: Influences
+  href: api/Simple3D.Core.SkinnedMesh.html#Simple3D_Core_SkinnedMesh_Influences_
+  commentId: Overload:Simple3D.Core.SkinnedMesh.Influences
+  isSpec: "True"
+  fullName: Simple3D.Core.SkinnedMesh.Influences
+  nameWithType: SkinnedMesh.Influences
+- uid: Simple3D.Core.SkinnedMesh.MaximumMorphTargets
+  name: MaximumMorphTargets
+  href: api/Simple3D.Core.SkinnedMesh.html#Simple3D_Core_SkinnedMesh_MaximumMorphTargets
+  commentId: F:Simple3D.Core.SkinnedMesh.MaximumMorphTargets
+  fullName: Simple3D.Core.SkinnedMesh.MaximumMorphTargets
+  nameWithType: SkinnedMesh.MaximumMorphTargets
+- uid: Simple3D.Core.SkinnedMesh.Mesh
+  name: Mesh
+  href: api/Simple3D.Core.SkinnedMesh.html#Simple3D_Core_SkinnedMesh_Mesh
+  commentId: P:Simple3D.Core.SkinnedMesh.Mesh
+  fullName: Simple3D.Core.SkinnedMesh.Mesh
+  nameWithType: SkinnedMesh.Mesh
+- uid: Simple3D.Core.SkinnedMesh.Mesh*
+  name: Mesh
+  href: api/Simple3D.Core.SkinnedMesh.html#Simple3D_Core_SkinnedMesh_Mesh_
+  commentId: Overload:Simple3D.Core.SkinnedMesh.Mesh
+  isSpec: "True"
+  fullName: Simple3D.Core.SkinnedMesh.Mesh
+  nameWithType: SkinnedMesh.Mesh
+- uid: Simple3D.Core.SkinnedMesh.MorphTargets
+  name: MorphTargets
+  href: api/Simple3D.Core.SkinnedMesh.html#Simple3D_Core_SkinnedMesh_MorphTargets
+  commentId: P:Simple3D.Core.SkinnedMesh.MorphTargets
+  fullName: Simple3D.Core.SkinnedMesh.MorphTargets
+  nameWithType: SkinnedMesh.MorphTargets
+- uid: Simple3D.Core.SkinnedMesh.MorphTargets*
+  name: MorphTargets
+  href: api/Simple3D.Core.SkinnedMesh.html#Simple3D_Core_SkinnedMesh_MorphTargets_
+  commentId: Overload:Simple3D.Core.SkinnedMesh.MorphTargets
+  isSpec: "True"
+  fullName: Simple3D.Core.SkinnedMesh.MorphTargets
+  nameWithType: SkinnedMesh.MorphTargets
+- uid: Simple3D.Core.SkinnedMesh.Skeleton
+  name: Skeleton
+  href: api/Simple3D.Core.SkinnedMesh.html#Simple3D_Core_SkinnedMesh_Skeleton
+  commentId: P:Simple3D.Core.SkinnedMesh.Skeleton
+  fullName: Simple3D.Core.SkinnedMesh.Skeleton
+  nameWithType: SkinnedMesh.Skeleton
+- uid: Simple3D.Core.SkinnedMesh.Skeleton*
+  name: Skeleton
+  href: api/Simple3D.Core.SkinnedMesh.html#Simple3D_Core_SkinnedMesh_Skeleton_
+  commentId: Overload:Simple3D.Core.SkinnedMesh.Skeleton
+  isSpec: "True"
+  fullName: Simple3D.Core.SkinnedMesh.Skeleton
+  nameWithType: SkinnedMesh.Skeleton
 - uid: Simple3D.Core.Texture2D
   name: Texture2D
   href: api/Simple3D.Core.Texture2D.html
@@ -1753,6 +2531,57 @@ references:
   commentId: F:Simple3D.Core.TextureFilter.Nearest
   fullName: Simple3D.Core.TextureFilter.Nearest
   nameWithType: TextureFilter.Nearest
+- uid: Simple3D.Core.VertexInfluence
+  name: VertexInfluence
+  href: api/Simple3D.Core.VertexInfluence.html
+  commentId: T:Simple3D.Core.VertexInfluence
+  fullName: Simple3D.Core.VertexInfluence
+  nameWithType: VertexInfluence
+- uid: Simple3D.Core.VertexInfluence.#ctor(Simple3D.Core.Int4,System.Numerics.Vector4)
+  name: VertexInfluence(Int4, Vector4)
+  href: api/Simple3D.Core.VertexInfluence.html#Simple3D_Core_VertexInfluence__ctor_Simple3D_Core_Int4_System_Numerics_Vector4_
+  commentId: M:Simple3D.Core.VertexInfluence.#ctor(Simple3D.Core.Int4,System.Numerics.Vector4)
+  name.vb: New(Int4, Vector4)
+  fullName: Simple3D.Core.VertexInfluence.VertexInfluence(Simple3D.Core.Int4, System.Numerics.Vector4)
+  fullName.vb: Simple3D.Core.VertexInfluence.New(Simple3D.Core.Int4, System.Numerics.Vector4)
+  nameWithType: VertexInfluence.VertexInfluence(Int4, Vector4)
+  nameWithType.vb: VertexInfluence.New(Int4, Vector4)
+- uid: Simple3D.Core.VertexInfluence.#ctor*
+  name: VertexInfluence
+  href: api/Simple3D.Core.VertexInfluence.html#Simple3D_Core_VertexInfluence__ctor_
+  commentId: Overload:Simple3D.Core.VertexInfluence.#ctor
+  isSpec: "True"
+  name.vb: New
+  fullName: Simple3D.Core.VertexInfluence.VertexInfluence
+  fullName.vb: Simple3D.Core.VertexInfluence.New
+  nameWithType: VertexInfluence.VertexInfluence
+  nameWithType.vb: VertexInfluence.New
+- uid: Simple3D.Core.VertexInfluence.Joints
+  name: Joints
+  href: api/Simple3D.Core.VertexInfluence.html#Simple3D_Core_VertexInfluence_Joints
+  commentId: P:Simple3D.Core.VertexInfluence.Joints
+  fullName: Simple3D.Core.VertexInfluence.Joints
+  nameWithType: VertexInfluence.Joints
+- uid: Simple3D.Core.VertexInfluence.Joints*
+  name: Joints
+  href: api/Simple3D.Core.VertexInfluence.html#Simple3D_Core_VertexInfluence_Joints_
+  commentId: Overload:Simple3D.Core.VertexInfluence.Joints
+  isSpec: "True"
+  fullName: Simple3D.Core.VertexInfluence.Joints
+  nameWithType: VertexInfluence.Joints
+- uid: Simple3D.Core.VertexInfluence.Weights
+  name: Weights
+  href: api/Simple3D.Core.VertexInfluence.html#Simple3D_Core_VertexInfluence_Weights
+  commentId: P:Simple3D.Core.VertexInfluence.Weights
+  fullName: Simple3D.Core.VertexInfluence.Weights
+  nameWithType: VertexInfluence.Weights
+- uid: Simple3D.Core.VertexInfluence.Weights*
+  name: Weights
+  href: api/Simple3D.Core.VertexInfluence.html#Simple3D_Core_VertexInfluence_Weights_
+  commentId: Overload:Simple3D.Core.VertexInfluence.Weights
+  isSpec: "True"
+  fullName: Simple3D.Core.VertexInfluence.Weights
+  nameWithType: VertexInfluence.Weights
 - uid: Simple3D.Core.WorldLabel
   name: WorldLabel
   href: api/Simple3D.Core.WorldLabel.html
@@ -1823,6 +2652,271 @@ references:
   commentId: N:Simple3D.Maui
   fullName: Simple3D.Maui
   nameWithType: Simple3D.Maui
+- uid: Simple3D.Maui.FrameClock
+  name: FrameClock
+  href: api/Simple3D.Maui.FrameClock.html
+  commentId: T:Simple3D.Maui.FrameClock
+  fullName: Simple3D.Maui.FrameClock
+  nameWithType: FrameClock
+- uid: Simple3D.Maui.FrameClock.Dispose
+  name: Dispose()
+  href: api/Simple3D.Maui.FrameClock.html#Simple3D_Maui_FrameClock_Dispose
+  commentId: M:Simple3D.Maui.FrameClock.Dispose
+  fullName: Simple3D.Maui.FrameClock.Dispose()
+  nameWithType: FrameClock.Dispose()
+- uid: Simple3D.Maui.FrameClock.Dispose*
+  name: Dispose
+  href: api/Simple3D.Maui.FrameClock.html#Simple3D_Maui_FrameClock_Dispose_
+  commentId: Overload:Simple3D.Maui.FrameClock.Dispose
+  isSpec: "True"
+  fullName: Simple3D.Maui.FrameClock.Dispose
+  nameWithType: FrameClock.Dispose
+- uid: Simple3D.Maui.FrameClock.IsRunning
+  name: IsRunning
+  href: api/Simple3D.Maui.FrameClock.html#Simple3D_Maui_FrameClock_IsRunning
+  commentId: P:Simple3D.Maui.FrameClock.IsRunning
+  fullName: Simple3D.Maui.FrameClock.IsRunning
+  nameWithType: FrameClock.IsRunning
+- uid: Simple3D.Maui.FrameClock.IsRunning*
+  name: IsRunning
+  href: api/Simple3D.Maui.FrameClock.html#Simple3D_Maui_FrameClock_IsRunning_
+  commentId: Overload:Simple3D.Maui.FrameClock.IsRunning
+  isSpec: "True"
+  fullName: Simple3D.Maui.FrameClock.IsRunning
+  nameWithType: FrameClock.IsRunning
+- uid: Simple3D.Maui.FrameClock.MaximumRate
+  name: MaximumRate
+  href: api/Simple3D.Maui.FrameClock.html#Simple3D_Maui_FrameClock_MaximumRate
+  commentId: F:Simple3D.Maui.FrameClock.MaximumRate
+  fullName: Simple3D.Maui.FrameClock.MaximumRate
+  nameWithType: FrameClock.MaximumRate
+- uid: Simple3D.Maui.FrameClock.RefreshRate
+  name: RefreshRate
+  href: api/Simple3D.Maui.FrameClock.html#Simple3D_Maui_FrameClock_RefreshRate
+  commentId: P:Simple3D.Maui.FrameClock.RefreshRate
+  fullName: Simple3D.Maui.FrameClock.RefreshRate
+  nameWithType: FrameClock.RefreshRate
+- uid: Simple3D.Maui.FrameClock.RefreshRate*
+  name: RefreshRate
+  href: api/Simple3D.Maui.FrameClock.html#Simple3D_Maui_FrameClock_RefreshRate_
+  commentId: Overload:Simple3D.Maui.FrameClock.RefreshRate
+  isSpec: "True"
+  fullName: Simple3D.Maui.FrameClock.RefreshRate
+  nameWithType: FrameClock.RefreshRate
+- uid: Simple3D.Maui.FrameClock.Start
+  name: Start()
+  href: api/Simple3D.Maui.FrameClock.html#Simple3D_Maui_FrameClock_Start
+  commentId: M:Simple3D.Maui.FrameClock.Start
+  fullName: Simple3D.Maui.FrameClock.Start()
+  nameWithType: FrameClock.Start()
+- uid: Simple3D.Maui.FrameClock.Start*
+  name: Start
+  href: api/Simple3D.Maui.FrameClock.html#Simple3D_Maui_FrameClock_Start_
+  commentId: Overload:Simple3D.Maui.FrameClock.Start
+  isSpec: "True"
+  fullName: Simple3D.Maui.FrameClock.Start
+  nameWithType: FrameClock.Start
+- uid: Simple3D.Maui.FrameClock.Stop
+  name: Stop()
+  href: api/Simple3D.Maui.FrameClock.html#Simple3D_Maui_FrameClock_Stop
+  commentId: M:Simple3D.Maui.FrameClock.Stop
+  fullName: Simple3D.Maui.FrameClock.Stop()
+  nameWithType: FrameClock.Stop()
+- uid: Simple3D.Maui.FrameClock.Stop*
+  name: Stop
+  href: api/Simple3D.Maui.FrameClock.html#Simple3D_Maui_FrameClock_Stop_
+  commentId: Overload:Simple3D.Maui.FrameClock.Stop
+  isSpec: "True"
+  fullName: Simple3D.Maui.FrameClock.Stop
+  nameWithType: FrameClock.Stop
+- uid: Simple3D.Maui.FrameClock.Tick
+  name: Tick
+  href: api/Simple3D.Maui.FrameClock.html#Simple3D_Maui_FrameClock_Tick
+  commentId: E:Simple3D.Maui.FrameClock.Tick
+  fullName: Simple3D.Maui.FrameClock.Tick
+  nameWithType: FrameClock.Tick
+- uid: Simple3D.Maui.GltfLoader
+  name: GltfLoader
+  href: api/Simple3D.Maui.GltfLoader.html
+  commentId: T:Simple3D.Maui.GltfLoader
+  fullName: Simple3D.Maui.GltfLoader
+  nameWithType: GltfLoader
+- uid: Simple3D.Maui.GltfLoader.Load(System.IO.Stream)
+  name: Load(Stream)
+  href: api/Simple3D.Maui.GltfLoader.html#Simple3D_Maui_GltfLoader_Load_System_IO_Stream_
+  commentId: M:Simple3D.Maui.GltfLoader.Load(System.IO.Stream)
+  fullName: Simple3D.Maui.GltfLoader.Load(System.IO.Stream)
+  nameWithType: GltfLoader.Load(Stream)
+- uid: Simple3D.Maui.GltfLoader.Load*
+  name: Load
+  href: api/Simple3D.Maui.GltfLoader.html#Simple3D_Maui_GltfLoader_Load_
+  commentId: Overload:Simple3D.Maui.GltfLoader.Load
+  isSpec: "True"
+  fullName: Simple3D.Maui.GltfLoader.Load
+  nameWithType: GltfLoader.Load
+- uid: Simple3D.Maui.GltfLoader.LoadAsync(System.IO.Stream)
+  name: LoadAsync(Stream)
+  href: api/Simple3D.Maui.GltfLoader.html#Simple3D_Maui_GltfLoader_LoadAsync_System_IO_Stream_
+  commentId: M:Simple3D.Maui.GltfLoader.LoadAsync(System.IO.Stream)
+  fullName: Simple3D.Maui.GltfLoader.LoadAsync(System.IO.Stream)
+  nameWithType: GltfLoader.LoadAsync(Stream)
+- uid: Simple3D.Maui.GltfLoader.LoadAsync*
+  name: LoadAsync
+  href: api/Simple3D.Maui.GltfLoader.html#Simple3D_Maui_GltfLoader_LoadAsync_
+  commentId: Overload:Simple3D.Maui.GltfLoader.LoadAsync
+  isSpec: "True"
+  fullName: Simple3D.Maui.GltfLoader.LoadAsync
+  nameWithType: GltfLoader.LoadAsync
+- uid: Simple3D.Maui.LoadedGltf
+  name: LoadedGltf
+  href: api/Simple3D.Maui.LoadedGltf.html
+  commentId: T:Simple3D.Maui.LoadedGltf
+  fullName: Simple3D.Maui.LoadedGltf
+  nameWithType: LoadedGltf
+- uid: Simple3D.Maui.LoadedGltf.#ctor(Simple3D.Core.GltfModel,Simple3D.Core.Shape)
+  name: LoadedGltf(GltfModel, Shape)
+  href: api/Simple3D.Maui.LoadedGltf.html#Simple3D_Maui_LoadedGltf__ctor_Simple3D_Core_GltfModel_Simple3D_Core_Shape_
+  commentId: M:Simple3D.Maui.LoadedGltf.#ctor(Simple3D.Core.GltfModel,Simple3D.Core.Shape)
+  name.vb: New(GltfModel, Shape)
+  fullName: Simple3D.Maui.LoadedGltf.LoadedGltf(Simple3D.Core.GltfModel, Simple3D.Core.Shape)
+  fullName.vb: Simple3D.Maui.LoadedGltf.New(Simple3D.Core.GltfModel, Simple3D.Core.Shape)
+  nameWithType: LoadedGltf.LoadedGltf(GltfModel, Shape)
+  nameWithType.vb: LoadedGltf.New(GltfModel, Shape)
+- uid: Simple3D.Maui.LoadedGltf.#ctor*
+  name: LoadedGltf
+  href: api/Simple3D.Maui.LoadedGltf.html#Simple3D_Maui_LoadedGltf__ctor_
+  commentId: Overload:Simple3D.Maui.LoadedGltf.#ctor
+  isSpec: "True"
+  name.vb: New
+  fullName: Simple3D.Maui.LoadedGltf.LoadedGltf
+  fullName.vb: Simple3D.Maui.LoadedGltf.New
+  nameWithType: LoadedGltf.LoadedGltf
+  nameWithType.vb: LoadedGltf.New
+- uid: Simple3D.Maui.LoadedGltf.Model
+  name: Model
+  href: api/Simple3D.Maui.LoadedGltf.html#Simple3D_Maui_LoadedGltf_Model
+  commentId: P:Simple3D.Maui.LoadedGltf.Model
+  fullName: Simple3D.Maui.LoadedGltf.Model
+  nameWithType: LoadedGltf.Model
+- uid: Simple3D.Maui.LoadedGltf.Model*
+  name: Model
+  href: api/Simple3D.Maui.LoadedGltf.html#Simple3D_Maui_LoadedGltf_Model_
+  commentId: Overload:Simple3D.Maui.LoadedGltf.Model
+  isSpec: "True"
+  fullName: Simple3D.Maui.LoadedGltf.Model
+  nameWithType: LoadedGltf.Model
+- uid: Simple3D.Maui.LoadedGltf.Shape
+  name: Shape
+  href: api/Simple3D.Maui.LoadedGltf.html#Simple3D_Maui_LoadedGltf_Shape
+  commentId: P:Simple3D.Maui.LoadedGltf.Shape
+  fullName: Simple3D.Maui.LoadedGltf.Shape
+  nameWithType: LoadedGltf.Shape
+- uid: Simple3D.Maui.LoadedGltf.Shape*
+  name: Shape
+  href: api/Simple3D.Maui.LoadedGltf.html#Simple3D_Maui_LoadedGltf_Shape_
+  commentId: Overload:Simple3D.Maui.LoadedGltf.Shape
+  isSpec: "True"
+  fullName: Simple3D.Maui.LoadedGltf.Shape
+  nameWithType: LoadedGltf.Shape
+- uid: Simple3D.Maui.RenderingBackend
+  name: RenderingBackend
+  href: api/Simple3D.Maui.RenderingBackend.html
+  commentId: T:Simple3D.Maui.RenderingBackend
+  fullName: Simple3D.Maui.RenderingBackend
+  nameWithType: RenderingBackend
+- uid: Simple3D.Maui.RenderingBackend.Hardware
+  name: Hardware
+  href: api/Simple3D.Maui.RenderingBackend.html#Simple3D_Maui_RenderingBackend_Hardware
+  commentId: F:Simple3D.Maui.RenderingBackend.Hardware
+  fullName: Simple3D.Maui.RenderingBackend.Hardware
+  nameWithType: RenderingBackend.Hardware
+- uid: Simple3D.Maui.RenderingBackend.None
+  name: None
+  href: api/Simple3D.Maui.RenderingBackend.html#Simple3D_Maui_RenderingBackend_None
+  commentId: F:Simple3D.Maui.RenderingBackend.None
+  fullName: Simple3D.Maui.RenderingBackend.None
+  nameWithType: RenderingBackend.None
+- uid: Simple3D.Maui.RenderingBackend.Software
+  name: Software
+  href: api/Simple3D.Maui.RenderingBackend.html#Simple3D_Maui_RenderingBackend_Software
+  commentId: F:Simple3D.Maui.RenderingBackend.Software
+  fullName: Simple3D.Maui.RenderingBackend.Software
+  nameWithType: RenderingBackend.Software
+- uid: Simple3D.Maui.RenderingFailureEventArgs
+  name: RenderingFailureEventArgs
+  href: api/Simple3D.Maui.RenderingFailureEventArgs.html
+  commentId: T:Simple3D.Maui.RenderingFailureEventArgs
+  fullName: Simple3D.Maui.RenderingFailureEventArgs
+  nameWithType: RenderingFailureEventArgs
+- uid: Simple3D.Maui.RenderingFailureEventArgs.#ctor(System.String,System.Boolean)
+  name: RenderingFailureEventArgs(string, bool)
+  href: api/Simple3D.Maui.RenderingFailureEventArgs.html#Simple3D_Maui_RenderingFailureEventArgs__ctor_System_String_System_Boolean_
+  commentId: M:Simple3D.Maui.RenderingFailureEventArgs.#ctor(System.String,System.Boolean)
+  name.vb: New(String, Boolean)
+  fullName: Simple3D.Maui.RenderingFailureEventArgs.RenderingFailureEventArgs(string, bool)
+  fullName.vb: Simple3D.Maui.RenderingFailureEventArgs.New(String, Boolean)
+  nameWithType: RenderingFailureEventArgs.RenderingFailureEventArgs(string, bool)
+  nameWithType.vb: RenderingFailureEventArgs.New(String, Boolean)
+- uid: Simple3D.Maui.RenderingFailureEventArgs.#ctor*
+  name: RenderingFailureEventArgs
+  href: api/Simple3D.Maui.RenderingFailureEventArgs.html#Simple3D_Maui_RenderingFailureEventArgs__ctor_
+  commentId: Overload:Simple3D.Maui.RenderingFailureEventArgs.#ctor
+  isSpec: "True"
+  name.vb: New
+  fullName: Simple3D.Maui.RenderingFailureEventArgs.RenderingFailureEventArgs
+  fullName.vb: Simple3D.Maui.RenderingFailureEventArgs.New
+  nameWithType: RenderingFailureEventArgs.RenderingFailureEventArgs
+  nameWithType.vb: RenderingFailureEventArgs.New
+- uid: Simple3D.Maui.RenderingFailureEventArgs.FellBackToSoftware
+  name: FellBackToSoftware
+  href: api/Simple3D.Maui.RenderingFailureEventArgs.html#Simple3D_Maui_RenderingFailureEventArgs_FellBackToSoftware
+  commentId: P:Simple3D.Maui.RenderingFailureEventArgs.FellBackToSoftware
+  fullName: Simple3D.Maui.RenderingFailureEventArgs.FellBackToSoftware
+  nameWithType: RenderingFailureEventArgs.FellBackToSoftware
+- uid: Simple3D.Maui.RenderingFailureEventArgs.FellBackToSoftware*
+  name: FellBackToSoftware
+  href: api/Simple3D.Maui.RenderingFailureEventArgs.html#Simple3D_Maui_RenderingFailureEventArgs_FellBackToSoftware_
+  commentId: Overload:Simple3D.Maui.RenderingFailureEventArgs.FellBackToSoftware
+  isSpec: "True"
+  fullName: Simple3D.Maui.RenderingFailureEventArgs.FellBackToSoftware
+  nameWithType: RenderingFailureEventArgs.FellBackToSoftware
+- uid: Simple3D.Maui.RenderingFailureEventArgs.Message
+  name: Message
+  href: api/Simple3D.Maui.RenderingFailureEventArgs.html#Simple3D_Maui_RenderingFailureEventArgs_Message
+  commentId: P:Simple3D.Maui.RenderingFailureEventArgs.Message
+  fullName: Simple3D.Maui.RenderingFailureEventArgs.Message
+  nameWithType: RenderingFailureEventArgs.Message
+- uid: Simple3D.Maui.RenderingFailureEventArgs.Message*
+  name: Message
+  href: api/Simple3D.Maui.RenderingFailureEventArgs.html#Simple3D_Maui_RenderingFailureEventArgs_Message_
+  commentId: Overload:Simple3D.Maui.RenderingFailureEventArgs.Message
+  isSpec: "True"
+  fullName: Simple3D.Maui.RenderingFailureEventArgs.Message
+  nameWithType: RenderingFailureEventArgs.Message
+- uid: Simple3D.Maui.RenderingMode
+  name: RenderingMode
+  href: api/Simple3D.Maui.RenderingMode.html
+  commentId: T:Simple3D.Maui.RenderingMode
+  fullName: Simple3D.Maui.RenderingMode
+  nameWithType: RenderingMode
+- uid: Simple3D.Maui.RenderingMode.Auto
+  name: Auto
+  href: api/Simple3D.Maui.RenderingMode.html#Simple3D_Maui_RenderingMode_Auto
+  commentId: F:Simple3D.Maui.RenderingMode.Auto
+  fullName: Simple3D.Maui.RenderingMode.Auto
+  nameWithType: RenderingMode.Auto
+- uid: Simple3D.Maui.RenderingMode.Hardware
+  name: Hardware
+  href: api/Simple3D.Maui.RenderingMode.html#Simple3D_Maui_RenderingMode_Hardware
+  commentId: F:Simple3D.Maui.RenderingMode.Hardware
+  fullName: Simple3D.Maui.RenderingMode.Hardware
+  nameWithType: RenderingMode.Hardware
+- uid: Simple3D.Maui.RenderingMode.Software
+  name: Software
+  href: api/Simple3D.Maui.RenderingMode.html#Simple3D_Maui_RenderingMode_Software
+  commentId: F:Simple3D.Maui.RenderingMode.Software
+  fullName: Simple3D.Maui.RenderingMode.Software
+  nameWithType: RenderingMode.Software
 - uid: Simple3D.Maui.Resource
   name: Resource
   href: api/Simple3D.Maui.Resource.html
@@ -1854,6 +2948,19 @@ references:
   fullName.vb: Simple3D.Maui.SceneView.New
   nameWithType: SceneView.SceneView
   nameWithType.vb: SceneView.New
+- uid: Simple3D.Maui.SceneView.ActiveRenderingBackend
+  name: ActiveRenderingBackend
+  href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_ActiveRenderingBackend
+  commentId: P:Simple3D.Maui.SceneView.ActiveRenderingBackend
+  fullName: Simple3D.Maui.SceneView.ActiveRenderingBackend
+  nameWithType: SceneView.ActiveRenderingBackend
+- uid: Simple3D.Maui.SceneView.ActiveRenderingBackend*
+  name: ActiveRenderingBackend
+  href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_ActiveRenderingBackend_
+  commentId: Overload:Simple3D.Maui.SceneView.ActiveRenderingBackend
+  isSpec: "True"
+  fullName: Simple3D.Maui.SceneView.ActiveRenderingBackend
+  nameWithType: SceneView.ActiveRenderingBackend
 - uid: Simple3D.Maui.SceneView.Camera
   name: Camera
   href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_Camera
@@ -1902,6 +3009,25 @@ references:
   isSpec: "True"
   fullName: Simple3D.Maui.SceneView.ClearSelection
   nameWithType: SceneView.ClearSelection
+- uid: Simple3D.Maui.SceneView.FrameSubmitted
+  name: FrameSubmitted
+  href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_FrameSubmitted
+  commentId: E:Simple3D.Maui.SceneView.FrameSubmitted
+  fullName: Simple3D.Maui.SceneView.FrameSubmitted
+  nameWithType: SceneView.FrameSubmitted
+- uid: Simple3D.Maui.SceneView.InvalidateSurface
+  name: InvalidateSurface()
+  href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_InvalidateSurface
+  commentId: M:Simple3D.Maui.SceneView.InvalidateSurface
+  fullName: Simple3D.Maui.SceneView.InvalidateSurface()
+  nameWithType: SceneView.InvalidateSurface()
+- uid: Simple3D.Maui.SceneView.InvalidateSurface*
+  name: InvalidateSurface
+  href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_InvalidateSurface_
+  commentId: Overload:Simple3D.Maui.SceneView.InvalidateSurface
+  isSpec: "True"
+  fullName: Simple3D.Maui.SceneView.InvalidateSurface
+  nameWithType: SceneView.InvalidateSurface
 - uid: Simple3D.Maui.SceneView.IsAntialiasEnabled
   name: IsAntialiasEnabled
   href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_IsAntialiasEnabled
@@ -1940,6 +3066,58 @@ references:
   commentId: F:Simple3D.Maui.SceneView.IsInteractiveProperty
   fullName: Simple3D.Maui.SceneView.IsInteractiveProperty
   nameWithType: SceneView.IsInteractiveProperty
+- uid: Simple3D.Maui.SceneView.LastFrameHeight
+  name: LastFrameHeight
+  href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_LastFrameHeight
+  commentId: P:Simple3D.Maui.SceneView.LastFrameHeight
+  fullName: Simple3D.Maui.SceneView.LastFrameHeight
+  nameWithType: SceneView.LastFrameHeight
+- uid: Simple3D.Maui.SceneView.LastFrameHeight*
+  name: LastFrameHeight
+  href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_LastFrameHeight_
+  commentId: Overload:Simple3D.Maui.SceneView.LastFrameHeight
+  isSpec: "True"
+  fullName: Simple3D.Maui.SceneView.LastFrameHeight
+  nameWithType: SceneView.LastFrameHeight
+- uid: Simple3D.Maui.SceneView.LastFrameMilliseconds
+  name: LastFrameMilliseconds
+  href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_LastFrameMilliseconds
+  commentId: P:Simple3D.Maui.SceneView.LastFrameMilliseconds
+  fullName: Simple3D.Maui.SceneView.LastFrameMilliseconds
+  nameWithType: SceneView.LastFrameMilliseconds
+- uid: Simple3D.Maui.SceneView.LastFrameMilliseconds*
+  name: LastFrameMilliseconds
+  href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_LastFrameMilliseconds_
+  commentId: Overload:Simple3D.Maui.SceneView.LastFrameMilliseconds
+  isSpec: "True"
+  fullName: Simple3D.Maui.SceneView.LastFrameMilliseconds
+  nameWithType: SceneView.LastFrameMilliseconds
+- uid: Simple3D.Maui.SceneView.LastFrameWidth
+  name: LastFrameWidth
+  href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_LastFrameWidth
+  commentId: P:Simple3D.Maui.SceneView.LastFrameWidth
+  fullName: Simple3D.Maui.SceneView.LastFrameWidth
+  nameWithType: SceneView.LastFrameWidth
+- uid: Simple3D.Maui.SceneView.LastFrameWidth*
+  name: LastFrameWidth
+  href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_LastFrameWidth_
+  commentId: Overload:Simple3D.Maui.SceneView.LastFrameWidth
+  isSpec: "True"
+  fullName: Simple3D.Maui.SceneView.LastFrameWidth
+  nameWithType: SceneView.LastFrameWidth
+- uid: Simple3D.Maui.SceneView.LastHardwareSubmissionMilliseconds
+  name: LastHardwareSubmissionMilliseconds
+  href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_LastHardwareSubmissionMilliseconds
+  commentId: P:Simple3D.Maui.SceneView.LastHardwareSubmissionMilliseconds
+  fullName: Simple3D.Maui.SceneView.LastHardwareSubmissionMilliseconds
+  nameWithType: SceneView.LastHardwareSubmissionMilliseconds
+- uid: Simple3D.Maui.SceneView.LastHardwareSubmissionMilliseconds*
+  name: LastHardwareSubmissionMilliseconds
+  href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_LastHardwareSubmissionMilliseconds_
+  commentId: Overload:Simple3D.Maui.SceneView.LastHardwareSubmissionMilliseconds
+  isSpec: "True"
+  fullName: Simple3D.Maui.SceneView.LastHardwareSubmissionMilliseconds
+  nameWithType: SceneView.LastHardwareSubmissionMilliseconds
 - uid: Simple3D.Maui.SceneView.MaximumRenderDimension
   name: MaximumRenderDimension
   href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_MaximumRenderDimension
@@ -2017,6 +3195,50 @@ references:
   isSpec: "True"
   fullName: Simple3D.Maui.SceneView.Refresh
   nameWithType: SceneView.Refresh
+- uid: Simple3D.Maui.SceneView.RenderingBackendChanged
+  name: RenderingBackendChanged
+  href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_RenderingBackendChanged
+  commentId: E:Simple3D.Maui.SceneView.RenderingBackendChanged
+  fullName: Simple3D.Maui.SceneView.RenderingBackendChanged
+  nameWithType: SceneView.RenderingBackendChanged
+- uid: Simple3D.Maui.SceneView.RenderingDiagnostic
+  name: RenderingDiagnostic
+  href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_RenderingDiagnostic
+  commentId: P:Simple3D.Maui.SceneView.RenderingDiagnostic
+  fullName: Simple3D.Maui.SceneView.RenderingDiagnostic
+  nameWithType: SceneView.RenderingDiagnostic
+- uid: Simple3D.Maui.SceneView.RenderingDiagnostic*
+  name: RenderingDiagnostic
+  href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_RenderingDiagnostic_
+  commentId: Overload:Simple3D.Maui.SceneView.RenderingDiagnostic
+  isSpec: "True"
+  fullName: Simple3D.Maui.SceneView.RenderingDiagnostic
+  nameWithType: SceneView.RenderingDiagnostic
+- uid: Simple3D.Maui.SceneView.RenderingFailed
+  name: RenderingFailed
+  href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_RenderingFailed
+  commentId: E:Simple3D.Maui.SceneView.RenderingFailed
+  fullName: Simple3D.Maui.SceneView.RenderingFailed
+  nameWithType: SceneView.RenderingFailed
+- uid: Simple3D.Maui.SceneView.RenderingMode
+  name: RenderingMode
+  href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_RenderingMode
+  commentId: P:Simple3D.Maui.SceneView.RenderingMode
+  fullName: Simple3D.Maui.SceneView.RenderingMode
+  nameWithType: SceneView.RenderingMode
+- uid: Simple3D.Maui.SceneView.RenderingMode*
+  name: RenderingMode
+  href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_RenderingMode_
+  commentId: Overload:Simple3D.Maui.SceneView.RenderingMode
+  isSpec: "True"
+  fullName: Simple3D.Maui.SceneView.RenderingMode
+  nameWithType: SceneView.RenderingMode
+- uid: Simple3D.Maui.SceneView.RenderingModeProperty
+  name: RenderingModeProperty
+  href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_RenderingModeProperty
+  commentId: F:Simple3D.Maui.SceneView.RenderingModeProperty
+  fullName: Simple3D.Maui.SceneView.RenderingModeProperty
+  nameWithType: SceneView.RenderingModeProperty
 - uid: Simple3D.Maui.SceneView.ResetCamera
   name: ResetCamera()
   href: api/Simple3D.Maui.SceneView.html#Simple3D_Maui_SceneView_ResetCamera

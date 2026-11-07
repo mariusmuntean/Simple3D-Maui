@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<!--[if IE]><![endif]-->
+<html>
+
+  <head>
+    <meta charset="utf-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+      <title>Skinned characters and glTF | Simple3D </title>
+      <meta name="viewport" content="width=device-width">
+      <meta name="title" content="Skinned characters and glTF | Simple3D ">
+    
+    
+      <link rel="shortcut icon" href="images/favicon.png">
+      <link rel="stylesheet" href="styles/docfx.vendor.min.css">
+      <link rel="stylesheet" href="styles/docfx.css">
+      <link rel="stylesheet" href="styles/main.css">
+      <meta property="docfx:navrel" content="toc.html">
+      <meta property="docfx:tocrel" content="toc.html">
+    
+    <meta property="docfx:rel" content="">
+    
+  </head>
+  <body data-spy="scroll" data-target="#affix" data-offset="120">
+    <div id="wrapper">
+      <header>
+
+        <nav id="autocollapse" class="navbar navbar-inverse ng-scope" role="navigation">
+          <div class="container">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+
+              <a class="navbar-brand" href="index.html">
+                <img id="logo" class="svg" src="images/navigation-mark.svg" alt="Simple3D">
+              </a>
+            </div>
+            <div class="collapse navbar-collapse" id="navbar">
+              <form class="navbar-form navbar-right" role="search" id="search">
+                <div class="form-group">
+                  <input type="text" class="form-control" id="search-query" placeholder="Search" autocomplete="off">
+                </div>
+              </form>
+            </div>
+          </div>
+        </nav>
+
+        <div class="subnav navbar navbar-default">
+          <div class="container hide-when-search" id="breadcrumb">
+            <ul class="breadcrumb">
+              <li></li>
+            </ul>
+          </div>
+        </div>
+      </header>
+      <div class="container body-content">
+
+        <div id="search-results">
+          <div class="search-list">Search Results for <span></span></div>
+          <div class="sr-items">
+            <p><i class="glyphicon glyphicon-refresh index-loading"></i></p>
+          </div>
+          <ul id="pagination" data-first=First data-prev=Previous data-next=Next data-last=Last></ul>
+        </div>
+      </div>
+      <div role="main" class="container body-content hide-when-search">
+        <div class="article row grid">
+          <div class="col-md-10">
+            <article class="content wrap" id="_content" data-uid="">
+<h1 id="skinned-characters-and-gltf">Skinned characters and glTF</h1>
+
+<p>Load a rigged glTF or VRM character and pose it from code: from a camera, a data stream or your own animation. The <a href="examples.html#mirror">Mirror example</a> drives a character from a person's body pose.</p>
+<h2 id="load-a-model">Load a model</h2>
+<p><code>GltfLoader</code> reads a binary glTF 2.0 file (<code>.glb</code>, and VRM, which is GLB with a humanoid bone map) and decodes its textures:</p>
+<pre><code class="lang-csharp">await using var stream = await FileSystem.OpenAppPackageFileAsync(&quot;froggy.vrm&quot;);
+var character = await GltfLoader.LoadAsync(stream);   // parsing and texture decoding run off the UI thread
+scene.Add(character.Shape);
+var skeleton = character.Model.Skeletons[0];
+</code></pre>
+<p>Core's <code>GltfReader.Read</code> does the same without decoding images, for headless rendering and tests: pass a decoder to <code>GltfModel.CreateShape</code>, or textured materials keep only their base color.</p>
+<p>Coordinates stay as authored: right-handed, +Y up, counterclockwise front faces. VRM 0.x models face −Z and VRM 1.0 models face +Z; Simple3D's default camera looks along −Z, so turn a VRM 0.x model with <code>Rotated(0, MathF.PI, 0)</code> to face it.</p>
+<table>
+<thead>
+<tr>
+<th>Supported</th>
+<th>Ignored or rejected</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Triangle meshes, indices, normals, UV0, vertex colors</td>
+<td>Points, lines, strips (skipped)</td>
+</tr>
+<tr>
+<td>Base color factor and texture; <code>doubleSided</code>; <code>KHR_materials_unlit</code></td>
+<td>PBR maps, alpha blending (drawn opaque), texture transforms</td>
+</tr>
+<tr>
+<td>Node hierarchy (TRS or matrix), skins with inverse bind matrices</td>
+<td>Animations, cameras, lights</td>
+</tr>
+<tr>
+<td>Morph targets on skinned primitives (POSITION/NORMAL, dense or sparse, <code>targetNames</code>, default <code>weights</code>); VRM 0.x / 1.0 expressions</td>
+<td>Morph targets on unskinned primitives, TANGENT deltas, expression material binds</td>
+</tr>
+<tr>
+<td>VRM 0.x / 1.0 humanoid bone names (<code>GltfModel.HumanoidBones</code>)</td>
+<td>External or data URIs, sparse accessors outside morph targets, Draco/meshopt (rejected)</td>
+</tr>
+</tbody>
+</table>
+<p>Input is bounded (64 MiB, <code>Mesh.MaximumElements</code>, node count and depth); malformed files throw <code>InvalidDataException</code>. Degenerate triangles are dropped.</p>
+<h2 id="pose-a-skinned-shape">Pose a skinned shape</h2>
+<p>A <code>SkinnedMesh</code> deforms bind-pose geometry with a <code>Skeleton</code> of up to 128 joints, each vertex blending up to four. A <code>SkeletonPose</code> sets every joint's local rotation, plus an offset for the root joints:</p>
+<pre><code class="lang-csharp">var rotations = skeleton.RestPose.Rotations.ToArray();
+var elbow = model.HumanoidBones[&quot;leftLowerArm&quot;];
+rotations[elbow] = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, .8f) * rotations[elbow];
+var waved = character.Shape.WithPose(SkeletonPose.Create(skeleton, rotations));
+scene.Replace(character.Shape, waved);
+</code></pre>
+<p>Poses and shapes are immutable like the rest of the scene: <code>WithPose</code> returns a copy, updating every skinned descendant that uses the pose's skeleton, and <code>Scene.Replace</code> redraws. <code>SkeletonPose.WorldTransforms</code> gives joint transforms, for example to attach a prop to a hand. <code>SkeletonPose.Blend(from, to, amount)</code> crossfades two poses of the same skeleton, for example to ease toward a tracked pose each displayed frame.</p>
+<h2 id="expressions-and-morph-targets">Expressions and morph targets</h2>
+<p>A <code>SkinnedMesh</code> carries up to 64 morph targets (blend shapes), blended before skinning. Set raw weights with <code>Shape.WithMorphWeights(mesh, weights)</code>, or drive VRM expressions by name:</p>
+<pre><code class="lang-csharp">var face = new Dictionary&lt;string, float&gt; { [&quot;joy&quot;] = .8f, [&quot;a&quot;] = mouthOpen, [&quot;blink_l&quot;] = 1 };
+scene.Replace(current, current = character.Model.ApplyExpressions(current, face));
+</code></pre>
+<p><code>GltfModel.Expressions</code> is keyed by lowercase VRM 0.x preset (<code>joy</code>, <code>angry</code>, <code>sorrow</code>, <code>fun</code>, <code>a</code>…<code>o</code>, <code>blink</code>, <code>blink_l</code>, <code>blink_r</code>, <code>lookup</code>…) or the custom name; VRM 1.0 presets keep their names and also answer to the VRM 0.x one (<code>happy</code>→<code>joy</code>, <code>aa</code>→<code>a</code>, <code>blinkLeft</code>→<code>blink_l</code>…). <code>ApplyExpressions</code> sums intensity × bind weight per target, clamps to [0,1], keeps pose and transforms, ignores unknown names, and shows exactly the expressions you pass: any you leave out return to neutral. Which presets exist depends on the model.</p>
+<h2 id="rendering-cost">Rendering cost</h2>
+<table>
+<thead>
+<tr>
+<th>Renderer</th>
+<th>What a new pose costs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Metal / OpenGL ES 3</td>
+<td>The bind-pose mesh uploads once and is shared by every pose and instance. Each frame uploads one joint palette (64 bytes per joint) per skinned instance; vertex shaders blend the joints.</td>
+</tr>
+<tr>
+<td>Metal / OpenGL ES 3, morphs</td>
+<td>Deltas (32 bytes per target per source vertex) upload once per mesh: a Metal buffer, or an RGBA32F texture on OpenGL ES. A weight change uploads 80 bytes of per-item constants; the vertex shader adds the 8 largest nonzero weights (more are dropped on the GPU; the software renderer blends all).</td>
+</tr>
+<tr>
+<td>Software</td>
+<td>The posed mesh is morphed and skinned on the CPU once per pose or weight change, then rasterized as usual.</td>
+</tr>
+</tbody>
+</table>
+<p>Picking and <code>Scene.GetBounds</code> use the posed geometry and skin on the CPU on demand. Lighting skins normals by the blended joint matrix, which is exact for rotations and uniform scale.</p>
+<p>Measured with the 3,330-triangle, 65-joint Mirror character on an Apple M-series Mac (Release, CPU time only): tracking, retargeting and posing take 0.02 ms per frame, preparing a 720×1280 GPU frame 0.07 ms, and a 360×640 software frame including CPU skinning 16 ms. Native probes check skinned GPU output against the software renderer, up to 128 joints, morphs at several weights on a bent pose, and that a pose or weight change uploads no vertex or delta data.</p>
+
+</article>
+          </div>
+
+          <div class="hidden-sm col-md-2" role="complementary">
+            <div class="sideaffix">
+              <div class="contribution">
+                <ul class="nav">
+                  <li>
+                    <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/docs/site/skinned-characters.md/#L1" class="contribution-link">Edit this page</a>
+                  </li>
+                </ul>
+              </div>
+              <nav class="bs-docs-sidebar hidden-print hidden-xs hidden-sm affix" id="affix">
+                <h5>In this article</h5>
+                <div></div>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <div class="grad-bottom"></div>
+        <div class="footer">
+          <div class="container">
+            <span class="pull-right">
+              <a href="#top">Back to top</a>
+            </span>
+      
+      <span>Generated by <strong>DocFX</strong></span>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <script type="text/javascript" src="styles/docfx.vendor.min.js"></script>
+    <script type="text/javascript" src="styles/docfx.js"></script>
+    <script type="text/javascript" src="styles/main.js"></script>
+  </body>
+</html>

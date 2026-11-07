@@ -94,11 +94,26 @@ Classes
       <h4><a class="xref" href="Simple3D.Core.DirectionalLight.html">DirectionalLight</a></h4>
       <section><p>Immutable world-space light emitting parallel rays, without shadows.</p>
 </section>
+      <h4><a class="xref" href="Simple3D.Core.GltfExpression.html">GltfExpression</a></h4>
+      <section><p>A VRM expression's morph contributions. Material and texture binds are ignored.</p>
+</section>
+      <h4><a class="xref" href="Simple3D.Core.GltfImage.html">GltfImage</a></h4>
+      <section><p>An embedded encoded image. Core leaves image decoding to the caller.</p>
+</section>
+      <h4><a class="xref" href="Simple3D.Core.GltfModel.html">GltfModel</a></h4>
+      <section><p>A binary glTF asset, with reusable geometry, skeletons and embedded images.</p>
+</section>
+      <h4><a class="xref" href="Simple3D.Core.GltfReader.html">GltfReader</a></h4>
+      <section><p>Reads a bounded binary glTF 2.0 / VRM subset without external resources or image codecs.</p>
+</section>
       <h4><a class="xref" href="Simple3D.Core.Material.html">Material</a></h4>
       <section><p>Immutable opaque material using packed 0xAARRGGBB color.</p>
 </section>
       <h4><a class="xref" href="Simple3D.Core.Mesh.html">Mesh</a></h4>
       <section><p>Immutable indexed triangle geometry. Counterclockwise vertices face outward; both sides render by default.</p>
+</section>
+      <h4><a class="xref" href="Simple3D.Core.MorphTarget.html">MorphTarget</a></h4>
+      <section><p>A blend shape: per-vertex offsets added to bind-pose geometry, scaled by a weight in [0,1].</p>
 </section>
       <h4><a class="xref" href="Simple3D.Core.ObjReader.html">ObjReader</a></h4>
       <section><p>Reads a bounded OBJ geometry subset without loading files or material libraries.</p>
@@ -124,6 +139,15 @@ Classes
       <h4><a class="xref" href="Simple3D.Core.ShapeReplacementEventArgs.html">ShapeReplacementEventArgs</a></h4>
       <section><p>A replaced scene node. Corresponding child positions represent the same parts in the replacement tree.</p>
 </section>
+      <h4><a class="xref" href="Simple3D.Core.Skeleton.html">Skeleton</a></h4>
+      <section><p>An immutable joint hierarchy shared by skinned meshes and their poses.</p>
+</section>
+      <h4><a class="xref" href="Simple3D.Core.SkeletonPose.html">SkeletonPose</a></h4>
+      <section><p>An immutable pose: one local rotation per joint plus an offset added to the root joints' rest translation.</p>
+</section>
+      <h4><a class="xref" href="Simple3D.Core.SkinnedMesh.html">SkinnedMesh</a></h4>
+      <section><p>Immutable bind-pose geometry deformed by a skeleton.</p>
+</section>
       <h4><a class="xref" href="Simple3D.Core.Texture2D.html">Texture2D</a></h4>
       <section><p>Immutable opaque image. Pixels are top-to-bottom ARGB; UV (0,0) is the bottom-left corner.</p>
 </section>
@@ -139,8 +163,17 @@ Structs
       <h4><a class="xref" href="Simple3D.Core.DrawTriangle.html">DrawTriangle</a></h4>
       <section><p>A projected triangle for the legacy painter renderer.</p>
 </section>
+      <h4><a class="xref" href="Simple3D.Core.Int4.html">Int4</a></h4>
+      <section><p>Four joint indices.</p>
+</section>
+      <h4><a class="xref" href="Simple3D.Core.Joint.html">Joint</a></h4>
+      <section><p>One joint of a <a class="xref" href="Simple3D.Core.Skeleton.html">Skeleton</a>: its parent and rest transform relative to that parent.</p>
+</section>
       <h4><a class="xref" href="Simple3D.Core.ProjectedLabel.html">ProjectedLabel</a></h4>
       <section><p>A projected overlay label. Coordinates use the same pixel space as the frame.</p>
+</section>
+      <h4><a class="xref" href="Simple3D.Core.VertexInfluence.html">VertexInfluence</a></h4>
+      <section><p>Up to four joint influences of one vertex. Weights are normalized when the skinned mesh is created.</p>
 </section>
     <h3 id="enums">
 Enums

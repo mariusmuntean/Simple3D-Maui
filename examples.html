@@ -115,10 +115,112 @@
 <img src="images/Robot%20Arm.png" alt="Robot Arm">
 <img src="images/Gantry%20Crane.png" alt="Gantry Crane"></p>
 <p>In <strong>Equipment</strong>, orbit the controller beside the motor: the chart belongs to a mapped front face, while the solid sides reveal the imported enclosure's depth. <code>ObjReader.Parse</code> imports the wedge and its independent UV indices once. A small opaque <code>Texture2D</code> supplies its display and body colors. The texture is generated in the shared sample so Core-only image exports need no codec; use <a href="materials-and-import.html#textures">TextureLoader.Load</a> in a MAUI app to decode an image once before creating the material.</p>
-<p>In <strong>Surface</strong>, choose <strong>Shading: smooth / flat</strong>, then <strong>Light: from right / left</strong>. Smooth mode uses averaged vertex normals; flat mode omits normals from the same wave geometry. Both keep the height gradient and 512 triangles, so the comparison isolates lighting rather than changing mesh detail. The light-ray direction changes in world space while the orbit camera stays put. <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/SurfaceComparison.cs">SurfaceComparison.cs</a> keeps both meshes and lights prepared; switching does no geometry generation and preserves selection. <strong>Reset</strong> restores smooth shading, light from the right, the initial camera and sample-marker position. The comparison controls appear only in Surface, in the horizontally scrollable tool row.</p>
+<p>In <strong>Surface</strong>, choose <strong>Shading</strong> (Smooth / Flat), then <strong>Light from</strong> (Left / Right). Smooth mode uses averaged vertex normals; flat mode omits normals from the same wave geometry. Both keep the height gradient and 512 triangles, so the comparison isolates lighting rather than changing mesh detail. The light-ray direction changes in world space while the orbit camera stays put. <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/SurfaceComparison.cs">SurfaceComparison.cs</a> keeps both meshes and lights prepared; switching does no geometry generation and preserves selection. <strong>Reset</strong> restores smooth shading, light from the right, the initial camera and sample-marker position. The comparison controls appear only in Surface, above its description.</p>
 <p>Telemetry and Gantry Crane use synthetic values, not live sensors or physical simulations. In an application, replace the time functions with measured values. Reuse immutable meshes and keep child order stable so selection follows the same logical part after replacement. The small shared helpers live in <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/DemoScenes.cs">DemoScenes.cs</a>.</p>
 <p>Robot Arm demonstrates child transforms relative to a parent. Gantry Crane combines group translation with state-dependent part dimensions: the cable changes length as the load rises. They teach different uses of the same hierarchy API. The examples share their animation and color helpers rather than repeating them in each file.</p>
 <p>The <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Demo/GalleryPage.cs">gallery page</a> owns the UI timer, lowers render resolution during animation and pauses on backgrounding. It targets 60 updates per second; this is not a displayed-frame-rate guarantee. Press Animate after returning to the app.</p>
+<h2 id="mirror">Mirror</h2>
+<p><img src="images/mirror.gif" alt="Mirror: a tracked person and the character copying them"></p>
+<p>The gallery's <strong>Mirror</strong> card opens a full-screen scene in which a character copies the person the camera sees, in portrait or landscape. Everything runs on the device; nothing is recorded or sent.</p>
+<ol>
+<li><strong>Start.</strong> The intro explains the three framings, then asks for the camera.</li>
+<li><strong>Get in frame.</strong> A silhouette shows where to stand: whole body, waist up, or just the face for close-up face tracking.</li>
+<li><strong>Play.</strong> The character appears and copies the person. Tap a thumbnail to switch characters, ⇄ to switch cameras, pinch to zoom. If the person leaves, a hint asks them back; haptics mark both moments.</li>
+</ol>
+<p>What it follows:</p>
+<ul>
+<li><strong>Body:</strong> arms, legs, torso bend and lean, turning toward or away from the camera (the back shows when they turn around). Arms stay outside the torso and pass behind it when a hand is hidden.</li>
+<li><strong>Face:</strong> mouth, each eye, smile and frown, through each character's own face table, so a wide-open mouth looks wide open on every model.</li>
+<li><strong>Head:</strong> turn, nod and tilt.</li>
+<li><strong>Smoothness:</strong> poses arrive at camera rate (25–30 Hz) and are eased at the display's rate (<code>FrameClock</code>, up to 240 Hz). The whole pipeline costs about 0.03 ms of CPU per displayed frame.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Cat</th>
+<th>Juanita</th>
+<th>CosmicBot</th>
+<th>Froggy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><img src="images/mirror-faces-cat.png" alt="Cat expressions"></td>
+<td><img src="images/mirror-faces-juanita.png" alt="Juanita expressions"></td>
+<td><img src="images/mirror-faces-cosmicbot.png" alt="CosmicBot expressions"></td>
+<td><img src="images/mirror-faces-froggy.png" alt="Froggy expressions"></td>
+</tr>
+</tbody>
+</table>
+<p><em>Each character's neutral face, open mouth, left and right blink, smile and frown (Froggy blinks with both eyes and has no smile or frown).</em></p>
+<h3 id="tested-on-real-people">Tested on real people</h3>
+<p>The tests replay Apple Vision landmarks from public-domain videos of real people through the full pipeline and every character (<a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/tests/Fixtures/SOURCES.md">sources</a>):</p>
+<table>
+<thead>
+<tr>
+<th>Video</th>
+<th>Checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NASA astronaut candidate Anna Menon talking (NASA/JSC)</td>
+<td>Mouth follows hers (r = 0.91) and opens 7–15% of head height on every character; blinks close the eyes; head turn follows (r = 0.89)</td>
+</tr>
+<tr>
+<td>Medical officer Sudha in an interview (NIOSH/CDC)</td>
+<td>Head tilt and turn follow (r = 0.81, 0.88)</td>
+</tr>
+<tr>
+<td>Half squats, filmed at an angle (CDC)</td>
+<td>Tracked in every frame; hips drop with hers; knees bend 60–114° at the bottom; the character turns to her angle</td>
+</tr>
+<tr>
+<td>Seated overhead press (CDC)</td>
+<td>Hands above the head whenever hers are, and below it whenever hers are lowered, in every frame</td>
+</tr>
+</tbody>
+</table>
+<p>The people shown do not endorse this project.</p>
+<table>
+<thead>
+<tr>
+<th>Piece</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tracking states, smoothing, face calibration</td>
+<td><a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Mirror/PoseTracker.cs">PoseTracker.cs</a></td>
+</tr>
+<tr>
+<td>Landmarks → humanoid bone rotations</td>
+<td><a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Mirror/HumanoidRetargeter.cs">HumanoidRetargeter.cs</a></td>
+</tr>
+<tr>
+<td>Face measurements</td>
+<td><a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Mirror/FaceGeometry.cs">FaceGeometry.cs</a></td>
+</tr>
+<tr>
+<td>Per-character face tables</td>
+<td><a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Mirror/MirrorFace.cs">MirrorFace.cs</a>, <a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Mirror/MirrorModels.cs">MirrorModels.cs</a></td>
+</tr>
+<tr>
+<td>Pose easing and expressions</td>
+<td><a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Mirror/MirrorSession.cs">MirrorSession.cs</a></td>
+</tr>
+<tr>
+<td>Pond stage, character placement, swaps</td>
+<td><a href="https://github.com/mariusmuntean/Simple3D-Maui/blob/main/samples/Simple3D.Shared/Mirror/MirrorStage.cs">MirrorStage.cs</a></td>
+</tr>
+<tr>
+<td>Camera, detectors and page</td>
+<td><a href="https://github.com/mariusmuntean/Simple3D-Maui/tree/main/samples/Simple3D.Demo/Mirror">Simple3D.Demo/Mirror</a></td>
+</tr>
+</tbody>
+</table>
+<p>To reproduce it in your app, load a VRM with <code>GltfLoader</code>, wrap it with <code>MirrorCharacter.FromVrm</code> (optionally with a <code>MirrorFace</code> table), feed <code>PoseFrame</code>s from your detector into <code>MirrorSession.Apply</code>, and call <code>MirrorSession.Present</code> from a <code>FrameClock</code> tick; the shared folder has no MAUI or platform dependencies. Detection runs on the device: Apple Vision is built into iOS and macOS; on Android, ML Kit's accurate pose and face models arrive with their NuGet packages. Detectors report 2D landmarks, so motion straight toward the camera is approximate. The characters are CC0 VRMs from ToxSam and Polygonal Mind's 100Avatars; see <a href="skinned-characters.html">skinned characters</a>. The GIF is rendered from the recorded landmarks with <code>--render-showcase</code> and paired with the source videos by <code>scripts/mirror-showcase.py</code>.</p>
 <h2 id="render-without-maui">Render without MAUI</h2>
 <pre><code class="lang-bash">dotnet run --project tests/Simple3D.Core.Tests -c Release -- --render-images Equipment equipment.ppm
 dotnet run --project tests/Simple3D.Core.Tests -c Release -- --render-images --all output
